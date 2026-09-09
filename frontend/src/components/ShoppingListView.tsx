@@ -5,7 +5,7 @@ import {
   ShoppingBag, Share2, Printer, Check, CheckSquare, Square, Plus,
   Archive, Sparkles, Trash2, PackageCheck, ChevronLeft, ChevronRight,
   Calendar, Wallet, AlertTriangle, Compass, Smartphone, HelpCircle,
-  X, ArrowRight, ShieldCheck, RefreshCw, Layers
+  X, ArrowRight, ShieldCheck, RefreshCw, Layers, FileDown
 } from 'lucide-react';
 
 interface Props {
@@ -90,6 +90,20 @@ export const ShoppingListView: React.FC<Props> = ({
     } catch (e) {
       alert('Einkaufsliste in die Zwischenablage kopiert!');
     }
+  };
+
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = () => {
+    setIsDownloadingPdf(true);
+    const downloadUrl = `/api/shopping-list/export-pdf?week_offset=${selectedWeekOffset}`;
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.setAttribute('download', `Einkaufsliste_KW${selectedWeekOffset}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => setIsDownloadingPdf(false), 1500);
   };
 
   const handleBookAllToPantry = async () => {
@@ -401,6 +415,16 @@ export const ShoppingListView: React.FC<Props> = ({
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={handleDownloadPdf}
+                  disabled={isDownloadingPdf}
+                  className="flex items-center gap-1.5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black shadow-md transition active:scale-95 disabled:opacity-50"
+                  title="Fertige Einkaufsliste als druckbares PDF herunterladen"
+                >
+                  <FileDown className={`w-4 h-4 ${isDownloadingPdf ? 'animate-bounce' : ''}`} />
+                  <span>{isDownloadingPdf ? 'Generiere PDF...' : '📄 PDF herunterladen'}</span>
+                </button>
+
                 <button
                   onClick={handleBookAllToPantry}
                   className="flex items-center gap-1.5 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow transition active:scale-95"

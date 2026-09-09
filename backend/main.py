@@ -9,8 +9,9 @@ from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
+from backend.planner.pdf_export import generate_shopping_list_pdf
 
 from backend.models import (
     FamilyMember, ProductOffer, WeeklyPlan, ShoppingList,
@@ -468,6 +469,23 @@ def export_whatsapp(week_offset: int = Query(0, description="Week offset from cu
     shopping_list = generate_shopping_list_from_plan(plan, get_custom_shopping_items())
     text = format_whatsapp_export(shopping_list)
     return {"text": text}
+
+
+@app.get("/api/shopping-list/export-pdf")
+def export_shopping_list_pdf(week_offset: int = Query(0, description="Week offset from current week")):
+    plan = get_or_create_weekly_plan(week_offset)
+    shopping_list = generate_shopping_list_from_plan(plan, get_custom_shopping_items())
+    pdf_bytes = generate_shopping_list_pdf(shopping_list)
+    iso_clean = plan.iso_week.replace(" ", "_") if plan.iso_week else f"KW_{week_offset}"
+    filename = f"Einkaufsliste_{iso_clean}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Access-Control-Expose-Headers": "Content-Disposition"
+        }
+    )
 
 
 # -----------------------------------------------------------
