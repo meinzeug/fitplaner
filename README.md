@@ -1,19 +1,21 @@
 <div align="center">
 
-# 🥗 FitPlaner • Smart Nutrition & Multi-Supermarket Family Manager
-### *Das 100% KI-freie, autarke Alltags-Betriebssystem für gesunde Ernährung, Wochen-Budget & Zero-Stress-Kochen*
+# 🥗 FitPlaner • Smart Family Nutrition & Multi-Retailer Hub
+### *Das autarke, 100% KI-freie Alltags-Betriebssystem für gesunde Familienernährung, Budgetkontrolle & Zero-Stress-Kochen*
 
-[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Web%20%7C%20Android%20APK-emerald?style=for-the-badge&logo=linux)](https://github.com/meinzeug/fitplaner)
-[![FastAPI](https://img.shields.io/badge/Backend-FastAPI%20%2B%20Python%203.12-blue?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
-[![React + Vite](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite%20%2B%20Tailwind-61DAFB?style=for-the-badge&logo=react)](https://react.dev)
-[![Capacitor Android](https://img.shields.io/badge/Mobile-Android%20APK%20(7.9%20MB)-3DDC84?style=for-the-badge&logo=android)](https://capacitorjs.com)
-[![Tests](https://img.shields.io/badge/Tests-38%2F38%20Passing-brightgreen?style=for-the-badge&logo=github-actions)](https://github.com/meinzeug/fitplaner)
-[![Zero-AI](https://img.shields.io/badge/AI%20Status-100%25%20Generic%20%26%20No--Subscription-orange?style=for-the-badge)](https://github.com/meinzeug/fitplaner)
+[![GitHub Release](https://img.shields.io/badge/Release-v2.0.0--Universal-emerald?style=for-the-badge&logo=github)](https://github.com/meinzeug/fitplaner)
+[![Platform](https://img.shields.io/badge/Plattform-Linux%20%7C%20Web%20%7C%20Android%20APK-0078D4?style=for-the-badge&logo=linux)](https://github.com/meinzeug/fitplaner)
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI%20%2B%20Python%203.12-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
+[![React 19](https://img.shields.io/badge/Frontend-React%2019%20%2B%20TypeScript%20%2B%20Tailwind-61DAFB?style=for-the-badge&logo=react)](https://react.dev)
+[![Mobile APK](https://img.shields.io/badge/Android%20App-FitPlaner.apk%20(4.2%20MB)-3DDC84?style=for-the-badge&logo=android)](https://github.com/meinzeug/fitplaner)
+[![PDF Engine](https://img.shields.io/badge/Export-Druckfertige%20PDF--Einkaufsliste-red?style=for-the-badge&logo=adobe-acrobat-reader)](https://github.com/meinzeug/fitplaner)
+[![Tests](https://img.shields.io/badge/Tests-38%2F38%20Passing%20(100%25)-brightgreen?style=for-the-badge&logo=pytest)](https://github.com/meinzeug/fitplaner)
+[![Zero AI](https://img.shields.io/badge/KI--Status-100%25%20Lokal%20%26%20Deterministisch-orange?style=for-the-badge)](https://github.com/meinzeug/fitplaner)
 
 <br/>
 
-> **FitPlaner** verwandelt den wöchentlichen Familieneinkauf bei **Netto, NP, Lidl, Aldi, Rewe, Kaufland & Edeka** in ein vollautomatisches, wissenschaftlich fundiertes Ernährungs- und Budgeterlebnis.  
-> **1.220+ Offline-Rezepte. Kein Abo. Keine Cloud-KI. PDF-Einkaufslisten-Export. Volle WLAN-Synchronisation im Haushalt.**
+> **FitPlaner** verwandelt den stressigen Familienalltag und den Wocheneinkauf bei **Netto, NP, Lidl, Aldi Nord/Süd, Rewe, Kaufland & Edeka** in ein vollautomatisches, mathematisch optimiertes Erlebnis.  
+> **1.220+ Offline-Rezepte. Kein Abo. Keine externen Cloud-APIs. PDF-Einkaufslisten-Export. Minutengenaue Tages-Regie & Tellertrick.**
 
 ---
 
@@ -21,74 +23,109 @@
 
 <br/>
 
-## 📰 DAS DIGITALE MAGAZIN: REVOLUTION IM FAMILIEN-ALLTAG
+## 📰 DAS DIGITALE MAGAZIN: ALLE HIGHLIGHTS IM ÜBERBLICK
 
 <table>
 <tr>
 <td width="33%" valign="top">
 
-### ⏱️ 1. Tages-Regie & Zeitplan
-**Jede Minute genau wissen, was zu tun ist.**
-- ☀️ 06:30 Uhr: Stoffwechsel-Hydration
-- 🎒 06:45 Uhr: 30-Sekunden-Brotdosen-Grab
-- 🍎 10:30 Uhr: Individuelle Fokus-Snacks
-- ⏰ 16:45 Uhr: 15-Min.-Feierabend-Alarm
-- 🥪 **20:00 Uhr: 12-Min.-Vorabend-Trick** (Dosen für morgen fertig vorbereiten)
+### 🌟 1. Vollvernetzte Startseite
+**Jede Station führt direkt ans Ziel.**
+- **Minutengenaue Tages-Regie**: 13 chronologische Stationen von 06:30 bis 22:30 Uhr.
+- **Tiefenverlinkung**: Direkte Buttons zu Rezepten, Zubereitungsschritten, Brotdosen-Tipps und der Einkaufsliste.
+- **Inline-Schnellansicht**: Kochanleitungen & Zutaten direkt auf der Karte aufklappen – ohne Extraklicks.
+- **3-Stationen-Autopilot**: Morgens (Brotdose) → Feierabend (Frische-Pick) → Abends (Tellertrick).
 
 </td>
 <td width="33%" valign="top">
 
-### 🍽️ 2. Der faire Tellertrick
-**Nie wieder am Herd grammgenau wiegen.**
-- Gemeinsam **ein** Familiengericht kochen
-- Servieren nach intuitiven **Kellenmaßen**:
-  - *Dennis (Muskelaufbau)*: 🥄 3 volle Kellen + Beilage
-  - *Sarah (Defizit)*: 🥄 1,5 Kellen + 2 Hände Salat
-- Nährwerte stimmen auf den Punkt!
+### 🍲 2. 1.220+ Rezepte-Universum
+**100% KI-frei & Null Wiederholungen.**
+- Riesige Offline-Rezeptdatenbank für **alle 11 Ernährungsweisen**:
+  - *Mischkost, High Protein, Low Carb / Keto*
+  - *Pescetarisch, Vegetarisch, Vegan*
+  - *Schweinefleisch-Frei (No Pork)*
+  - *Glutenfrei, Laktosefrei, Paleo, Budget*
+- Schritt-für-Schritt Zubereitung mit Vorbereitungs- und Kochzeiten.
+- Perfekt abgestimmte Brotdosen- und Meal-Prep-Tipps.
 
 </td>
 <td width="33%" valign="top">
 
-### 🚶‍♂️ 3. Gang-Laufweg & PDF
-**Stressfrei durch jeden Supermarkt.**
-- Sortiert nach Filial-Zonen:
-  1. *Obst & Gemüse* (Eingang)
-  2. *Kühlregal & Molkerei*
-  3. *Fleisch & Frischer Fisch*
-  4. *Trockensortiment & Vorräte*
-- **📱 Daumen-Modus**: 64px Touch-Felder.
-- **📄 PDF-Export**: Druckfertige Einkaufsliste mit Checkboxen `[ ]` zum Abhaken.
+### 🛒 3. Multi-Supermarkt Radar
+**Echte Prospekte & Prospekt-Horizont.**
+- Integration aller großen Ketten: **Netto, NP, Lidl, Aldi Nord, Aldi Süd, Rewe, Kaufland, Edeka**.
+- **Realistischer Prospekt-Horizont**:
+  - 🟢 *Aktive Woche*: Echte Angebote gültig ab Montag.
+  - 🟡 *Vorschau-Woche*: Prospekt frisch verfügbar.
+  - ⚪ *Folgewochen*: Vorausschauende Grundpreis- & Saisonplanung.
+- Automatische Berücksichtigung von Prospekt-Knallern.
 
 </td>
 </tr>
 <tr>
 <td width="33%" valign="top">
 
-### 📅 4. Wöchentliche Budgets
-**Multi-Wochen-Planung & Spar-Radar.**
-- Beliebig vor- und zurückblättern (KW 36, 37, 38...)
-- Individuelles Budget pro Woche (z. B. 120 € oder 60 € am Monatsende)
-- Live Restbudget & Spar-Ampel (🟢 / 🟡 / 🔴)
-- Multi-Supermarkt Rabatt-Kalkulation.
+### 📄 4. PDF-Einkaufslisten-Export
+**Druckfertig & gangoptimiert für den Markt.**
+- Professionelle PDF-Generierung mit **ReportLab**.
+- **Sortiert nach Markt-Laufweg**:
+  1. *Obst & Gemüse* (Markt-Eingang)
+  2. *Kühlregal & Molkerei*
+  3. *Fleisch & Frischer Fisch*
+  4. *Trockensortiment & Vorräte*
+- Mit druckfertigen Checkboxen `[ ]`, Supermarkt-Farbkodierung, Packungsgrößen und Preissummen.
 
 </td>
 <td width="33%" valign="top">
 
-### 📦 5. Vorratskammer & Barcode
-**Gegen Lebensmittelverschwendung.**
-- EAN-13 Barcode-Scanner & Kassenbon-OCR
-- Frische-Ampel nach Mindesthaltbarkeit (MHD)
-- **Lager-Abzug**: Vorhandene Zutaten kosten automatisch **0,00 €** auf der Liste!
+### 🍽️ 5. Der faire Tellertrick
+**Schluss mit grammgenauem Wiegen am Herd.**
+- **Ein** Gericht für die ganze Familie kochen.
+- Portionierung nach intuitiven **Kellenmaßen**:
+  - *Dennis (Muskelaufbau)*: 🥄 3 Kellen Hauptgericht + 1 gehäufte Handvoll Reis.
+  - *Sarah (Kaloriendefizit)*: 🥄 1,5 Kellen Hauptgericht + 2 lockere Hände Salat.
+- Basiert auf exakter Mifflin-St Jeor BMR/TDEE-Formel.
 
 </td>
 <td width="33%" valign="top">
 
-### 📡 6. WLAN-Ping Auto-Discovery
-**Zero-Config Synchronisation.**
-- UDP-Broadcast Radar auf **Port 8092**
-- Subnetz-ARP-Scanner erkennt Handys sofort
-- 1-Klick-Kopplung im Web-Installer
-- Automatischer Haushalts-Sync nach Heimkehr.
+### 📦 6. Vorratskammer & Barcode
+**Zero Waste & Null Doppelkäufe.**
+- EAN-13 Barcode-Scanner & Kassenbon-Erfassung.
+- **Automatischer Lager-Abzug**: Was bereits zuhause vorrätig ist, kostet auf der Einkaufsliste **0,00 €**!
+- Frische-Ampel nach Mindesthaltbarkeit (MHD).
+- **„Gekocht & Lager abbuchen“**: Zieht verbrauchte Mengen mit 1 Klick aus dem Lager ab.
+
+</td>
+</tr>
+<tr>
+<td width="33%" valign="top">
+
+### 📅 7. Wöchentliche Budgets
+**Multi-Wochen-Navigation & Spar-Ampel.**
+- Beliebig vor- und zurückblättern (KW 36, KW 37, KW 38...).
+- Individuelles Wochenbudget festlegbar (z. B. 120 € oder Monatsende-Sparwoche mit 60 €).
+- Live Restbudget-Berechnung & Warn-Ampel (🟢 / 🟡 / 🔴).
+- Transparente Spar- und Deckungsübersicht.
+
+</td>
+<td width="33%" valign="top">
+
+### 🥪 8. 12-Min.-Vorabend-Trick
+**Morgens 0 Minuten Stress.**
+- **20:00 Uhr Station**: Vorbereitung der Brotdose und des Frühstücks für den nächsten Tag in nur 12 Minuten.
+- Overnight-Oats quellen über Nacht im Kühlschrank.
+- Morgens einfach nur die fertigen Dosen greifen (**30-Sekunden-Grab-and-Go**).
+
+</td>
+<td width="33%" valign="top">
+
+### 📱 9. Android APK & WLAN-Radar
+**Immer synchron im ganzen Haushalt.**
+- Native Android-App (**FitPlaner.apk**, 4,2 MB) direkt zum Download verlinkt.
+- **Zero-Config Auto-Discovery**: Linux-Server und Handy finden sich automatisch über UDP-Broadcast auf **Port 8092**.
+- Offline-Modus im Supermarkt ohne Funkloch-Ärger.
 
 </td>
 </tr>
@@ -96,136 +133,158 @@
 
 ---
 
-## 🏛️ SYSTEM-ARCHITEKTUR
+## 🏛️ GESAMT-ARCHITEKTUR & SYSTEM-TOPOLOGIE
+
+FitPlaner ist modular, robust und vollständig unabhängig von externen Cloud-Diensten konzipiert:
 
 ```mermaid
-graph TD
+graph TB
     subgraph "Heimnetzwerk / Linux PC (Host: 0.0.0.0:8090)"
-        Server[FastAPI Core Server & Engine]
-        Engine1[Timeline Engine & Minutengenaue Tages-Regie]
-        Engine2[Mifflin-St Jeor Nährwert- & Tellertrick-Rechner]
-        Engine3[Packungsgrößen- & Lager-Kalkulator]
-        Engine4[WLAN-Ping Auto-Discovery: UDP 8092 & ARP]
-        Engine5[1.220+ Rezept-Universum & Multi-Supermarkt-Prospekte]
-        PDFGen[PDF Export Engine mit ReportLab]
-        WebUI[React 19 + Vite Dashboard: dist/]
+        CoreServer["FastAPI Core Application"]
+        
+        subgraph "Engines & Fachlogik"
+            RecipeUniv["Rezept-Universum (1.220+ Rezepte)"]
+            MultiLeaflet["Multi-Supermarkt Prospekt-Engine"]
+            TimelineEng["Timeline Engine & Tages-Regie"]
+            NutritionEng["Mifflin-St Jeor & Tellertrick"]
+            PantryEng["Vorrats- & Packungsgrößen-Engine"]
+            PDFGen["ReportLab PDF-Export-Engine"]
+            UDPDiscovery["UDP Radar & Heartbeat (Port 8092)"]
+        end
+
+        WebFrontend["React 19 + TypeScript + Tailwind (dist/)"]
     end
 
-    subgraph "Smartphones & Tablets im WLAN"
-        MobileBrowser[Handy-Browser: Chrome / Safari]
-        NativeAPK[FitPlaner Native Android APK]
+    subgraph "Clients im Haushalt & Unterwegs"
+        MobileBrowser["Smartphone / Tablet Browser"]
+        AndroidApp["FitPlaner Native Android APK"]
+        PrintedPDF["Gedruckte Einkaufsliste (A4)"]
     end
 
-    subgraph "Unterwegs im Markt (100% Offline & Autark)"
-        OfflineApp[Einkaufsliste im Daumen-Modus • PDF • Barcode-Scanner]
-    end
+    CoreServer --> RecipeUniv
+    CoreServer --> MultiLeaflet
+    CoreServer --> TimelineEng
+    CoreServer --> NutritionEng
+    CoreServer --> PantryEng
+    CoreServer --> PDFGen
+    CoreServer --> UDPDiscovery
+    CoreServer --> WebFrontend
 
-    Server --> Engine1
-    Server --> Engine2
-    Server --> Engine3
-    Server --> Engine4
-    Server --> Engine5
-    Server --> PDFGen
-    Server --> WebUI
-
-    Engine4 <-->|UDP Broadcast 8092 & Heartbeat Ping| NativeAPK
-    WebUI <-->|WLAN: 192.168.x.x:8090| MobileBrowser
-    NativeAPK -->|Sync bei Heimkehr| Server
-    NativeAPK -->|Unterwegs| OfflineApp
+    WebFrontend <-->|HTTP / WebSocket 8090| MobileBrowser
+    UDPDiscovery <-->|Broadcast Port 8092| AndroidApp
+    AndroidApp <-->|REST API Sync| CoreServer
+    PDFGen -->|Download| PrintedPDF
 ```
 
 ---
 
 ## ⏱️ DIE MINUTENGENAUE TAGES-REGIE
 
-Der neue Ernährungs-Zeitplaner steuert deinen Tag chronologisch und nimmt dir jede mentale Belastung ab:
+Der Ernährungs-Zeitplaner steuert deinen Tag chronologisch und nimmt dir jede mentale Belastung ab:
 
-| Uhrzeit | Station / Mission | Details & Familien-Nutzen |
-| :--- | :--- | :--- |
-| **06:30** | ☀️ **Morgen-Start & Hydration** | 1 großes Glas lauwarmes Wasser (300–500ml) für Dennis & Sarah (Stoffwechsel-Kick). |
-| **06:45** | 🎒 **Brotdosen-Grab-and-Go** | Gestern vorbereitete Dosen & Snackboxen aus dem Kühlschrank in die Taschen packen (**30 Sekunden!**). |
-| **07:00** | 🥣 **Frühstück lt. Wochenplan** | Tages-Rezept (z. B. Vollkorn-Knäckebrot mit Bio-Ei & Avocado-Creme). |
-| **10:30** | 🍎 **Vormittags-Snack** | Dennis: Handvoll Mandeln (Muskelschutz); Sarah: Apfel & Gurkensticks (Sättigung ohne Kalorienlast). |
-| **12:30** | 🍱 **Mittagspause to-go** | Vollwertiges Brotdosen-Gericht (z. B. Kichererbsen-Thunfisch-Salat mit Bio-Ei). Keine teuren Kantinen! |
-| **15:30** | 💧 **Nachmittags-Booster** | 500ml Wasser oder Grüntee + gesunder Snack gegen das 15-Uhr-Leistungstief. |
-| **16:45** | ⏰ **Feierabend-Vorausblick** | 15 Min. vor Feierabend: Erinnerung an kurzen Supermarkt-Halt für den Frische-Pick. |
-| **17:15** | 🛒 **Frische-Pick im Markt** | Frischen Fisch, Geflügel oder Babyspinat direkt auf dem Heimweg frisch einpacken. |
-| **18:00** | 🍳 **Herd-Regie & Koch-Start** | Ofen/Pfanne anheizen. Schnelle Zubereitung in meist nur 1 Pfanne/Topf. |
-| **18:30** | 🍽️ **Familien-Dinner** | Servieren nach dem **fairen Tellertrick** am Herd ohne Küchenwaage. |
-| **20:00** | 🥪 **Brotdose für MORGEN vorbereiten** | **Der 12-Minuten-Vorabend-Trick:** Overnight-Oats anrühren, Reste einpacken, Snackboxen füllen. |
-| **20:45** | ❄️ **TK-Auftau-Check** | Zutaten für übermorgen zum schonenden Auftauen in das Null-Grad-Fach legen. |
-| **21:45** | 🌙 **Abend-Hydration & Bettruhe** | Kräutertee, Magnesium, Regeneration für tiefen REM-Schlaf. |
+| Uhrzeit | Station / Mission | Typ | Verlinkung & Nutzen |
+| :--- | :--- | :--- | :--- |
+| **06:30** | ☀️ **Morgen-Start & Hydration** | Wasser | 1 großes Glas lauwarmes Wasser (300–500ml) für Dennis & Sarah (Stoffwechsel-Kick). |
+| **06:45** | 🎒 **Brotdosen-Grab-and-Go** | Prep | Gestern vorbereitete Dosen & Snackboxen aus dem Kühlschrank in die Taschen packen (**30 Sekunden!**). |
+| **07:00** | 🥣 **Frühstück lt. Wochenplan** | Mahlzeit | 🍳 **Rezept & Zubereitung verlinkt** • z. B. Vollkorn-Müsli mit Beeren & Leinsamen. |
+| **10:30** | 🍎 **Vormittags-Snack** | Snack | Dennis: Handvoll Walnüsse (Muskelschutz); Sarah: Apfel & Gurkensticks (Sättigung ohne Kalorienlast). |
+| **12:30** | 🍱 **Mittagspause to-go** | Mahlzeit | 🥗 **Rezept verlinkt** • Vollwertige Brotdose (z. B. Quinoa-Bowl mit Kichererbsen). Keine teuren Kantinen! |
+| **15:30** | 💧 **Nachmittags-Booster** | Wasser | 500ml Wasser oder Grüntee + Magerquark/Mandarine gegen das 15-Uhr-Leistungstief. |
+| **16:45** | ⏰ **Feierabend-Vorausblick** | Frische | 🛒 **Zur Einkaufsliste verlinkt** • 15 Min. vor Feierabend: Erinnerung an Halt bei Netto/NP. |
+| **17:15** | 🛒 **Frische-Pick im Markt** | Frische | 🛒 **Einkaufsliste & Marktregal** • Frischen Lachs, Geflügel oder Spinat auf dem Heimweg mitnehmen. |
+| **18:00** | 🍳 **Herd-Regie & Koch-Start** | Kochen | 🍳 **Zubereitungsschritte & Timer** • Schnelle Zubereitung in meist nur 1 Pfanne/Topf. |
+| **18:30** | 🍽️ **Familien-Dinner (Tellertrick)** | Mahlzeit | 🍽️ **Tellertrick am Herd** • Servieren nach Kellenmaßen ohne Küchenwaage. |
+| **20:00** | 🥪 **Brotdose für MORGEN vorbereiten** | Prep | 🍱 **Morgen-Rezepte verlinkt** • **Der 12-Minuten-Vorabend-Trick:** Overnight-Oats anrühren, Boxen füllen. |
+| **20:45** | ❄️ **TK-Auftau-Check** | Vorrat | 📦 **Vorratskammer verlinkt** • Schonendes Auftauen im Kühlschrank für übermorgen. |
+| **21:45** | 🌙 **Abend-Hydration & Bettruhe** | Wasser | Kräutertee, Magnesium, Regeneration für tiefen, erholsamen Schlaf. |
 
 ---
 
-## 🍽️ DER FAIRE TELLERTRICK (KÜCHENWAAGE WAR GESTERN)
+## 🍽️ DER FAIRE TELLERTRICK: SERVIEREN AM HERD
 
-Niemand wiegt nach einem anstrengenden Arbeitstag jede Tomate einzeln ab. Der **Tellertrick** übersetzt die wissenschaftlichen BMR/TDEE-Kalorienwerte (Mifflin-St Jeor) direkt in **Küchenmaße am Herd**:
+Vergiss das grammgenaue Abwiegen einzelner Zutaten nach Feierabend. Der **Tellertrick** übersetzt wissenschaftliche Nährwertberechnungen (Mifflin-St Jeor) direkt in **Küchen-Haushaltsmaße am Herd**:
 
 ```
-🥘 Beispiel: Cremiges Rote-Linsen-Curry mit Babyspinat
+🥘 Beispielgericht: Rote-Linsen-Curry mit Kokosmilch & Babyspinat
 ├── 👤 Dennis (Ziel: Muskelaufbau • 2.650 kcal)
-│   └── 🥄 3 volle Kellen Linsen-Curry + 1 gehäufte Handvoll Naturreis
+│   ├── 🥄 3 volle Kellen Linsen-Curry
+│   └── 🍚 1 gehäufte Handvoll Naturreis
 └── 👤 Sarah (Ziel: Fettabbau • 1.700 kcal)
-    └── 🥄 1,5 Kellen Linsen-Curry + 2 lockere Hände Frischer Salat
+    ├── 🥄 1,5 Kellen Linsen-Curry
+    └── 🥗 2 lockere Hände Frischer Salat / Rohkost
 ```
 
 ---
 
-## 📱 NATIVE ANDROID APP & AUTO-DISCOVERY RADAR
+## 📄 PROFESSIONELLER PDF-EINKAUFSLISTEN-EXPORT
 
-Die App wurde mit Capacitor kompiliert und läuft als native Android-App:
+Mit einem Klick auf **„📄 PDF herunterladen“** im Tab *Einkauf & Lager* erzeugt FitPlaner eine druckfertige Einkaufsliste im DIN-A4-Format:
 
-- **Schlanke APK**: (`FitPlaner.apk` liegt direkt im Hauptverzeichnis).
-- **Kamera-Unterstützung**: EAN-13 Barcode-Scanner und Kassenbon-Fotografie.
-- **100% Offline im Supermarkt**: Wenn das Mobilfunknetz im Markt abreißt, schaltet die App verzögerungsfrei auf den Offline-Cache um.
-- **WLAN-Auto-Discovery Radar (Port 8092)**:
-  - Der Linux-Server sendet und lauscht auf allgemeine UDP-Broadcast-Pings.
-  - Sobald das Smartphone zu Hause ins WLAN kommt, gleicht es abgehakte Artikel und verbrauchte Vorräte vollautomatisch mit dem PC ab.
+- **Sortiert nach Markt-Gängen**: Obst & Gemüse → Kühlung & Fleisch → Trockensortiment & Vorräte.
+- **Druckfertige Checkboxen `[ ]`**: Zum manuellen Durchstreichen mit dem Kugelschreiber.
+- **Klare Mengenangaben**: Basierend auf realen Supermarkt-Packungsgrößen (z. B. *2x 500g Haferflocken*).
+- **Multi-Supermarkt-Kennzeichnung**: Jeder Artikel ist mit dem günstigsten Markt (Netto, NP, Lidl, Aldi, Rewe etc.) gekennzeichnet.
+- **KPI-Übersichtsleiste**: Geschätzte Gesamtkosten, bereits vorrätige Artikel und Sparsummen auf einen Blick.
 
 ---
 
-## 🚀 INSTALLATION AUF LINUX (UBUNTU / DEBIAN / FEDORA / ARCH)
+## 🥗 DAS REZEPTE-UNIVERSUM (1.220+ OFFLINE-REZEPTE)
 
-Im Hauptverzeichnis befindet sich das All-in-One Installationsskript [`setup.sh`](setup.sh):
+FitPlaner enthält eine kuratierte Offline-Bibliothek aus über 1.220 Rezepten, die alle gängigen Ernährungsformen abdecken:
+
+| Ernährungsform | Typische Zutaten | Fokus |
+| :--- | :--- | :--- |
+| **Mischkost (Ausgewogen)** | Mageres Fleisch, Vollkorn, Gemüse, gesunde Fette | Ausgewogene Makronährstoffe für die ganze Familie |
+| **High Protein / Muskelaufbau** | Hähnchenbrust, Magerquark, Eier, Hülsenfrüchte | Hohe biologische Wertigkeit, Muskelschutz |
+| **Low Carb & Keto** | Lachs, Avocado, Nüsse, Brokkoli, Blumenkohl | Minimale Insulinausschüttung, stabile Energie |
+| **Pescetarisch** | Wildlachs, Kabeljau, Thunfisch, Garnelen, Gemüse | Gesunde Omega-3-Fettsäuren |
+| **Vegetarisch** | Eier, Hüttenkäse, Kichererbsen, Linsen, Tofu | Vollwertige fleischlose Proteinquellen |
+| **Vegan** | Hülsenfrüchte, Nüsse, Samen, Vollkorngetreide | 100% pflanzlich mit Fokus auf Mikronährstoffe |
+| **No Pork (Schweinefleisch-Frei)** | Rindfleisch, Geflügel, Fisch, vegetarische Alternativen | 100% frei von Schweinefleisch & Gelatine |
+| **Glutenfrei / Laktosefrei** | Reis, Quinoa, Kartoffeln, laktosefreie Milchprodukte | Maximale Bekömmlichkeit bei Unverträglichkeiten |
+| **Paleo / Clean Eating** | Unverarbeitetes Fleisch, Fisch, Nüsse, Obst, Gemüse | Streng frei von Industriezucker und Zusatzstoffen |
+| **Budget-Sparfuchs** | Haferflocken, Karotten, Linsen, Kartoffeln, Eier | Maximal gesunde Nährstoffe unter 2,50 € pro Tag |
+
+---
+
+## 📱 ANDROID APP & AUTO-DISCOVERY RADAR
+
+Die native Android-App (`FitPlaner.apk`) verbindet sich vollautomatisch mit deinem PC:
+
+1. **APK Herunterladen**: Direkt im Dashboard über das Menü oder den Footer herunterladen (ca. 4,2 MB).
+2. **Im WLAN öffnen**: Die App lauscht auf den UDP-Broadcast auf **Port 8092**.
+3. **Zero-Config Sync**: Sobald du nach dem Einkauf nach Hause kommst, werden abgehakte Artikel und verbrauchte Vorräte automatisch mit dem Haupt-PC synchronisiert.
+4. **Offline-Funktion**: Im Supermarkt funktioniert die App auch im tiefsten Funkloch vollständig autark.
+
+---
+
+## 🚀 SCHNELLSTART & INSTALLATION AUF LINUX
+
+FitPlaner lässt sich mit einem einzigen Befehl auf jedem Linux-PC (Ubuntu, Debian, Fedora, Arch, Manjaro etc.) installieren:
 
 ```bash
 # 1. Repository klonen
 git clone https://github.com/meinzeug/fitplaner.git
 cd fitplaner
 
-# 2. Lokales Setup ausführen (erstellt .venv, baut Frontend & richtet Desktop-Starter ein)
+# 2. Einrichtungs-Skript ausführen
 ./setup.sh
 
 # 3. Server starten
 ./run.sh
 ```
 
-### 🌐 Adressen im Netzwerk:
-- **Am PC (Browser)**: `http://localhost:8090`
-- **Vom Smartphone im WLAN**: `http://<DEINE-PC-IP>:8090` *(wird vom Skript automatisch ausgegeben)*
+### 🌐 Zugriffs-Adressen:
+- **Lokaler PC (Browser)**: `http://localhost:8090`
+- **Smartphones / Tablets im WLAN**: `http://<DEINE-PC-IP>:8090` *(wird vom Skript automatisch angezeigt)*
 - **Direkter APK-Download**: `http://<DEINE-PC-IP>:8090/FitPlaner.apk`
-- **Linux-Anwendungsmenü**: Einfach nach **„FitPlaner“** suchen!
+- **Linux-Anwendungsmenü**: Suche einfach nach **„FitPlaner“** und starte es per Klick!
 
 ---
 
-## 🛠️ TECH-STACK & QUALITÄTSVERSPRECHEN
+## 🧪 TESTSUITE & QUALITÄTSSICHERUNG
 
-| Schicht | Technologie | Details |
-| :--- | :--- | :--- |
-| **Backend** | Python 3.12, FastAPI, Uvicorn | Vollständig asynchron, Pydantic v2 validiert, gebunden an `0.0.0.0` |
-| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS | Komponenten-Architektur, 0 TypeScript-Fehler, < 1s Build-Zeit |
-| **Mobile** | Capacitor 7, Android SDK 34/35 | Native APK, Kamera-Berechtigungen, Offline-PWA-Fallback |
-| **Dokumente** | ReportLab PDF Engine | Druckfertige A4 Einkaufslisten mit Checkboxen und KPI-Karten |
-| **Netzwerk** | UDP Socket Broadcast, ARP Subnet-Probe | Port 8092 Auto-Discovery ohne manuelle IP-Konfiguration |
-| **Ernährung** | 1.220+ Offline-Rezepte, Open Food Facts, Marktguru | NOVA-Klassifikation (1–4), E-Nummern-Audit, Clean-Eating-Filter |
-| **KI-Freiheit** | 100% Deterministisch | Keine monatlichen Kosten, keine externen LLM-Abos, absolute Datensouveränität |
-
----
-
-## 🧪 AUTOMATISIERTE TESTS
-
-Die gesamte Logik wird durch **38 automatisierte Backend-Unit-Tests** abgesichert:
+FitPlaner wird durch eine lückenlose Testsuite aus **38 automatisierten Unit-Tests** abgesichert:
 
 ```bash
 .venv/bin/python3 -m unittest discover backend/tests
@@ -234,23 +293,38 @@ Die gesamte Logik wird durch **38 automatisierte Backend-Unit-Tests** abgesicher
 ```
 ......................................
 ----------------------------------------------------------------------
-Ran 38 tests in 0.441s
+Ran 38 tests in 0.449s
 
 OK
 ```
-- `test_pdf_export.py`: Testet PDF-Magic-Bytes (`%PDF-`), Formatierung und Content-Disposition-Download.
-- `test_recipe_universe.py`: Testet 1.220+ Rezepte-Universum, alle 11 Diäten, Null-Wiederholung & Prospekt-Horizont.
-- `test_timeline_schedule.py`: Testet 13 chronologische Stationen, Weckzeit-Shifting & Vorabend-Prep.
-- `test_installer.py`: Testet QR-Code-SVG Generierung, LAN-IP Erkennung und Geräte-Kopplung.
-- `test_daily_hub.py`: Testet Öffnungszeiten-Abgleich, Frische-Pick & Tellertrick.
-- `test_budget_and_weeks.py`: Testet ISO-8601 Wochen-Berechnung & Budget-Ampel.
-- `test_nutrition.py`: Testet Mifflin-St Jeor BMR/TDEE & Portionsskalierung.
-- `test_pantry.py`: Testet Packungsgrößen, Restmengen & MHD-Ampel.
-- `test_health_filter.py`: Testet Ausschluss von E-Nummern (E250, E621) & verstecktem Zucker.
+
+### Abgedeckte Testbereiche:
+- `test_pdf_export.py`: Validierung des PDF-Binärstreams (`%PDF-1.4`), Tabellenlayout und Header.
+- `test_recipe_universe.py`: Testet 1.220 Rezepte, alle 11 Ernährungsweisen, Rotationslogik und Prospekt-Horizont.
+- `test_timeline_schedule.py`: Testet die 13 chronologischen Stationen, Zeitanpassungen und Vorabend-Mealprep.
+- `test_daily_hub.py`: Testet Öffnungszeiten, Feierabend-Alarm, Frische-Pick und Kellen-Tellertrick.
+- `test_installer.py`: Testet lokale IP-Erkennung, QR-Code-SVG-Generierung und WLAN-Pairing.
+- `test_budget_and_weeks.py`: Testet ISO-Wochenberechnung, Multi-Wochen-Offset und Budget-Ampel.
+- `test_nutrition.py`: Testet Mifflin-St Jeor BMR/TDEE-Berechnung und individuelle Makroverteilung.
+- `test_pantry.py`: Testet Lagerabbuchung, Mindesthaltbarkeits-Ampel und Kassenbon-Parsing.
+- `test_health_filter.py`: Testet automatische Erkennung und Ausschluss schädlicher E-Nummern und versteckter Zucker.
+
+---
+
+## 🛠️ TECHNOLOGIE-STACK
+
+| Komponente | Technologie | Zweck / Besonderheit |
+| :--- | :--- | :--- |
+| **Backend-Framework** | Python 3.12, FastAPI, Uvicorn | Vollständig asynchron, Pydantic v2 validiert, gebunden an `0.0.0.0:8090` |
+| **Frontend-UI** | React 19, TypeScript, Vite, Tailwind CSS | Schnelle Ladezeiten (< 1s Build), moderne Glasmorphismus-Komponenten |
+| **Dokumenten-Engine** | ReportLab PDF Engine | Druckfertige A4 Einkaufslisten mit Checkboxen und Vektorgrafiken |
+| **Netzwerk & Sync** | UDP Socket Broadcast, ARP Subnet-Probe | Port 8092 Auto-Discovery ohne manuelle IP-Eingabe |
+| **Mobile Runtime** | Capacitor 7, Android SDK 34/35 | Native Android APK (4,2 MB) mit Kamera-Barcode-Scanner |
+| **Datenbestand** | Lokales JSON & SQLite | 100% offline nutzbar, null Tracking, absolute Datensouveränität |
 
 ---
 
 ## 📄 LIZENZ & CREDITS
 
 Entwickelt für **Dennis & Familie** von `meinzeug`.  
-100% Open Source, frei nutzbar für maximale Gesundheit und faire Haushaltsfinanzen.
+Open Source unter MIT-Lizenz. Frei nutzbar für maximale Gesundheit, stressfreien Familienalltag und faire Haushaltsfinanzen.
