@@ -1,5 +1,5 @@
 """
-FastAPI Main Application for FitPlaner (Netto & NP Smart Nutrition & Family Manager).
+FastAPI Main Application for FitPlaner (Smart Nutrition & Multi-Supermarket Family Manager).
 Includes Pantry Management, MHD, Barcode, Receipt Scanner, Time-of-day Assistant & Leaflets.
 """
 

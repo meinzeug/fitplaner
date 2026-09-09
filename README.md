@@ -1,19 +1,19 @@
 <div align="center">
 
-# 🥗 FitPlaner • Netto & NP Smart Nutrition & Family Manager
+# 🥗 FitPlaner • Smart Nutrition & Multi-Supermarket Family Manager
 ### *Das 100% KI-freie, autarke Alltags-Betriebssystem für gesunde Ernährung, Wochen-Budget & Zero-Stress-Kochen*
 
-[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Web%20%7C%20Android%20APK-emerald?style=for-the-badge&logo=linux)](https://github.com/meinzeug/netto-np-planer)
+[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Web%20%7C%20Android%20APK-emerald?style=for-the-badge&logo=linux)](https://github.com/meinzeug/fitplaner)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI%20%2B%20Python%203.12-blue?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
 [![React + Vite](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite%20%2B%20Tailwind-61DAFB?style=for-the-badge&logo=react)](https://react.dev)
-[![Capacitor Android](https://img.shields.io/badge/Mobile-Android%20APK%20(4.2%20MB)-3DDC84?style=for-the-badge&logo=android)](https://capacitorjs.com)
-[![Tests](https://img.shields.io/badge/Tests-30%2F30%20Passing-brightgreen?style=for-the-badge&logo=github-actions)](https://github.com/meinzeug/netto-np-planer)
-[![Zero-AI](https://img.shields.io/badge/AI%20Status-100%25%20Generic%20%26%20No--Subscription-orange?style=for-the-badge)](https://github.com/meinzeug/netto-np-planer)
+[![Capacitor Android](https://img.shields.io/badge/Mobile-Android%20APK%20(7.9%20MB)-3DDC84?style=for-the-badge&logo=android)](https://capacitorjs.com)
+[![Tests](https://img.shields.io/badge/Tests-38%2F38%20Passing-brightgreen?style=for-the-badge&logo=github-actions)](https://github.com/meinzeug/fitplaner)
+[![Zero-AI](https://img.shields.io/badge/AI%20Status-100%25%20Generic%20%26%20No--Subscription-orange?style=for-the-badge)](https://github.com/meinzeug/fitplaner)
 
 <br/>
 
-> **FitPlaner** verwandelt den wöchentlichen Netto Marken-Discount & NP Discounter-Einkauf in ein vollautomatisches, wissenschaftlich fundiertes Ernährungs- und Budgeterlebnis.  
-> **Kein Abo. Keine Cloud-KI. Keine Küchenwaage beim Kochen. Volle WLAN-Synchronisation im Haushalt.**
+> **FitPlaner** verwandelt den wöchentlichen Familieneinkauf bei **Netto, NP, Lidl, Aldi, Rewe, Kaufland & Edeka** in ein vollautomatisches, wissenschaftlich fundiertes Ernährungs- und Budgeterlebnis.  
+> **1.220+ Offline-Rezepte. Kein Abo. Keine Cloud-KI. PDF-Einkaufslisten-Export. Volle WLAN-Synchronisation im Haushalt.**
 
 ---
 
@@ -49,14 +49,15 @@
 </td>
 <td width="33%" valign="top">
 
-### 🚶‍♂️ 3. Gang-Laufweg & Daumen
-**Stressfrei durch den Supermarkt.**
-- Sortiert nach Netto/NP Realität:
+### 🚶‍♂️ 3. Gang-Laufweg & PDF
+**Stressfrei durch jeden Supermarkt.**
+- Sortiert nach Filial-Zonen:
   1. *Obst & Gemüse* (Eingang)
-  2. *Kühlregal & Frische*
-  3. *Fleisch & Fisch*
+  2. *Kühlregal & Molkerei*
+  3. *Fleisch & Frischer Fisch*
   4. *Trockensortiment & Vorräte*
-- **📱 Daumen-Modus**: 64px Touch-Felder für einhändiges Gehen mit Korb.
+- **📱 Daumen-Modus**: 64px Touch-Felder.
+- **📄 PDF-Export**: Druckfertige Einkaufsliste mit Checkboxen `[ ]` zum Abhaken.
 
 </td>
 </tr>
@@ -68,7 +69,7 @@
 - Beliebig vor- und zurückblättern (KW 36, 37, 38...)
 - Individuelles Budget pro Woche (z. B. 120 € oder 60 € am Monatsende)
 - Live Restbudget & Spar-Ampel (🟢 / 🟡 / 🔴)
-- Netto & NP Ersparnis-Kalkulation.
+- Multi-Supermarkt Rabatt-Kalkulation.
 
 </td>
 <td width="33%" valign="top">
@@ -105,22 +106,26 @@ graph TD
         Engine2[Mifflin-St Jeor Nährwert- & Tellertrick-Rechner]
         Engine3[Packungsgrößen- & Lager-Kalkulator]
         Engine4[WLAN-Ping Auto-Discovery: UDP 8092 & ARP]
+        Engine5[1.220+ Rezept-Universum & Multi-Supermarkt-Prospekte]
+        PDFGen[PDF Export Engine mit ReportLab]
         WebUI[React 19 + Vite Dashboard: dist/]
     end
 
     subgraph "Smartphones & Tablets im WLAN"
         MobileBrowser[Handy-Browser: Chrome / Safari]
-        NativeAPK[FitPlaner Native Android APK: 4.2 MB]
+        NativeAPK[FitPlaner Native Android APK]
     end
 
     subgraph "Unterwegs im Markt (100% Offline & Autark)"
-        OfflineApp[Einkaufsliste im Daumen-Modus • Barcode-Scanner]
+        OfflineApp[Einkaufsliste im Daumen-Modus • PDF • Barcode-Scanner]
     end
 
     Server --> Engine1
     Server --> Engine2
     Server --> Engine3
     Server --> Engine4
+    Server --> Engine5
+    Server --> PDFGen
     Server --> WebUI
 
     Engine4 <-->|UDP Broadcast 8092 & Heartbeat Ping| NativeAPK
@@ -143,7 +148,7 @@ Der neue Ernährungs-Zeitplaner steuert deinen Tag chronologisch und nimmt dir j
 | **10:30** | 🍎 **Vormittags-Snack** | Dennis: Handvoll Mandeln (Muskelschutz); Sarah: Apfel & Gurkensticks (Sättigung ohne Kalorienlast). |
 | **12:30** | 🍱 **Mittagspause to-go** | Vollwertiges Brotdosen-Gericht (z. B. Kichererbsen-Thunfisch-Salat mit Bio-Ei). Keine teuren Kantinen! |
 | **15:30** | 💧 **Nachmittags-Booster** | 500ml Wasser oder Grüntee + gesunder Snack gegen das 15-Uhr-Leistungstief. |
-| **16:45** | ⏰ **Feierabend-Vorausblick** | 15 Min. vor Feierabend: Erinnerung an kurzen Netto/NP Halt für den Frische-Pick. |
+| **16:45** | ⏰ **Feierabend-Vorausblick** | 15 Min. vor Feierabend: Erinnerung an kurzen Supermarkt-Halt für den Frische-Pick. |
 | **17:15** | 🛒 **Frische-Pick im Markt** | Frischen Fisch, Geflügel oder Babyspinat direkt auf dem Heimweg frisch einpacken. |
 | **18:00** | 🍳 **Herd-Regie & Koch-Start** | Ofen/Pfanne anheizen. Schnelle Zubereitung in meist nur 1 Pfanne/Topf. |
 | **18:30** | 🍽️ **Familien-Dinner** | Servieren nach dem **fairen Tellertrick** am Herd ohne Küchenwaage. |
@@ -171,9 +176,9 @@ Niemand wiegt nach einem anstrengenden Arbeitstag jede Tomate einzeln ab. Der **
 
 Die App wurde mit Capacitor kompiliert und läuft als native Android-App:
 
-- **Schlanke APK**: Nur **4,2 MB** (`FitPlaner.apk` liegt im Hauptverzeichnis).
+- **Schlanke APK**: (`FitPlaner.apk` liegt direkt im Hauptverzeichnis).
 - **Kamera-Unterstützung**: EAN-13 Barcode-Scanner und Kassenbon-Fotografie.
-- **100% Offline im Supermarkt**: Wenn das Mobilfunknetz im Discounter abreißt, schaltet die App verzögerungsfrei auf den Offline-Cache um.
+- **100% Offline im Supermarkt**: Wenn das Mobilfunknetz im Markt abreißt, schaltet die App verzögerungsfrei auf den Offline-Cache um.
 - **WLAN-Auto-Discovery Radar (Port 8092)**:
   - Der Linux-Server sendet und lauscht auf allgemeine UDP-Broadcast-Pings.
   - Sobald das Smartphone zu Hause ins WLAN kommt, gleicht es abgehakte Artikel und verbrauchte Vorräte vollautomatisch mit dem PC ab.
@@ -186,8 +191,8 @@ Im Hauptverzeichnis befindet sich das All-in-One Installationsskript [`setup.sh`
 
 ```bash
 # 1. Repository klonen
-git clone https://github.com/meinzeug/netto-np-planer.git
-cd netto-np-planer
+git clone https://github.com/meinzeug/fitplaner.git
+cd fitplaner
 
 # 2. Lokales Setup ausführen (erstellt .venv, baut Frontend & richtet Desktop-Starter ein)
 ./setup.sh
@@ -200,7 +205,7 @@ cd netto-np-planer
 - **Am PC (Browser)**: `http://localhost:8090`
 - **Vom Smartphone im WLAN**: `http://<DEINE-PC-IP>:8090` *(wird vom Skript automatisch ausgegeben)*
 - **Direkter APK-Download**: `http://<DEINE-PC-IP>:8090/FitPlaner.apk`
-- **Linux-Anwendungsmenü**: Einfach nach **„FitPlaner (Netto & NP)“** suchen!
+- **Linux-Anwendungsmenü**: Einfach nach **„FitPlaner“** suchen!
 
 ---
 
@@ -211,27 +216,30 @@ cd netto-np-planer
 | **Backend** | Python 3.12, FastAPI, Uvicorn | Vollständig asynchron, Pydantic v2 validiert, gebunden an `0.0.0.0` |
 | **Frontend** | React 19, TypeScript, Vite, Tailwind CSS | Komponenten-Architektur, 0 TypeScript-Fehler, < 1s Build-Zeit |
 | **Mobile** | Capacitor 7, Android SDK 34/35 | Native APK, Kamera-Berechtigungen, Offline-PWA-Fallback |
+| **Dokumente** | ReportLab PDF Engine | Druckfertige A4 Einkaufslisten mit Checkboxen und KPI-Karten |
 | **Netzwerk** | UDP Socket Broadcast, ARP Subnet-Probe | Port 8092 Auto-Discovery ohne manuelle IP-Konfiguration |
-| **Ernährung** | Open Food Facts API, Marktguru API | NOVA-Klassifikation (1–4), E-Nummern-Audit, Clean-Eating-Filter |
+| **Ernährung** | 1.220+ Offline-Rezepte, Open Food Facts, Marktguru | NOVA-Klassifikation (1–4), E-Nummern-Audit, Clean-Eating-Filter |
 | **KI-Freiheit** | 100% Deterministisch | Keine monatlichen Kosten, keine externen LLM-Abos, absolute Datensouveränität |
 
 ---
 
 ## 🧪 AUTOMATISIERTE TESTS
 
-Die gesamte Logik wird durch **30 automatisierte Backend-Unit-Tests** abgesichert:
+Die gesamte Logik wird durch **38 automatisierte Backend-Unit-Tests** abgesichert:
 
 ```bash
 .venv/bin/python3 -m unittest discover backend/tests
 ```
 
 ```
-..............................
+......................................
 ----------------------------------------------------------------------
-Ran 30 tests in 0.105s
+Ran 38 tests in 0.441s
 
 OK
 ```
+- `test_pdf_export.py`: Testet PDF-Magic-Bytes (`%PDF-`), Formatierung und Content-Disposition-Download.
+- `test_recipe_universe.py`: Testet 1.220+ Rezepte-Universum, alle 11 Diäten, Null-Wiederholung & Prospekt-Horizont.
 - `test_timeline_schedule.py`: Testet 13 chronologische Stationen, Weckzeit-Shifting & Vorabend-Prep.
 - `test_installer.py`: Testet QR-Code-SVG Generierung, LAN-IP Erkennung und Geräte-Kopplung.
 - `test_daily_hub.py`: Testet Öffnungszeiten-Abgleich, Frische-Pick & Tellertrick.

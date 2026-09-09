@@ -373,11 +373,10 @@ export function App() {
               <div>
                 <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center gap-1.5">
                   FitPlaner
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-stone-900 font-extrabold">Netto</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-600 text-white font-extrabold">NP</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold">Multi-Supermarkt</span>
                 </h1>
                 <span className="text-[10px] text-slate-400 font-semibold block uppercase tracking-wider">
-                  Smartes Kochen & Einkaufen
+                  Smarter Ernährungsplaner & Familien-Manager
                 </span>
               </div>
             </div>

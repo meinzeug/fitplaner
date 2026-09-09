@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# 🥗 FitPlaner - Netto & NP Ernährungsplaner & Familien-Manager
+# 🥗 FitPlaner - Smarter Ernährungsplaner & Multi-Supermarkt Familien-Manager
 # Lokaler Linux PC Installations- & Setup-Assistent
 # ==============================================================================
 
@@ -28,7 +28,7 @@ cat << "EOF"
  |_|    |_|\__|_|    |_|\__,_|_| |_|\___|_|   
 EOF
 echo -e "${COLOR_RESET}"
-echo -e "${COLOR_BOLD}🥗 FitPlaner • Netto & NP Ernährungsplaner & Familien-Manager${COLOR_RESET}"
+echo -e "${COLOR_BOLD}🥗 FitPlaner • Smarter Ernährungsplaner & Multi-Supermarkt Familien-Manager${COLOR_RESET}"
 echo -e "Installations- und Einrichtungs-Assistent für Linux (Ubuntu, Debian, Fedora, Arch)"
 echo "------------------------------------------------------------------"
 
@@ -119,8 +119,8 @@ cat > "$DESKTOP_FILE" << EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=FitPlaner (Netto & NP)
-Comment=Ernährungsplaner, Familien-Manager, Barcode-Scanner & Tellertrick
+Name=FitPlaner
+Comment=Smarter Ernährungsplaner, Multi-Supermarkt Familien-Manager & Einkaufsliste
 Exec=bash -c "cd '$ROOT_DIR' && ./run.sh"
 Icon=$ICON_PATH
 Terminal=true
@@ -177,6 +177,6 @@ if [ -n "$FW_HINT" ]; then
     echo -e "${COLOR_YELLOW}$FW_HINT${COLOR_RESET}\n"
 fi
 echo -e "💡 ${COLOR_BOLD}Tipp:${COLOR_RESET} Du kannst die App ab sofort auch direkt über dein Linux-Startmenü"
-echo -e "   unter dem Namen ${COLOR_BOLD}\"FitPlaner (Netto & NP)\"${COLOR_RESET} aufrufen!"
+echo -e "   unter dem Namen ${COLOR_BOLD}\"FitPlaner\"${COLOR_RESET} aufrufen!"
 echo "------------------------------------------------------------------"
 

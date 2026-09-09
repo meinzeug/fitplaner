@@ -7,7 +7,7 @@ cd "$DIR"
 PORT="${PORT:-8090}"
 
 echo "=========================================================="
-echo "🥗 FitPlaner - Netto & NP Ernährungsplaner & Familien-Manager"
+echo "🥗 FitPlaner - Smarter Ernährungsplaner & Multi-Supermarkt Familien-Manager"
 echo "=========================================================="
 
 # Check Python environment
