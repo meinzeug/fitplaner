@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FitPlaner</string>
+    <string name="title_activity_main">FitPlaner</string>
+    <string name="package_name">de.fitplaner.nettonp</string>
+    <string name="custom_url_scheme">de.fitplaner.nettonp</string>
+</resources>
