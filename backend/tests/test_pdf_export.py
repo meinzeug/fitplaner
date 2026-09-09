@@ -25,6 +25,17 @@ class TestPdfExport(unittest.TestCase):
     def test_pdf_generation_content_and_magic_bytes(self):
         plan = generate_weekly_plan(self.family, week_offset=0)
         s_list = generate_shopping_list_from_plan(plan)
+        
+        # Verify that items have exact product names, brands, and valid EAN-13 barcodes
+        all_items = s_list.items_netto + s_list.items_np + s_list.items_pantry + s_list.items_lidl + s_list.items_aldi
+        self.assertGreater(len(all_items), 0, "Shopping list must have items")
+        for item in all_items:
+            self.assertIsNotNone(item.exact_product_name, f"Item {item.name} must have exact product name")
+            self.assertIsNotNone(item.brand, f"Item {item.name} must have brand")
+            self.assertIsNotNone(item.barcode, f"Item {item.name} must have barcode")
+            self.assertEqual(len(item.barcode), 13, f"Barcode {item.barcode} must be 13 digits")
+            self.assertTrue(item.barcode.isdigit(), f"Barcode {item.barcode} must be numeric")
+
         pdf_bytes = generate_shopping_list_pdf(s_list)
 
         # PDF must start with %PDF header

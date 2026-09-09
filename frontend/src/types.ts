@@ -201,6 +201,9 @@ export interface CustomShoppingItem {
   retailer: Retailer;
   notes?: string;
   is_checked: boolean;
+  exact_product_name?: string;
+  brand?: string;
+  barcode?: string;
 }
 
 export interface ShoppingItem {
@@ -222,6 +225,9 @@ export interface ShoppingItem {
   is_covered_by_stock: boolean;
   aisle?: string;
   substitutes?: string[];
+  exact_product_name?: string;
+  brand?: string;
+  barcode?: string;
 }
 
 export interface FreshPickItem {

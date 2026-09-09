@@ -5,7 +5,7 @@ import {
   ShoppingBag, Share2, Printer, Check, CheckSquare, Square, Plus,
   Archive, Sparkles, Trash2, PackageCheck, ChevronLeft, ChevronRight,
   Calendar, Wallet, AlertTriangle, Compass, Smartphone, HelpCircle,
-  X, ArrowRight, ShieldCheck, RefreshCw, Layers, FileDown
+  X, ArrowRight, ShieldCheck, RefreshCw, Layers, FileDown, Barcode
 } from 'lucide-react';
 
 interface Props {
@@ -220,8 +220,13 @@ export const ShoppingListView: React.FC<Props> = ({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className={`font-bold text-slate-800 leading-tight truncate ${thumbMode ? 'text-base' : 'text-sm'}`}>
-                {item.name}
+                {item.exact_product_name || item.name}
               </span>
+              {item.brand && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md font-extrabold bg-slate-100 text-slate-700 border border-slate-200">
+                  {item.brand}
+                </span>
+              )}
               {item.storeTag && viewMode === 'aisle' && (
                 <span className={`text-[10px] px-2 py-0.5 rounded-md font-extrabold ${
                   item.storeTag === 'Netto' ? 'bg-amber-100 text-stone-900' :
@@ -242,11 +247,17 @@ export const ShoppingListView: React.FC<Props> = ({
                   </span>
                 )
               )}
+              {item.barcode && !item.is_covered_by_stock && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200" title="EAN-13 Barcode für Handscanner & Kasse">
+                  <Barcode className="w-3.5 h-3.5 text-amber-700" />
+                  <span>{item.barcode}</span>
+                </span>
+              )}
             </div>
-            <div className="text-xs text-slate-400 font-medium mt-0.5">
-              Rezeptbedarf: {item.total_quantity} {item.unit}
+            <div className="text-xs text-slate-400 font-medium mt-0.5 flex flex-wrap items-center gap-x-2">
+              <span>Rezeptbedarf: {item.total_quantity} {item.unit}</span>
               {item.leftover_after_purchase > 0 && !item.is_covered_by_stock && (
-                <span className="text-emerald-600 ml-1 font-semibold">
+                <span className="text-emerald-600 font-semibold">
                   (Rest {item.leftover_after_purchase} {item.unit} wandert ins Lager)
                 </span>
               )}

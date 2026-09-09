@@ -199,6 +199,9 @@ class CustomShoppingItem(BaseModel):
     retailer: Literal["Netto", "NP", "Lidl", "Aldi Nord", "Aldi Süd", "Rewe", "Kaufland", "Edeka", "Vorratskammer", "Sonstiges"] = "Netto"
     notes: Optional[str] = None
     is_checked: bool = False
+    exact_product_name: Optional[str] = None
+    brand: Optional[str] = None
+    barcode: Optional[str] = None
 
 
 class ShoppingItem(BaseModel):
@@ -221,6 +224,9 @@ class ShoppingItem(BaseModel):
     is_covered_by_stock: bool = False
     aisle: str = "Trockensortiment & Vorräte"
     substitutes: List[str] = Field(default_factory=list)
+    exact_product_name: Optional[str] = None
+    brand: Optional[str] = None
+    barcode: Optional[str] = None
 
 
 class ShoppingList(BaseModel):
