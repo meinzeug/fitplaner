@@ -1,3 +1,15 @@
+export type Retailer =
+  | 'Netto'
+  | 'NP'
+  | 'Lidl'
+  | 'Aldi Nord'
+  | 'Aldi Süd'
+  | 'Rewe'
+  | 'Kaufland'
+  | 'Edeka'
+  | 'Vorratskammer'
+  | 'Sonstiges';
+
 export interface AdditiveInfo {
   code: string;
   name: string;
@@ -18,7 +30,7 @@ export interface IngredientAnalysis {
 
 export interface ProductOffer {
   id: string;
-  retailer: 'Netto' | 'NP';
+  retailer: Retailer;
   title: string;
   brand?: string;
   original_price?: number;
@@ -148,6 +160,9 @@ export interface WeeklyPlan {
   budget?: number;
   budget_status?: 'ok' | 'warning' | 'exceeded';
   budget_difference?: number;
+  leaflet_availability_status?: 'active' | 'preview' | 'not_yet_published' | 'archived';
+  leaflet_availability_note?: string;
+  active_retailers?: string[];
 }
 
 export interface BudgetInfo {
@@ -183,7 +198,7 @@ export interface CustomShoppingItem {
   quantity: number;
   unit: string;
   category: string;
-  retailer: 'Netto' | 'NP' | 'Vorratskammer' | 'Sonstiges';
+  retailer: Retailer;
   notes?: string;
   is_checked: boolean;
 }
@@ -193,7 +208,7 @@ export interface ShoppingItem {
   total_quantity: number;
   unit: string;
   category: string;
-  retailer: 'Netto' | 'NP' | 'Vorratskammer';
+  retailer: Retailer;
   is_on_sale: boolean;
   unit_price?: number;
   total_price?: number;
@@ -252,7 +267,13 @@ export interface DailyHubResponse {
 export interface ShoppingList {
   items_netto: ShoppingItem[];
   items_np: ShoppingItem[];
+  items_lidl?: ShoppingItem[];
+  items_aldi?: ShoppingItem[];
+  items_rewe?: ShoppingItem[];
+  items_kaufland?: ShoppingItem[];
+  items_edeka?: ShoppingItem[];
   items_pantry: ShoppingItem[];
+  items_by_retailer?: Record<string, ShoppingItem[]>;
   custom_items: CustomShoppingItem[];
   total_price: number;
   total_savings: number;
@@ -282,7 +303,7 @@ export interface LeafletPage {
 
 export interface LeafletBrochure {
   id: string;
-  retailer: 'Netto' | 'NP';
+  retailer: Retailer | string;
   title: string;
   valid_from: string;
   valid_to: string;
@@ -341,4 +362,3 @@ export interface DailyTimelineResponse {
   progress_percent: number;
   prep_tomorrow?: PrepTomorrowSummary | null;
 }
-

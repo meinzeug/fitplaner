@@ -25,12 +25,15 @@ from backend.nutrition.ingredient_analyzer import (
     fetch_open_food_facts_analysis, analyze_ingredient_locally
 )
 from backend.nutrition.recipe_database import RECIPES_DATABASE
+from backend.nutrition.recipe_universe import (
+    get_all_universe_recipes, filter_universe_recipes, get_universe_stats
+)
 from backend.schedule.timeline_engine import (
     generate_daily_timeline, get_schedule_settings,
     update_schedule_settings, toggle_timeline_task, reset_timeline_tasks
 )
 from backend.scrapers.marktguru_client import get_all_supermarket_offers
-from backend.scrapers.leaflets import get_all_leaflets
+from backend.scrapers.leaflets import get_all_leaflets, get_leaflet_by_retailer
 from backend.scanners.barcode_service import lookup_barcode
 from backend.scanners.receipt_scanner import parse_supermarket_receipt
 from backend.pantry.inventory_manager import (
@@ -285,8 +288,8 @@ def scan_receipt_endpoint(req: ReceiptScanRequest):
 # -----------------------------------------------------------
 
 @app.get("/api/leaflets", response_model=List[LeafletBrochure])
-def get_brochures():
-    return get_all_leaflets()
+def get_brochures(retailer: Optional[str] = None):
+    return get_all_leaflets(retailer=retailer)
 
 
 # -----------------------------------------------------------
@@ -400,10 +403,20 @@ async def analyze_product(query: IngredientQuery):
 
 
 @app.get("/api/recipes", response_model=List[Recipe])
-def get_recipes(meal_type: Optional[str] = None):
-    if meal_type:
-        return [r for r in RECIPES_DATABASE if r.meal_type == meal_type]
-    return RECIPES_DATABASE
+def get_recipes(
+    meal_type: Optional[str] = None,
+    diet: Optional[str] = None,
+    limit: Optional[int] = Query(None, description="Max recipes to return (default all)")
+):
+    recipes = filter_universe_recipes(meal_type=meal_type, diet=diet)
+    if limit and limit > 0:
+        return recipes[:limit]
+    return recipes
+
+
+@app.get("/api/recipes/stats")
+def get_recipe_statistics():
+    return get_universe_stats()
 
 
 @app.post("/api/plan/generate", response_model=WeeklyPlan)

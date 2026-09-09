@@ -51,11 +51,24 @@ async def fetch_live_offers_for_retailer(
                     advertisers = item.get("advertisers", [])
                     adv_name = advertisers[0].get("name", "") if advertisers else ""
 
-                    # Detect if Netto or NP/Edeka
-                    if "netto" in adv_name.lower():
+                    # Detect retailer brand
+                    adv_lower = adv_name.lower()
+                    if "netto" in adv_lower:
                         retailer = "Netto"
-                    elif "np" in adv_name.lower() or "edeka" in adv_name.lower():
+                    elif "np" in adv_lower:
                         retailer = "NP"
+                    elif "lidl" in adv_lower:
+                        retailer = "Lidl"
+                    elif "aldi" in adv_lower and ("süd" in adv_lower or "sued" in adv_lower):
+                        retailer = "Aldi Süd"
+                    elif "aldi" in adv_lower:
+                        retailer = "Aldi Nord"
+                    elif "rewe" in adv_lower:
+                        retailer = "Rewe"
+                    elif "kaufland" in adv_lower:
+                        retailer = "Kaufland"
+                    elif "edeka" in adv_lower:
+                        retailer = "Edeka"
                     else:
                         continue  # Skip unrelated retailers
 

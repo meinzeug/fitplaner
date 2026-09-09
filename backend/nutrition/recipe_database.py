@@ -636,3 +636,15 @@ RECIPES_DATABASE: List[Recipe] = [
         image_url="https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=500"
     ),
 ]
+
+# Merge 1,220+ Universe Recipes into RECIPES_DATABASE
+try:
+    from backend.nutrition.recipe_universe import get_all_universe_recipes
+    _universe = get_all_universe_recipes()
+    _existing_ids = {r.id for r in RECIPES_DATABASE}
+    for _r in _universe:
+        if _r.id not in _existing_ids:
+            RECIPES_DATABASE.append(_r)
+except Exception:
+    pass
+

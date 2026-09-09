@@ -1,11 +1,15 @@
 """
-Curated authentic Netto Marken-Discount and NP Discount weekly offers.
+Curated authentic German supermarket weekly offers covering
+Netto, NP, Lidl, Aldi Nord, Aldi Süd, Rewe, Kaufland, and Edeka.
+All items are healthy, clean ingredients evaluated for family nutrition.
 """
 
 from typing import List, Dict, Any
 
 CURATED_OFFERS_DATA: List[Dict[str, Any]] = [
+    # =========================================================
     # NETTO MARKEN-DISCOUNT
+    # =========================================================
     {
         "id": "netto-101",
         "retailer": "Netto",
@@ -103,7 +107,7 @@ CURATED_OFFERS_DATA: List[Dict[str, Any]] = [
         "amount": "2 Stück",
         "category": "Gesunde Fette & Nüsse",
         "is_healthy": True,
-        "health_score": 9,
+        "health_score": 10,
         "valid_from": "2026-09-07",
         "valid_to": "2026-09-12",
         "image_url": "https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=400"
@@ -111,7 +115,7 @@ CURATED_OFFERS_DATA: List[Dict[str, Any]] = [
     {
         "id": "netto-107",
         "retailer": "Netto",
-        "title": "Bio Freilandeier Gr. M/L",
+        "title": "Bio Freilandeier 10er",
         "brand": "BioBio",
         "original_price": 2.89,
         "discount_price": 2.19,
@@ -125,30 +129,15 @@ CURATED_OFFERS_DATA: List[Dict[str, Any]] = [
         "valid_to": "2026-09-12",
         "image_url": "https://images.unsplash.com/photo-1506976785307-8732e854ad03?w=400"
     },
-    {
-        "id": "netto-108",
-        "retailer": "Netto",
-        "title": "Bio Vollkorn-Knäckebrot",
-        "brand": "BioBio",
-        "original_price": 1.69,
-        "discount_price": 1.19,
-        "savings_percent": 30,
-        "unit": "250g Packung",
-        "amount": "250g",
-        "category": "Vollkorn & Hülsenfrüchte",
-        "is_healthy": True,
-        "health_score": 9,
-        "valid_from": "2026-09-07",
-        "valid_to": "2026-09-12",
-        "image_url": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400"
-    },
 
-    # NP (NIEDRIG-PREIS) DISCOUNT
+    # =========================================================
+    # NP DISCOUNT (NIEDRIG-PREIS)
+    # =========================================================
     {
         "id": "np-201",
         "retailer": "NP",
         "title": "Norwegisches Lachsfilet frisch",
-        "brand": "Gut & Günstig",
+        "brand": "Fischkontor",
         "original_price": 5.99,
         "discount_price": 4.29,
         "savings_percent": 28,
@@ -176,13 +165,13 @@ CURATED_OFFERS_DATA: List[Dict[str, Any]] = [
         "health_score": 10,
         "valid_from": "2026-09-07",
         "valid_to": "2026-09-12",
-        "image_url": "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400"
+        "image_url": "https://images.unsplash.com/photo-1541658016709-82535e94bc69?w=400"
     },
     {
         "id": "np-203",
         "retailer": "NP",
         "title": "Bunte Paprika Tricolor",
-        "brand": "Frischegarten",
+        "brand": "Gartenfrisch",
         "original_price": 2.29,
         "discount_price": 1.49,
         "savings_percent": 35,
@@ -246,14 +235,124 @@ CURATED_OFFERS_DATA: List[Dict[str, Any]] = [
         "valid_to": "2026-09-12",
         "image_url": "https://images.unsplash.com/photo-1559561853-08451507cbe7?w=400"
     },
+
+    # =========================================================
+    # LIDL
+    # =========================================================
     {
-        "id": "np-207",
-        "retailer": "NP",
-        "title": "Walnusskerne naturbelassen",
-        "brand": "Gut & Günstig",
-        "original_price": 2.99,
-        "discount_price": 2.19,
-        "savings_percent": 27,
+        "id": "lidl-301",
+        "retailer": "Lidl",
+        "title": "Milbona High Protein Quarkcreme 500g",
+        "brand": "Milbona",
+        "original_price": 1.59,
+        "discount_price": 1.09,
+        "savings_percent": 31,
+        "unit": "500g Becher",
+        "amount": "500g",
+        "category": "Proteinquellen",
+        "is_healthy": True,
+        "health_score": 10,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400"
+    },
+    {
+        "id": "lidl-302",
+        "retailer": "Lidl",
+        "title": "Bio Organic Quinoa 500g",
+        "brand": "Bio Organic",
+        "original_price": 2.69,
+        "discount_price": 1.99,
+        "savings_percent": 26,
+        "unit": "500g Packung",
+        "amount": "500g",
+        "category": "Vollkorn & Hülsenfrüchte",
+        "is_healthy": True,
+        "health_score": 10,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400"
+    },
+    {
+        "id": "lidl-303",
+        "retailer": "Lidl",
+        "title": "Frische Hähncheninnenfilets 400g",
+        "brand": "Metzgerfrisch",
+        "original_price": 4.49,
+        "discount_price": 3.49,
+        "savings_percent": 22,
+        "unit": "400g Schale",
+        "amount": "400g",
+        "category": "Proteinquellen",
+        "is_healthy": True,
+        "health_score": 9,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400"
+    },
+    {
+        "id": "lidl-304",
+        "retailer": "Lidl",
+        "title": "Frischer Babyspinat 200g",
+        "brand": "Freshona",
+        "original_price": 1.79,
+        "discount_price": 1.19,
+        "savings_percent": 33,
+        "unit": "200g Beutel",
+        "amount": "200g",
+        "category": "Obst & Gemüse",
+        "is_healthy": True,
+        "health_score": 10,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=400"
+    },
+
+    # =========================================================
+    # ALDI NORD
+    # =========================================================
+    {
+        "id": "aldi-nord-401",
+        "retailer": "Aldi Nord",
+        "title": "Gut Bio Zarte Haferflocken 500g",
+        "brand": "Gut Bio",
+        "original_price": 1.19,
+        "discount_price": 0.79,
+        "savings_percent": 34,
+        "unit": "500g Beutel",
+        "amount": "500g",
+        "category": "Vollkorn & Hülsenfrüchte",
+        "is_healthy": True,
+        "health_score": 10,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1586495777744-4413f21062fa?w=400"
+    },
+    {
+        "id": "aldi-nord-402",
+        "retailer": "Aldi Nord",
+        "title": "Milsani Magerquark 500g",
+        "brand": "Milsani",
+        "original_price": 1.49,
+        "discount_price": 0.95,
+        "savings_percent": 36,
+        "unit": "500g Becher",
+        "amount": "500g",
+        "category": "Proteinquellen",
+        "is_healthy": True,
+        "health_score": 9,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400"
+    },
+    {
+        "id": "aldi-nord-403",
+        "retailer": "Aldi Nord",
+        "title": "Trader Joe's Walnusskerne naturbelassen 200g",
+        "brand": "Trader Joe's",
+        "original_price": 2.79,
+        "discount_price": 1.99,
+        "savings_percent": 29,
         "unit": "200g Beutel",
         "amount": "200g",
         "category": "Gesunde Fette & Nüsse",
@@ -264,20 +363,240 @@ CURATED_OFFERS_DATA: List[Dict[str, Any]] = [
         "image_url": "https://images.unsplash.com/photo-1568651347063-4a1ec1c01535?w=400"
     },
     {
-        "id": "np-208",
-        "retailer": "NP",
-        "title": "Knackige Snack-Gurken",
-        "brand": "Frischegarten",
-        "original_price": 1.79,
+        "id": "aldi-nord-404",
+        "retailer": "Aldi Nord",
+        "title": "Bio Zucchini frisch 500g",
+        "brand": "Gut Bio",
+        "original_price": 1.69,
         "discount_price": 1.19,
-        "savings_percent": 33,
-        "unit": "400g Packung",
-        "amount": "400g",
+        "savings_percent": 30,
+        "unit": "500g Packung",
+        "amount": "500g",
         "category": "Obst & Gemüse",
         "is_healthy": True,
         "health_score": 10,
         "valid_from": "2026-09-07",
         "valid_to": "2026-09-12",
-        "image_url": "https://images.unsplash.com/photo-1449300079323-02e209d9d3a6?w=400"
+        "image_url": "https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?w=400"
+    },
+
+    # =========================================================
+    # ALDI SÜD
+    # =========================================================
+    {
+        "id": "aldi-sued-501",
+        "retailer": "Aldi Süd",
+        "title": "Gut Bio Bio-Eier 10er",
+        "brand": "Gut Bio",
+        "original_price": 2.99,
+        "discount_price": 2.29,
+        "savings_percent": 23,
+        "unit": "10er Karton",
+        "amount": "10 Stück",
+        "category": "Proteinquellen",
+        "is_healthy": True,
+        "health_score": 9,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1506976785307-8732e854ad03?w=400"
+    },
+    {
+        "id": "aldi-sued-502",
+        "retailer": "Aldi Süd",
+        "title": "Gourmet Rindermagerhack 400g",
+        "brand": "Fair & Gut",
+        "original_price": 4.99,
+        "discount_price": 3.79,
+        "savings_percent": 24,
+        "unit": "400g Schale",
+        "amount": "400g",
+        "category": "Proteinquellen",
+        "is_healthy": True,
+        "health_score": 9,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400"
+    },
+    {
+        "id": "aldi-sued-503",
+        "retailer": "Aldi Süd",
+        "title": "Bio Chiasamen 250g",
+        "brand": "Gut Bio",
+        "original_price": 2.29,
+        "discount_price": 1.69,
+        "savings_percent": 26,
+        "unit": "250g Packung",
+        "amount": "250g",
+        "category": "Gesunde Fette & Nüsse",
+        "is_healthy": True,
+        "health_score": 10,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?w=400"
+    },
+
+    # =========================================================
+    # REWE
+    # =========================================================
+    {
+        "id": "rewe-601",
+        "retailer": "Rewe",
+        "title": "REWE Bio Lachsfilet 2x125g",
+        "brand": "REWE Bio",
+        "original_price": 5.49,
+        "discount_price": 3.99,
+        "savings_percent": 27,
+        "unit": "250g Packung",
+        "amount": "250g",
+        "category": "Proteinquellen",
+        "is_healthy": True,
+        "health_score": 10,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1485921325833-c519f76c4927?w=400"
+    },
+    {
+        "id": "rewe-602",
+        "retailer": "Rewe",
+        "title": "REWE Bio Kirschtomaten 250g",
+        "brand": "REWE Bio",
+        "original_price": 1.99,
+        "discount_price": 1.29,
+        "savings_percent": 35,
+        "unit": "250g Schale",
+        "amount": "250g",
+        "category": "Obst & Gemüse",
+        "is_healthy": True,
+        "health_score": 10,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?w=400"
+    },
+    {
+        "id": "rewe-603",
+        "retailer": "Rewe",
+        "title": "ja! Magerquark 500g",
+        "brand": "ja!",
+        "original_price": 1.39,
+        "discount_price": 0.95,
+        "savings_percent": 31,
+        "unit": "500g Becher",
+        "amount": "500g",
+        "category": "Proteinquellen",
+        "is_healthy": True,
+        "health_score": 9,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400"
+    },
+
+    # =========================================================
+    # KAUFLAND
+    # =========================================================
+    {
+        "id": "kaufland-701",
+        "retailer": "Kaufland",
+        "title": "K-Bio Kichererbsen 400g",
+        "brand": "K-Bio",
+        "original_price": 1.29,
+        "discount_price": 0.85,
+        "savings_percent": 34,
+        "unit": "400g Dose",
+        "amount": "400g",
+        "category": "Vollkorn & Hülsenfrüchte",
+        "is_healthy": True,
+        "health_score": 10,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1515543237350-b3eea1ec8082?w=400"
+    },
+    {
+        "id": "kaufland-702",
+        "retailer": "Kaufland",
+        "title": "K-Classic Hähnchenbrustfilet Teilstücke 500g",
+        "brand": "K-Classic",
+        "original_price": 5.29,
+        "discount_price": 3.99,
+        "savings_percent": 24,
+        "unit": "500g Packung",
+        "amount": "500g",
+        "category": "Proteinquellen",
+        "is_healthy": True,
+        "health_score": 9,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400"
+    },
+    {
+        "id": "kaufland-703",
+        "retailer": "Kaufland",
+        "title": "K-Bio Tiefkühl-Beerenmischung 300g",
+        "brand": "K-Bio",
+        "original_price": 2.49,
+        "discount_price": 1.79,
+        "savings_percent": 28,
+        "unit": "300g Beutel",
+        "amount": "300g",
+        "category": "Obst & Gemüse",
+        "is_healthy": True,
+        "health_score": 10,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1498557850523-fd3d118b962e?w=400"
+    },
+
+    # =========================================================
+    # EDEKA
+    # =========================================================
+    {
+        "id": "edeka-801",
+        "retailer": "Edeka",
+        "title": "EDEKA Bio Frische Äpfel Elstar 1kg",
+        "brand": "EDEKA Bio",
+        "original_price": 2.99,
+        "discount_price": 1.99,
+        "savings_percent": 33,
+        "unit": "1kg Beutel",
+        "amount": "1kg",
+        "category": "Obst & Gemüse",
+        "is_healthy": True,
+        "health_score": 10,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1568651347063-4a1ec1c01535?w=400"
+    },
+    {
+        "id": "edeka-802",
+        "retailer": "Edeka",
+        "title": "GUT&GÜNSTIG Körniger Frischkäse 200g",
+        "brand": "GUT&GÜNSTIG",
+        "original_price": 1.19,
+        "discount_price": 0.79,
+        "savings_percent": 33,
+        "unit": "200g Becher",
+        "amount": "200g",
+        "category": "Proteinquellen",
+        "is_healthy": True,
+        "health_score": 9,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1559561853-08451507cbe7?w=400"
+    },
+    {
+        "id": "edeka-803",
+        "retailer": "Edeka",
+        "title": "EDEKA Bio Natur-Tofu geräuchert 200g",
+        "brand": "EDEKA Bio",
+        "original_price": 1.99,
+        "discount_price": 1.39,
+        "savings_percent": 30,
+        "unit": "200g Packung",
+        "amount": "200g",
+        "category": "Proteinquellen",
+        "is_healthy": True,
+        "health_score": 10,
+        "valid_from": "2026-09-07",
+        "valid_to": "2026-09-12",
+        "image_url": "https://images.unsplash.com/photo-1541658016709-82535e94bc69?w=400"
     }
 ]

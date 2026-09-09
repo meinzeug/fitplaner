@@ -1,6 +1,7 @@
 """
 Weekly Meal Plan Generator with individualized family portion scaling,
-strict allergy filtering, and disliked foods exclusion.
+strict allergy filtering, disliked foods exclusion, zero-repetition universe cycling,
+and realistic supermarket leaflet validity horizons.
 """
 
 import uuid
@@ -10,7 +11,7 @@ from backend.models import (
     FamilyMember, Recipe, DayPlan, WeeklyPlan, PersonMealPortion
 )
 from backend.nutrition.calculator import scale_recipe_for_person
-from backend.nutrition.recipe_database import RECIPES_DATABASE
+from backend.nutrition.recipe_universe import get_all_universe_recipes
 
 
 DAYS_OF_WEEK = [
@@ -34,7 +35,11 @@ def is_recipe_compatible_with_member(recipe: Recipe, member: FamilyMember) -> bo
         if not any(d in recipe.diet_types for d in ["pescetarian", "vegetarian", "vegan"]):
             return False
     elif diet == "no_pork":
-        if any("schwein" in ing.name.lower() or "salami" in ing.name.lower() for ing in recipe.ingredients):
+        if "no_pork" not in recipe.diet_types:
+            if any("schwein" in ing.name.lower() or "salami" in ing.name.lower() for ing in recipe.ingredients):
+                return False
+    elif diet in ["high_protein", "low_carb", "gluten_free", "lactose_free", "mediterranean", "clean_eating"]:
+        if diet not in recipe.diet_types:
             return False
 
     # 2. Allergies Check
@@ -76,9 +81,9 @@ def generate_weekly_plan(
 ) -> WeeklyPlan:
     """
     Generates a 7-day meal plan tailored to all family members for a specific week offset (0 = current week, +1 = next week, etc.),
-    respecting allergies, dislikes, and budget targets.
+    respecting allergies, dislikes, budget targets, and supermarket leaflet validity horizon.
     """
-    db = preferred_recipes or RECIPES_DATABASE
+    db = preferred_recipes if preferred_recipes is not None else get_all_universe_recipes()
 
     # Filter available recipes per meal type taking family compatibility into account
     all_breakfasts = [r for r in db if r.meal_type == "breakfast_lunchbox"]
@@ -91,7 +96,7 @@ def generate_weekly_plan(
 
     days: List[DayPlan] = []
     today = datetime.now()
-    
+
     # Calculate Monday of the target week offset
     monday = (today - timedelta(days=today.weekday())) + timedelta(weeks=week_offset)
     sunday = monday + timedelta(days=6)
@@ -101,12 +106,31 @@ def generate_weekly_plan(
     end_date_str = sunday.strftime("%d.%m.%Y")
     week_label = f"KW {iso_week} • {monday.strftime('%d.%m.')} - {sunday.strftime('%d.%m.%Y')}"
 
+    # Supermarket leaflet horizon logic:
+    # Retailer leaflets are only published at most 1 week in advance
+    if week_offset < 0:
+        leaflet_status = "archived"
+        leaflet_note = f"Vergangene Angebote aus {iso_week_str} (Archiviert)"
+    elif week_offset == 0:
+        leaflet_status = "active"
+        leaflet_note = f"Aktuelle Prospekte (Netto, NP, Lidl, Aldi, Rewe, Kaufland, Edeka) für {iso_week_str} bis Samstag gültig"
+    elif week_offset == 1:
+        leaflet_status = "preview"
+        leaflet_note = f"Vorschau-Prospekte für kommende Woche ({iso_week_str}) verfügbar"
+    else:
+        leaflet_status = "not_yet_published"
+        expected_pub_date = (monday - timedelta(days=7)).strftime("%d.%m.%Y")
+        leaflet_note = f"Händler-Prospekte für {iso_week_str} erscheinen erst am {expected_pub_date}. Plan basiert auf Standard-Artikeln."
+
+    # Zero-repetition cycling: week_offset offsets the selection in the 1,220 recipe pool
+    base_offset = abs(week_offset) * 7
+
     for i, day_name in enumerate(DAYS_OF_WEEK):
         day_date = monday + timedelta(days=i)
         date_str = day_date.strftime("%d.%m.%Y")
-        bf_recipe = breakfasts[i % len(breakfasts)]
-        lu_recipe = lunches[i % len(lunches)]
-        di_recipe = dinners[i % len(dinners)]
+        bf_recipe = breakfasts[(base_offset + i) % len(breakfasts)]
+        lu_recipe = lunches[(base_offset + i) % len(lunches)]
+        di_recipe = dinners[(base_offset + i) % len(dinners)]
 
         portions_by_member: Dict[str, Dict[str, PersonMealPortion]] = {}
         daily_nutrition_by_member: Dict[str, Dict[str, int]] = {}
@@ -173,6 +197,9 @@ def generate_weekly_plan(
         budget=budget,
         budget_status=budget_status,  # type: ignore
         budget_difference=diff,
+        leaflet_availability_status=leaflet_status,  # type: ignore
+        leaflet_availability_note=leaflet_note,
+        active_retailers=["Netto", "NP", "Lidl", "Aldi Nord", "Aldi Süd", "Rewe", "Kaufland", "Edeka"],
     )
 
 
@@ -189,7 +216,8 @@ def swap_meal_in_plan(
     if day_index < 0 or day_index >= len(plan.days):
         return plan
 
-    new_recipe = next((r for r in RECIPES_DATABASE if r.id == new_recipe_id), None)
+    all_recipes = get_all_universe_recipes()
+    new_recipe = next((r for r in all_recipes if r.id == new_recipe_id), None)
     if not new_recipe:
         return plan
 

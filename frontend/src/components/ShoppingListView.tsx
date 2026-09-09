@@ -56,7 +56,7 @@ export const ShoppingListView: React.FC<Props> = ({
   const [customName, setCustomName] = useState('');
   const [customQty, setCustomQty] = useState(1);
   const [customUnit, setCustomUnit] = useState('Stück');
-  const [customRetailer, setCustomRetailer] = useState<'Netto' | 'NP' | 'Sonstiges'>('Netto');
+  const [customRetailer, setCustomRetailer] = useState<string>('Netto');
 
   if (!shoppingList) {
     return (
@@ -110,6 +110,11 @@ export const ShoppingListView: React.FC<Props> = ({
 
     collectItems(shoppingList.items_netto);
     collectItems(shoppingList.items_np);
+    if (shoppingList.items_lidl) collectItems(shoppingList.items_lidl);
+    if (shoppingList.items_aldi) collectItems(shoppingList.items_aldi);
+    if (shoppingList.items_rewe) collectItems(shoppingList.items_rewe);
+    if (shoppingList.items_kaufland) collectItems(shoppingList.items_kaufland);
+    if (shoppingList.items_edeka) collectItems(shoppingList.items_edeka);
     collectItems(shoppingList.items_pantry);
 
     for (const c of shoppingList.custom_items) {
@@ -138,7 +143,7 @@ export const ShoppingListView: React.FC<Props> = ({
       name: customName.trim(),
       quantity: customQty,
       unit: customUnit,
-      retailer: customRetailer,
+      retailer: customRetailer as any,
       category: 'Zusatzartikel',
     });
     setCustomName('');
@@ -149,6 +154,11 @@ export const ShoppingListView: React.FC<Props> = ({
   const allItemsWithStore = [
     ...shoppingList.items_netto.map((i) => ({ ...i, storeTag: 'Netto' })),
     ...shoppingList.items_np.map((i) => ({ ...i, storeTag: 'NP' })),
+    ...(shoppingList.items_lidl || []).map((i) => ({ ...i, storeTag: 'Lidl' })),
+    ...(shoppingList.items_aldi || []).map((i) => ({ ...i, storeTag: 'Aldi' })),
+    ...(shoppingList.items_rewe || []).map((i) => ({ ...i, storeTag: 'Rewe' })),
+    ...(shoppingList.items_kaufland || []).map((i) => ({ ...i, storeTag: 'Kaufland' })),
+    ...(shoppingList.items_edeka || []).map((i) => ({ ...i, storeTag: 'Edeka' })),
     ...shoppingList.items_pantry.map((i) => ({ ...i, storeTag: 'Vorratskammer' })),
   ];
 
@@ -511,11 +521,17 @@ export const ShoppingListView: React.FC<Props> = ({
               </select>
               <select
                 value={customRetailer}
-                onChange={(e) => setCustomRetailer(e.target.value as any)}
+                onChange={(e) => setCustomRetailer(e.target.value)}
                 className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-bold"
               >
-                <option value="Netto">🟡 Netto</option>
-                <option value="NP">🔴 NP</option>
+                <option value="Netto">🟡 Netto Marken-Discount</option>
+                <option value="NP">🔴 NP Discount</option>
+                <option value="Lidl">🔵 Lidl</option>
+                <option value="Aldi Nord">🔷 Aldi Nord</option>
+                <option value="Aldi Süd">🔷 Aldi Süd</option>
+                <option value="Rewe">🔴 Rewe</option>
+                <option value="Kaufland">🔴 Kaufland</option>
+                <option value="Edeka">🟡 Edeka</option>
                 <option value="Sonstiges">⚪ Sonstiges</option>
               </select>
               <button
@@ -595,6 +611,106 @@ export const ShoppingListView: React.FC<Props> = ({
                   </div>
                   <div className="p-3 divide-y divide-slate-100">
                     {shoppingList.items_np.map((it) => renderItemRow(it, `np-${it.name}`))}
+                  </div>
+                </div>
+              )}
+
+              {/* Lidl */}
+              {shoppingList.items_lidl && shoppingList.items_lidl.length > 0 && (
+                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 bg-blue-600 text-white flex items-center justify-between font-black">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-extrabold">🔵 Lidl</h3>
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-black/20 font-semibold">
+                        {shoppingList.items_lidl.length} Positionen
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold">
+                      {shoppingList.items_lidl.filter((i) => checkedMap[`lidl-${i.name}`]).length} / {shoppingList.items_lidl.length} erledigt
+                    </span>
+                  </div>
+                  <div className="p-3 divide-y divide-slate-100">
+                    {shoppingList.items_lidl.map((it) => renderItemRow(it, `lidl-${it.name}`))}
+                  </div>
+                </div>
+              )}
+
+              {/* Aldi */}
+              {shoppingList.items_aldi && shoppingList.items_aldi.length > 0 && (
+                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 bg-sky-800 text-white flex items-center justify-between font-black">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-extrabold">🔷 Aldi (Nord & Süd)</h3>
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-black/20 font-semibold">
+                        {shoppingList.items_aldi.length} Positionen
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold">
+                      {shoppingList.items_aldi.filter((i) => checkedMap[`aldi-${i.name}`]).length} / {shoppingList.items_aldi.length} erledigt
+                    </span>
+                  </div>
+                  <div className="p-3 divide-y divide-slate-100">
+                    {shoppingList.items_aldi.map((it) => renderItemRow(it, `aldi-${it.name}`))}
+                  </div>
+                </div>
+              )}
+
+              {/* Rewe */}
+              {shoppingList.items_rewe && shoppingList.items_rewe.length > 0 && (
+                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 bg-red-700 text-white flex items-center justify-between font-black">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-extrabold">🔴 Rewe Dein Markt</h3>
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-black/20 font-semibold">
+                        {shoppingList.items_rewe.length} Positionen
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold">
+                      {shoppingList.items_rewe.filter((i) => checkedMap[`rewe-${i.name}`]).length} / {shoppingList.items_rewe.length} erledigt
+                    </span>
+                  </div>
+                  <div className="p-3 divide-y divide-slate-100">
+                    {shoppingList.items_rewe.map((it) => renderItemRow(it, `rewe-${it.name}`))}
+                  </div>
+                </div>
+              )}
+
+              {/* Kaufland */}
+              {shoppingList.items_kaufland && shoppingList.items_kaufland.length > 0 && (
+                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 bg-red-800 text-white flex items-center justify-between font-black">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-extrabold">🔴 Kaufland</h3>
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-black/20 font-semibold">
+                        {shoppingList.items_kaufland.length} Positionen
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold">
+                      {shoppingList.items_kaufland.filter((i) => checkedMap[`kaufland-${i.name}`]).length} / {shoppingList.items_kaufland.length} erledigt
+                    </span>
+                  </div>
+                  <div className="p-3 divide-y divide-slate-100">
+                    {shoppingList.items_kaufland.map((it) => renderItemRow(it, `kaufland-${it.name}`))}
+                  </div>
+                </div>
+              )}
+
+              {/* Edeka */}
+              {shoppingList.items_edeka && shoppingList.items_edeka.length > 0 && (
+                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 bg-yellow-400 text-blue-950 flex items-center justify-between font-black">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-extrabold">🟡 Edeka</h3>
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-black/15 font-semibold">
+                        {shoppingList.items_edeka.length} Positionen
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold">
+                      {shoppingList.items_edeka.filter((i) => checkedMap[`edeka-${i.name}`]).length} / {shoppingList.items_edeka.length} erledigt
+                    </span>
+                  </div>
+                  <div className="p-3 divide-y divide-slate-100">
+                    {shoppingList.items_edeka.map((it) => renderItemRow(it, `edeka-${it.name}`))}
                   </div>
                 </div>
               )}

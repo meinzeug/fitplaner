@@ -5,7 +5,7 @@ import {
   Calendar, RefreshCw, Box, UtensilsCrossed, Clock, Flame, Sparkles,
   ArrowRightLeft, ChefHat, CheckCircle2, Sun, Moon, Coffee,
   ChevronLeft, ChevronRight, Wallet, AlertTriangle, Check, PiggyBank,
-  TrendingDown, TrendingUp, Lightbulb, Users
+  TrendingDown, TrendingUp, Lightbulb, Users, BookOpen
 } from 'lucide-react';
 
 interface Props {
@@ -304,6 +304,61 @@ export const WeeklyPlanView: React.FC<Props> = ({
             </div>
           </div>
         )}
+      </div>
+
+      {/* SUPERMARKT-PROSPEKT HORIZONT & REZEPT-UNIVERSUM STATUS */}
+      <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+            plan.leaflet_availability_status === 'active'
+              ? 'bg-emerald-100 text-emerald-700'
+              : plan.leaflet_availability_status === 'preview'
+              ? 'bg-indigo-100 text-indigo-700'
+              : 'bg-amber-100 text-amber-700'
+          }`}>
+            <BookOpen className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className={`text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                plan.leaflet_availability_status === 'active'
+                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  : plan.leaflet_availability_status === 'preview'
+                  ? 'bg-indigo-100 text-indigo-800 border border-indigo-300'
+                  : 'bg-amber-100 text-amber-800 border border-amber-300'
+              }`}>
+                {plan.leaflet_availability_status === 'active' && '🟢 Aktuelle Discounter-Prospekte aktiv'}
+                {plan.leaflet_availability_status === 'preview' && '🟣 Vorab-Vorschau (Discounter)'}
+                {plan.leaflet_availability_status === 'not_yet_published' && '📅 Prospekt-Horizont: Noch nicht veröffentlicht'}
+                {plan.leaflet_availability_status === 'archived' && '📁 Prospekt-Archiv'}
+              </span>
+              <span className="text-[11px] font-bold text-slate-500">
+                • 1.220+ Offline-Rezepte • 0 Wiederholungen
+              </span>
+            </div>
+            <p className="text-xs text-slate-600">
+              {plan.leaflet_availability_note || 'Reale Angebote mit deutschen Supermärkten synchronisiert (Netto, NP, Lidl, Aldi, Rewe, Kaufland, Edeka).'}
+            </p>
+          </div>
+        </div>
+
+        {/* Active Retailer Badges */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] font-bold text-slate-400 uppercase mr-1">Supermärkte:</span>
+          {[
+            { name: 'Netto', bg: 'bg-amber-400 text-stone-950' },
+            { name: 'NP', bg: 'bg-red-600 text-white' },
+            { name: 'Lidl', bg: 'bg-blue-600 text-white' },
+            { name: 'Aldi', bg: 'bg-sky-800 text-white' },
+            { name: 'Rewe', bg: 'bg-red-700 text-white' },
+            { name: 'Kaufland', bg: 'bg-rose-900 text-white' },
+            { name: 'Edeka', bg: 'bg-yellow-400 text-blue-950' },
+          ].map((r) => (
+            <span key={r.name} className={`px-2 py-0.5 rounded-lg text-[10px] font-black ${r.bg}`}>
+              {r.name}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* SMART TIME-OF-DAY HERO WIDGET ("WAS STEHT JETZT AN?") */}

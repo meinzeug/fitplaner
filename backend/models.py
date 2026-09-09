@@ -26,7 +26,7 @@ class IngredientAnalysis(BaseModel):
 
 class ProductOffer(BaseModel):
     id: str
-    retailer: Literal["Netto", "NP"]
+    retailer: Literal["Netto", "NP", "Lidl", "Aldi Nord", "Aldi Süd", "Rewe", "Kaufland", "Edeka", "Sonstiges"]
     title: str
     brand: Optional[str] = None
     original_price: Optional[float] = None
@@ -72,22 +72,6 @@ class RecipeIngredient(BaseModel):
     matched_offer_id: Optional[str] = None
     matched_offer_retailer: Optional[str] = None
     matched_offer_price: Optional[float] = None
-
-
-class Recipe(BaseModel):
-    id: str
-    title: str
-    meal_type: Literal["breakfast_lunchbox", "lunch_lunchbox", "dinner_home"]
-    prep_time_minutes: int
-    lunchbox_ready: bool = True
-    base_calories: int
-    base_protein_g: int
-    base_carbs_g: int
-    base_fat_g: int
-    ingredients: List[RecipeIngredient]
-    instructions: List[str]
-    tags: List[str] = Field(default_factory=list)
-    image_url: Optional[str] = None
 
 
 class ScaledIngredient(BaseModel):
@@ -165,6 +149,9 @@ class WeeklyPlan(BaseModel):
     budget: float = 120.0
     budget_status: Literal["ok", "warning", "exceeded"] = "ok"
     budget_difference: float = 0.0
+    leaflet_availability_status: Literal["active", "preview", "not_yet_published", "archived"] = "active"
+    leaflet_availability_note: str = ""
+    active_retailers: List[str] = Field(default_factory=lambda: ["Netto", "NP", "Lidl", "Aldi Nord", "Rewe", "Kaufland", "Edeka"])
 
 
 class BudgetInfo(BaseModel):
@@ -209,7 +196,7 @@ class CustomShoppingItem(BaseModel):
     quantity: float
     unit: str = "Stück"
     category: str = "Sonstiges"
-    retailer: Literal["Netto", "NP", "Vorratskammer", "Sonstiges"] = "Netto"
+    retailer: Literal["Netto", "NP", "Lidl", "Aldi Nord", "Aldi Süd", "Rewe", "Kaufland", "Edeka", "Vorratskammer", "Sonstiges"] = "Netto"
     notes: Optional[str] = None
     is_checked: bool = False
 
@@ -219,7 +206,7 @@ class ShoppingItem(BaseModel):
     total_quantity: float
     unit: str
     category: str
-    retailer: Literal["Netto", "NP", "Vorratskammer"]
+    retailer: Literal["Netto", "NP", "Lidl", "Aldi Nord", "Aldi Süd", "Rewe", "Kaufland", "Edeka", "Vorratskammer", "Sonstiges"]
     is_on_sale: bool = False
     unit_price: Optional[float] = None
     total_price: Optional[float] = None
@@ -239,7 +226,13 @@ class ShoppingItem(BaseModel):
 class ShoppingList(BaseModel):
     items_netto: List[ShoppingItem] = Field(default_factory=list)
     items_np: List[ShoppingItem] = Field(default_factory=list)
+    items_lidl: List[ShoppingItem] = Field(default_factory=list)
+    items_aldi: List[ShoppingItem] = Field(default_factory=list)
+    items_rewe: List[ShoppingItem] = Field(default_factory=list)
+    items_kaufland: List[ShoppingItem] = Field(default_factory=list)
+    items_edeka: List[ShoppingItem] = Field(default_factory=list)
     items_pantry: List[ShoppingItem] = Field(default_factory=list)
+    items_by_retailer: Dict[str, List[ShoppingItem]] = Field(default_factory=dict)
     custom_items: List[CustomShoppingItem] = Field(default_factory=list)
     total_price: float = 0.0
     total_savings: float = 0.0
@@ -316,7 +309,7 @@ class LeafletPage(BaseModel):
 
 class LeafletBrochure(BaseModel):
     id: str
-    retailer: Literal["Netto", "NP"]
+    retailer: Literal["Netto", "NP", "Lidl", "Aldi Nord", "Aldi Süd", "Rewe", "Kaufland", "Edeka", "Sonstiges"]
     title: str
     valid_from: str
     valid_to: str

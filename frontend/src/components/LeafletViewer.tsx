@@ -4,15 +4,26 @@ import { BookOpen, ExternalLink, ChevronLeft, ChevronRight, Tag, Sparkles, PlusC
 
 interface Props {
   leaflets: LeafletBrochure[];
-  onAddCustomItem: (name: string, retailer: 'Netto' | 'NP') => Promise<void>;
+  onAddCustomItem: (name: string, retailer: any) => Promise<void>;
 }
 
+const RETAILER_CONFIG: Record<string, { label: string; activeClass: string; icon: string }> = {
+  'Netto': { label: 'Netto Marken-Discount', activeClass: 'bg-amber-400 text-stone-900 shadow-md', icon: '🟡' },
+  'NP': { label: 'NP Discount', activeClass: 'bg-red-600 text-white shadow-md', icon: '🔴' },
+  'Lidl': { label: 'Lidl', activeClass: 'bg-blue-600 text-white shadow-md', icon: '🔵' },
+  'Aldi Nord': { label: 'Aldi Nord', activeClass: 'bg-sky-800 text-white shadow-md', icon: '🔷' },
+  'Aldi Süd': { label: 'Aldi Süd', activeClass: 'bg-indigo-900 text-white shadow-md', icon: '🔷' },
+  'Rewe': { label: 'Rewe', activeClass: 'bg-red-700 text-white shadow-md', icon: '🔴' },
+  'Kaufland': { label: 'Kaufland', activeClass: 'bg-rose-900 text-white shadow-md', icon: '🔴' },
+  'Edeka': { label: 'Edeka', activeClass: 'bg-yellow-400 text-blue-950 shadow-md', icon: '🟡' },
+};
+
 export const LeafletViewer: React.FC<Props> = ({ leaflets, onAddCustomItem }) => {
-  const [selectedRetailer, setSelectedRetailer] = useState<'Netto' | 'NP'>('Netto');
+  const [selectedRetailer, setSelectedRetailer] = useState<string>('Netto');
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [addedToast, setAddedToast] = useState<string | null>(null);
 
-  const activeBrochure = leaflets.find((l) => l.retailer === selectedRetailer) || leaflets[0];
+  const activeBrochure = leaflets.find((l) => l.retailer.toLowerCase() === selectedRetailer.toLowerCase()) || leaflets[0];
   const pages = activeBrochure?.pages || [];
   const currentPage = pages[currentPageIndex] || pages[0];
 
@@ -53,36 +64,6 @@ export const LeafletViewer: React.FC<Props> = ({ leaflets, onAddCustomItem }) =>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Retailer Switcher */}
-          <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl">
-            <button
-              onClick={() => {
-                setSelectedRetailer('Netto');
-                setCurrentPageIndex(0);
-              }}
-              className={`px-4 py-2 rounded-xl text-xs font-black transition ${
-                selectedRetailer === 'Netto'
-                  ? 'bg-amber-400 text-stone-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              🟡 Netto Marken-Discount
-            </button>
-            <button
-              onClick={() => {
-                setSelectedRetailer('NP');
-                setCurrentPageIndex(0);
-              }}
-              className={`px-4 py-2 rounded-xl text-xs font-black transition ${
-                selectedRetailer === 'NP'
-                  ? 'bg-red-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              🔴 NP Discount
-            </button>
-          </div>
-
           <a
             href={activeBrochure.online_url}
             target="_blank"
@@ -93,6 +74,31 @@ export const LeafletViewer: React.FC<Props> = ({ leaflets, onAddCustomItem }) =>
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         </div>
+      </div>
+
+      {/* Multi-Retailer Switcher Pills */}
+      <div className="bg-white p-2.5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2 overflow-x-auto scrollbar-thin">
+        {Object.entries(RETAILER_CONFIG).map(([retKey, conf]) => {
+          const isSelected = selectedRetailer.toLowerCase() === retKey.toLowerCase();
+          const hasBrochure = leaflets.some((l) => l.retailer.toLowerCase() === retKey.toLowerCase());
+          return (
+            <button
+              key={retKey}
+              onClick={() => {
+                setSelectedRetailer(retKey);
+                setCurrentPageIndex(0);
+              }}
+              className={`px-3.5 py-2 rounded-xl text-xs font-extrabold whitespace-nowrap transition flex items-center gap-1.5 ${
+                isSelected
+                  ? conf.activeClass
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+              } ${!hasBrochure ? 'opacity-50' : ''}`}
+            >
+              <span>{conf.icon}</span>
+              <span>{conf.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Toast */}
