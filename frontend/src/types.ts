@@ -65,6 +65,12 @@ export interface FamilyMember {
   target_protein_g: number;
   target_carbs_g: number;
   target_fat_g: number;
+  role_title?: string;
+  age_group?: 'mini' | 'kid' | 'teen' | 'junior' | 'adult' | 'senior';
+  chore_points?: number;
+  badges?: string[];
+  water_intake_ml?: number;
+  daily_water_target_ml?: number;
 }
 
 export interface RecipeIngredient {
@@ -403,3 +409,111 @@ export interface DailyTimelineResponse {
   progress_percent: number;
   prep_tomorrow?: PrepTomorrowSummary | null;
 }
+
+export interface FamilyChore {
+  id: string;
+  title: string;
+  description: string;
+  assigned_member_id?: string;
+  assigned_member_name?: string;
+  age_group: 'mini' | 'kid' | 'teen' | 'junior' | 'adult' | 'all';
+  min_age: number;
+  difficulty: 'easy' | 'medium' | 'chef';
+  points: number;
+  meal_type: 'breakfast' | 'lunch' | 'dinner' | 'prep' | 'general';
+  station_id?: string;
+  day_index: number;
+  is_completed: boolean;
+  completed_by_name?: string;
+  icon: string;
+}
+
+export interface MemberVitalityDetail {
+  member_id: string;
+  member_name: string;
+  age: number;
+  age_group: string;
+  role_title: string;
+  score: number;
+  status: string;
+  calories_target: number;
+  protein_target_g: number;
+  fiber_target_g: number;
+  water_intake_ml: number;
+  water_target_ml: number;
+  water_percent: number;
+  key_focus_nutrient: string;
+  actionable_tip: string;
+  badges: string[];
+}
+
+export interface FamilyVitalityScore {
+  overall_score: number;
+  status_label: string;
+  status_color: string;
+  plants_count: number;
+  plants_target: number;
+  plants_percent: number;
+  plants_list: string[];
+  missing_plant_types: string[];
+  fiber_score: number;
+  omega3_score: number;
+  sugar_radar_score: number;
+  hydration_score: number;
+  family_points_total: number;
+  family_star_goal: number;
+  family_star_percent: number;
+  members: MemberVitalityDetail[];
+  vitality_tips: string[];
+}
+
+export interface MeshSyncPacket {
+  device_id: string;
+  device_name: string;
+  timestamp: string;
+  sequence_id: number;
+  checked_shopping_items: string[];
+  completed_chores: string[];
+  member_points: Record<string, number>;
+  member_water: Record<string, number>;
+  lunchbox_packed?: boolean;
+  fresh_pick_bought?: boolean;
+  dinner_cooked?: boolean;
+}
+
+export interface MeshStatusResponse {
+  mode: 'lan_mesh' | 'bluetooth_ready' | 'offline_autonomous' | 'internet_connected';
+  is_lan_available: boolean;
+  is_bluetooth_ready: boolean;
+  is_internet_available: boolean;
+  active_peers_count: number;
+  last_sync_time: string;
+  offline_queue_length: number;
+  local_ip: string;
+  bluetooth_service_uuid: string;
+}
+
+export interface PairedDevice {
+  id: string;
+  name: string;
+  model: string;
+  ip_address: string;
+  connected_at: string;
+  last_sync: string;
+  is_online: boolean;
+  assigned_member_id?: string;
+}
+
+export interface InstallerInfoResponse {
+  lan_ip: string;
+  port: number;
+  apk_available: boolean;
+  apk_download_url: string;
+  apk_file_size_mb?: number;
+  pairing_url: string;
+  qr_code_svg: string;
+  qr_code_pairing_svg: string;
+  paired_devices: PairedDevice[];
+}
+
+

@@ -19,9 +19,20 @@ from backend.models import (
     ReceiptScanResult, LeafletBrochure, BudgetInfo, UpdateBudgetRequest,
     DailyHubResponse, UpdateDailyStatusRequest, ScaledIngredient,
     ScheduleTimeSettings, TimelineTask, DailyTimelineResponse,
-    UpdateScheduleSettingsRequest, ToggleTaskRequest, PrepTomorrowSummary
+    UpdateScheduleSettingsRequest, ToggleTaskRequest, PrepTomorrowSummary,
+    FamilyChore, FamilyVitalityScore, MemberVitalityDetail,
+    MeshSyncPacket, MeshStatusResponse
 )
 from backend.nutrition.calculator import enrich_family_member
+from backend.health.vitality_engine import (
+    calculate_family_vitality, calculate_water_target, evaluate_member_vitality
+)
+from backend.family.chore_engine import (
+    generate_daily_chores, toggle_chore, get_current_chores
+)
+from backend.sync.mesh_sync import (
+    get_mesh_status, create_local_sync_packet, merge_peer_sync_packet
+)
 from backend.nutrition.ingredient_analyzer import (
     fetch_open_food_facts_analysis, analyze_ingredient_locally
 )
@@ -72,7 +83,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initial default profiles
+# Initial default profiles (Demonstrating complete multi-generation family: Parents, Teen, Kid)
 DEFAULT_MEMBERS_DATA = [
     {
         "id": "mem-1",
@@ -85,6 +96,8 @@ DEFAULT_MEMBERS_DATA = [
         "goal": "gain_muscle",
         "dietary_preference": "high_protein",
         "allergies": [],
+        "chore_points": 25,
+        "water_intake_ml": 1750,
     },
     {
         "id": "mem-2",
@@ -97,6 +110,36 @@ DEFAULT_MEMBERS_DATA = [
         "goal": "lose_weight",
         "dietary_preference": "all",
         "allergies": [],
+        "chore_points": 30,
+        "water_intake_ml": 1500,
+    },
+    {
+        "id": "mem-3",
+        "name": "Lea",
+        "gender": "female",
+        "age": 12,
+        "height_cm": 150,
+        "weight_kg": 42,
+        "activity_level": "active",
+        "goal": "maintain",
+        "dietary_preference": "all",
+        "allergies": [],
+        "chore_points": 20,
+        "water_intake_ml": 1250,
+    },
+    {
+        "id": "mem-4",
+        "name": "Felix",
+        "gender": "male",
+        "age": 8,
+        "height_cm": 130,
+        "weight_kg": 28,
+        "activity_level": "active",
+        "goal": "maintain",
+        "dietary_preference": "all",
+        "allergies": [],
+        "chore_points": 15,
+        "water_intake_ml": 1000,
     },
 ]
 
@@ -914,6 +957,102 @@ try:
     start_discovery_service(server_port=8090)
 except Exception as e:
     print(f"[Discovery] Could not start UDP listener: {e}")
+
+
+# -----------------------------------------------------------
+# FAMILIEN-VITALITÄT, 30-PFLANZEN-CHALLENGE & KÜCHEN-ÄMTLI
+# -----------------------------------------------------------
+
+@app.get("/api/vitality/radar", response_model=FamilyVitalityScore)
+def get_family_vitality_radar():
+    """Calculates overall family vitality, 30-plants microbiome count, and age-tailored scores."""
+    plan = get_or_create_weekly_plan(0)
+    return calculate_family_vitality(family_profiles, plan)
+
+
+@app.get("/api/family/chores", response_model=List[FamilyChore])
+def get_family_chores(day_index: Optional[int] = Query(None)):
+    """Returns today's age-appropriate kitchen and prep chores distributed across family members."""
+    if day_index is None:
+        day_index = datetime.now().weekday()
+    plan = get_or_create_weekly_plan(0)
+    day_plan = plan.days[day_index] if plan and plan.days and day_index < len(plan.days) else None
+    return generate_daily_chores(family_profiles, day_index, day_plan)
+
+
+class ToggleChoreRequest(BaseModel):
+    is_completed: bool
+
+
+@app.post("/api/family/chores/{chore_id}/toggle")
+def toggle_family_chore(chore_id: str, req: ToggleChoreRequest):
+    """Marks a family chore as completed or uncompleted and awards Vital-Stars."""
+    chore, delta = toggle_chore(chore_id, req.is_completed, family_profiles)
+    if not chore:
+        raise HTTPException(status_code=404, detail=f"Chore {chore_id} not found")
+    return {
+        "status": "success",
+        "chore": chore,
+        "points_delta": delta,
+        "members": family_profiles
+    }
+
+
+class WaterIntakeRequest(BaseModel):
+    delta_ml: int = 250  # Default 1 glass = 250ml
+
+
+@app.post("/api/family/members/{member_id}/water")
+def update_member_water(member_id: str, req: WaterIntakeRequest):
+    """Tracks water intake for a family member (+/- 250ml glasses)."""
+    for m in family_profiles:
+        if m.id == member_id:
+            m.water_intake_ml = max(0, getattr(m, "water_intake_ml", 0) + req.delta_ml)
+            return {
+                "status": "success",
+                "member_id": m.id,
+                "name": m.name,
+                "water_intake_ml": m.water_intake_ml,
+                "water_target_ml": m.daily_water_target_ml
+            }
+    raise HTTPException(status_code=404, detail=f"Member {member_id} not found")
+
+
+# -----------------------------------------------------------
+# HALB-AUTARKE PEER-TO-PEER WLAN & BLUETOOTH MESH SYNCHRONISATION
+# -----------------------------------------------------------
+
+@app.get("/api/sync/mesh-status", response_model=MeshStatusResponse)
+def get_local_mesh_status():
+    """Returns local network and Bluetooth LE mesh status for autonomous offline operation."""
+    return get_mesh_status()
+
+
+@app.post("/api/sync/mesh-push")
+def push_mesh_sync_packet(packet: MeshSyncPacket):
+    """Receives and merges a delta sync packet from a peer smartphone over Wi-Fi or Bluetooth LE."""
+    res = merge_peer_sync_packet(
+        packet=packet,
+        chores=get_current_chores(),
+        members=family_profiles,
+        daily_hub_state=daily_hub_state
+    )
+    return res
+
+
+@app.get("/api/sync/mesh-pull", response_model=MeshSyncPacket)
+def pull_mesh_sync_packet():
+    """Builds a local state snapshot to transfer to a peer phone."""
+    active_chores = get_current_chores()
+    completed_ids = [c.id for c in active_chores if c.is_completed]
+    return create_local_sync_packet(
+        device_id="fitplaner-host-node",
+        device_name="FitPlaner Basis-Knoten",
+        checked_items=[],
+        completed_chores=completed_ids,
+        members=family_profiles,
+        daily_hub_state=daily_hub_state
+    )
 
 
 # -----------------------------------------------------------

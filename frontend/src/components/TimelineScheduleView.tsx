@@ -36,7 +36,7 @@ import {
 
 interface Props {
   onOpenRecipe?: (dayIndex: number, mealType: 'breakfast' | 'lunch' | 'dinner', recipeOrId?: any) => void;
-  onNavigateTab?: (tab: 'heute' | 'woche' | 'einkauf') => void;
+  onNavigateTab?: (tab: 'heute' | 'woche' | 'einkauf' | 'vitalitaet' | 'aemtli') => void;
 }
 
 export const TimelineScheduleView: React.FC<Props> = ({

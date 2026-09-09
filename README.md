@@ -1,21 +1,23 @@
 <div align="center">
 
-# 🥗 FitPlaner • Smart Family Nutrition & Multi-Retailer Hub
-### *Das autarke, 100% KI-freie Alltags-Betriebssystem für gesunde Familienernährung, Budgetkontrolle & Zero-Stress-Kochen*
+# 🥗 FitPlaner • Family Health Super App & Multi-Retailer Hub
+### *Das autarke, 100% KI-freie Alltags-Betriebssystem für maximale Familiengesundheit, altersgerechte Küchen-Ämtli & dezentralen WLAN/Bluetooth-Mesh-Sync*
 
-[![GitHub Release](https://img.shields.io/badge/Release-v2.0.0--Universal-emerald?style=for-the-badge&logo=github)](https://github.com/meinzeug/fitplaner)
+[![GitHub Release](https://img.shields.io/badge/Release-v2.5.0--SuperApp-emerald?style=for-the-badge&logo=github)](https://github.com/meinzeug/fitplaner)
 [![Platform](https://img.shields.io/badge/Plattform-Linux%20%7C%20Web%20%7C%20Android%20APK-0078D4?style=for-the-badge&logo=linux)](https://github.com/meinzeug/fitplaner)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI%20%2B%20Python%203.12-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
 [![React 19](https://img.shields.io/badge/Frontend-React%2019%20%2B%20TypeScript%20%2B%20Tailwind-61DAFB?style=for-the-badge&logo=react)](https://react.dev)
-[![Mobile APK](https://img.shields.io/badge/Android%20App-FitPlaner.apk%20(4.2%20MB)-3DDC84?style=for-the-badge&logo=android)](https://github.com/meinzeug/fitplaner)
+[![Mobile APK](https://img.shields.io/badge/Android%20App-FitPlaner.apk%20(P2P%20Mesh)-3DDC84?style=for-the-badge&logo=android)](https://github.com/meinzeug/fitplaner)
 [![PDF Engine](https://img.shields.io/badge/Export-Druckfertige%20PDF--Einkaufsliste-red?style=for-the-badge&logo=adobe-acrobat-reader)](https://github.com/meinzeug/fitplaner)
-[![Tests](https://img.shields.io/badge/Tests-38%2F38%20Passing%20(100%25)-brightgreen?style=for-the-badge&logo=pytest)](https://github.com/meinzeug/fitplaner)
+[![Tests](https://img.shields.io/badge/Tests-47%2F47%20Passing%20(100%25)-brightgreen?style=for-the-badge&logo=pytest)](https://github.com/meinzeug/fitplaner)
+[![P2P Mesh](https://img.shields.io/badge/Mesh%20Sync-WLAN%20%2B%20Bluetooth%20LE-blueviolet?style=for-the-badge&logo=bluetooth)](https://github.com/meinzeug/fitplaner)
+[![Mikrobiom](https://img.shields.io/badge/Gesundheit-30--Pflanzen--Radar-teal?style=for-the-badge)](https://github.com/meinzeug/fitplaner)
 [![Zero AI](https://img.shields.io/badge/KI--Status-100%25%20Lokal%20%26%20Deterministisch-orange?style=for-the-badge)](https://github.com/meinzeug/fitplaner)
 
 <br/>
 
-> **FitPlaner** verwandelt den stressigen Familienalltag und den Wocheneinkauf bei **Netto, NP, Lidl, Aldi Nord/Süd, Rewe, Kaufland & Edeka** in ein vollautomatisches, mathematisch optimiertes Erlebnis.  
-> **1.220+ Offline-Rezepte. Kein Abo. Keine externen Cloud-APIs. PDF-Einkaufslisten-Export. Minutengenaue Tages-Regie & Tellertrick.**
+> **FitPlaner** ist die All-in-One **Super App für die Familie**: Sie vereint kompromisslose **Präventions-Gesundheit** (30-Pflanzen-Mikrobiom-Challenge, altersgerechte Nährstoffe, Hydrations-Tracker), **faire Aufgabenverteilung in der Küche** nach Entwicklungsstufen (Mini, Kid, Teen, Junior, Erwachsener) mit spielerischem Sternepott und einen **halb-autarken Peer-to-Peer Mesh-Abgleich** via **WLAN & Bluetooth LE** zwischen allen Familien-Smartphones.  
+> **1.220+ Offline-Rezepte. Kein Abo. Keine externen Cloud-APIs. 100% autark untereinander. Internet nur für Prospekte.**
 
 ---
 
@@ -29,7 +31,43 @@
 <tr>
 <td width="33%" valign="top">
 
-### 🌟 1. Vollvernetzte Startseite
+### 🌿 1. Vitalitäts-Radar & 30 Pflanzen
+**Maximale Darm- & Zellgesundheit für alle.**
+- **30-Pflanzen-Wochen-Challenge**: Erfasst automatisch Vollkorn, Nüsse, Samen, Hülsenfrüchte, Gemüse & Obst nach *American Gut Project*.
+- **0–100 Vitality Radar**: Ganzheitlicher Score aus Pflanzen-Diversität, Ballaststoffen, Hydration & 0% Industriezucker.
+- **Interaktiver Wasser-Tracker**: Individuelle Zielmengen nach Körpergewicht (ml/kg) mit Schnell-Button `+250 ml`.
+- **Altersgerechte Nährstoff-Booster**: Spezifische Empfehlungen für Knochen, Konzentration, Muskeln & Herz.
+
+</td>
+<td width="33%" valign="top">
+
+### 🤝 2. Altersgerechte Küchen-Ämtli
+**Faire Arbeitsaufteilung nach Entwicklungsalter.**
+- **Entwicklungsstufen-Katalog**:
+  - 👶 *Mini (3–5 J.)*: Beeren waschen, Salat zupfen.
+  - 🧒 *Kid (6–9 J.)*: Tisch decken, Haferflocken wiegen, Gurken schälen.
+  - 🧑 *Teen (10–14 J.)*: Gemüse würfeln, Schul-Snack packen, Pfanne rühren.
+  - 🧑‍🍳 *Junior (15–18 J.)*: One-Pan kochen, Overnight-Oats, Frische-Pick.
+  - 👨‍👩‍👦 *Erwachsene (19+ J.)*: Herd-Regie, Heißes Braten & Wochenplanung.
+- **Sternepott-Gamification**: Jede erledigte Aufgabe bringt Vital-Sterne für ein gemeinsames Familien-Ziel (z. B. 50 Sterne = Familienausflug!).
+
+</td>
+<td width="33%" valign="top">
+
+### 📶 3. Dezentraler P2P Mesh-Sync
+**Autark untereinander – ohne Fremd-Server.**
+- **WLAN & Bluetooth LE Direkt-Abgleich**:
+  - Handys der Familienmitglieder synchronisieren sich automatisch untereinander, sobald sie in Funkreichweite sind.
+  - Funktioniert im Heimnetzwerk (UDP Broadcast / Multicast) sowie direkt per **Bluetooth LE GATT** ohne Router.
+- **Konfliktfreier Delta-Sync**: Einkaufslisten-Häkchen, erledigte Aufgaben und Trinkmengen verschmelzen nahtlos per Set-Union & LWW.
+- **Internet nur für Prospekte**: Absolute Privatsphäre – Familiendaten verlassen niemals die eigenen Geräte.
+
+</td>
+</tr>
+<tr>
+<td width="33%" valign="top">
+
+### 🌟 4. Vollvernetzte Startseite
 **Jede Station führt direkt ans Ziel.**
 - **Minutengenaue Tages-Regie**: 13 chronologische Stationen von 06:30 bis 22:30 Uhr.
 - **Tiefenverlinkung**: Direkte Buttons zu Rezepten, Zubereitungsschritten, Brotdosen-Tipps und der Einkaufsliste.
@@ -39,7 +77,7 @@
 </td>
 <td width="33%" valign="top">
 
-### 🍲 2. 1.220+ Rezepte-Universum
+### 🍲 5. 1.220+ Rezepte-Universum
 **100% KI-frei & Null Wiederholungen.**
 - Riesige Offline-Rezeptdatenbank für **alle 11 Ernährungsweisen**:
   - *Mischkost, High Protein, Low Carb / Keto*
@@ -52,7 +90,7 @@
 </td>
 <td width="33%" valign="top">
 
-### 🛒 3. Multi-Supermarkt Radar
+### 🛒 6. Multi-Supermarkt Radar
 **Echte Prospekte & Prospekt-Horizont.**
 - Integration aller großen Ketten: **Netto, NP, Lidl, Aldi Nord, Aldi Süd, Rewe, Kaufland, Edeka**.
 - **Realistischer Prospekt-Horizont**:
@@ -66,7 +104,7 @@
 <tr>
 <td width="33%" valign="top">
 
-### 📄 4. PDF-Einkaufslisten-Export
+### 📄 7. PDF-Einkaufslisten-Export
 **Druckfertig & gangoptimiert für den Markt.**
 - Professionelle PDF-Generierung mit **ReportLab**.
 - **Sortiert nach Markt-Laufweg**:
@@ -79,18 +117,19 @@
 </td>
 <td width="33%" valign="top">
 
-### 🍽️ 5. Der faire Tellertrick
+### 🍽️ 8. Der faire Tellertrick
 **Schluss mit grammgenauem Wiegen am Herd.**
 - **Ein** Gericht für die ganze Familie kochen.
 - Portionierung nach intuitiven **Kellenmaßen**:
   - *Dennis (Muskelaufbau)*: 🥄 3 Kellen Hauptgericht + 1 gehäufte Handvoll Reis.
   - *Sarah (Kaloriendefizit)*: 🥄 1,5 Kellen Hauptgericht + 2 lockere Hände Salat.
+  - *Kinder / Jugendliche*: Altersgerechte Kellenportionen ohne Diätstress.
 - Basiert auf exakter Mifflin-St Jeor BMR/TDEE-Formel.
 
 </td>
 <td width="33%" valign="top">
 
-### 📦 6. Vorratskammer & Barcode
+### 📦 9. Vorratskammer & Barcode
 **Zero Waste & Null Doppelkäufe.**
 - EAN-13 Barcode-Scanner & Kassenbon-Erfassung.
 - **Automatischer Lager-Abzug**: Was bereits zuhause vorrätig ist, kostet auf der Einkaufsliste **0,00 €**!
@@ -102,17 +141,17 @@
 <tr>
 <td width="33%" valign="top">
 
-### 📅 7. Wöchentliche Budgets
+### 📅 10. Wöchentliche Budgets
 **Multi-Wochen-Navigation & Spar-Ampel.**
 - Beliebig vor- und zurückblättern (KW 36, KW 37, KW 38...).
-- Individuelles Wochenbudget festlegbar (z. B. 120 € oder Monatsende-Sparwoche mit 60 €).
+- Individuelles Wochenbudget festlegbar (z. B. 120 € oder Sparwoche mit 60 €).
 - Live Restbudget-Berechnung & Warn-Ampel (🟢 / 🟡 / 🔴).
 - Transparente Spar- und Deckungsübersicht.
 
 </td>
 <td width="33%" valign="top">
 
-### 🥪 8. 12-Min.-Vorabend-Trick
+### 🥪 11. 12-Min.-Vorabend-Trick
 **Morgens 0 Minuten Stress.**
 - **20:00 Uhr Station**: Vorbereitung der Brotdose und des Frühstücks für den nächsten Tag in nur 12 Minuten.
 - Overnight-Oats quellen über Nacht im Kühlschrank.
@@ -121,11 +160,12 @@
 </td>
 <td width="33%" valign="top">
 
-### 📱 9. Android APK & WLAN-Radar
+### 📱 12. Android APK & Mesh-Pairing
 **Immer synchron im ganzen Haushalt.**
-- Native Android-App (**FitPlaner.apk**, 4,2 MB) direkt zum Download verlinkt.
-- **Zero-Config Auto-Discovery**: Linux-Server und Handy finden sich automatisch über UDP-Broadcast auf **Port 8092**.
-- Offline-Modus im Supermarkt ohne Funkloch-Ärger.
+- Native Android-App (**FitPlaner.apk**) direkt im Heimnetz verlinkt.
+- Bluetooth LE & WLAN-Multicast Berechtigungen direkt integriert.
+- Automatische Erkennung anderer Familien-Geräte in Funkreichweite.
+- 100% Offline-Betrieb im Supermarkt ohne Mobilfunk.
 
 </td>
 </tr>
@@ -133,48 +173,145 @@
 
 ---
 
-## 🏛️ GESAMT-ARCHITEKTUR & SYSTEM-TOPOLOGIE
+## 🌿 FAMILIENGESUNDHEIT & DAS 30-PFLANZEN-MIKROBIOM-RADAR
 
-FitPlaner ist modular, robust und vollständig unabhängig von externen Cloud-Diensten konzipiert:
+Gesundheit ist kein Zufall, sondern die Summe täglicher Routinen. Das integrierte **Vitalitäts-Radar** fokussiert sich auf die zentralen Säulen moderner Präventionsmedizin:
+
+```mermaid
+pie title "FitPlaner Vitalitäts-Score (0–100 Punkte)"
+    "30-Pflanzen-Diversität (Mikrobiom)" : 40
+    "Ausreichende Hydration (ml/kg)" : 25
+    "Ballaststoff-Ziele" : 20
+    "0% Industriezucker-Bonus" : 15
+```
+
+### 🧬 Die 30-Pflanzen-Challenge
+Studien des renommierten *American Gut Project* belegen: Menschen, die pro Woche mindestens **30 verschiedene pflanzliche Lebensmittel** (Gemüse, Obst, Vollkorn, Hülsenfrüchte, Nüsse, Samen, Kräuter) verzehren, verfügen über ein signifikant vielfältigeres Darm-Mikrobiom, ein stärkeres Immunsystem und eine optimierte mentale Leistungsfähigkeit.
+- FitPlaner scannt alle im Wochenplan enthaltenen Rezepte automatisch.
+- Jede Zutat wird kategorisiert (`Kategorie: Hülsenfrüchte, Nüsse, Beeren, Blattgemüse, Vollkorn`).
+- Ein interaktiver Fortschrittsbalken zeigt der Familie auf einen Blick, wie viele der 30 Pflanzen in der aktuellen Woche bereits erreicht sind.
+
+### 💧 Wissenschaftlicher Hydrations-Tracker
+Wasser ist der wichtigste Nährstoff des Körpers. FitPlaner berechnet für jedes Familienmitglied den individuellen Bedarf:
+- **Formel**: 35–40 ml Wasser pro Kilogramm Körpergewicht.
+- **Interaktives Logging**: Mit dem Schnell-Button `+250 ml` loggt jedes Familienmitglied sein getrunkenes Glas Wasser direkt in der App.
+- **P2P-Sync**: Der aktuelle Wasserstand synchronisiert sich automatisch mit allen Familien-Geräten.
+
+### 🎯 Altersgerechte Nährstoff-Booster
+| Altersstufe | Zielgruppe | Nährstoff-Fokus | FitPlaner Booster-Lebensmittel |
+| :--- | :--- | :--- | :--- |
+| **Mini (3–5 J.)** | Felix | Calcium, Vitamin D, gesunde Fette | Magerquark, Beeren, Sesam, Mandelmus |
+| **Kid (6–9 J.)** | Felix | Ballaststoffe, Eisen, langkettige Carbs | Haferflocken, Karotten-Sticks, Erbsen, Äpfel |
+| **Teen (10–14 J.)** | Lea | Eisen, Omega-3, Zink, B-Vitamine | Leinsamen, Walnüsse, Linsen, Kürbiskerne |
+| **Junior (15–18 J.)** | Jugend | Biologisches Protein, Magnesium | Kichererbsen, Quinoa, Sonnenblumenkerne |
+| **Adult (19+ J.)** | Dennis & Sarah | Herz-Kreislauf, Polyphenole, Muskelschutz | Olivenöl, dunkle Beeren, Brokkoli, Ingwer |
+
+---
+
+## 🤝 ALTERSGERECHTE KÜCHEN-ÄMTLI & STERNEPOTT-GAMIFICATION
+
+Gemeinsam kochen und die Küche sauber halten schweißt die Familie zusammen und nimmt den Eltern die gesamte mentale Last ab. FitPlaner teilt Aufgaben automatisch nach dem Entwicklungsalter zu:
+
+```
+                          🌟 DER FAMILIEN-STERNEPOTT 🌟
+          [★★★★★★★★★★★★★★★★★★★★····················] 24 / 50 Sterne
+                      🎯 Ziel: Gemeinsamer Kino- & Badetag!
+```
+
+### 📋 Der Ämtli-Katalog nach Entwicklungsstufen:
+- **👶 Mini (3–5 Jahre)**:
+  - 🍓 *Beeren waschen* (Früchte in Sieb spülen) • `+2 ★`
+  - 🥬 *Salatblätter zupfen* (Blätter schonend zerteilen) • `+2 ★`
+  - 🥄 *Servietten verteilen* (Auf die Plätze legen) • `+1 ★`
+- **🧒 Kid (6–9 Jahre)**:
+  - 🍽️ *Tisch eindecken* (Teller, Besteck, Gläser aufstellen) • `+3 ★`
+  - 🥣 *Haferflocken abmessen* (Müsli mit Kelle in Schalen füllen) • `+2 ★`
+  - 🥕 *Gurken & Karotten schälen* (Mit sicherem Sparschäler) • `+3 ★`
+  - 🥤 *Wassergläser einschenken* (Frisches Wasser für alle) • `+2 ★`
+- **🧑 Teen (10–14 Jahre)**:
+  - 🥒 *Gemüse würfeln* (Paprika, Zucchini mundgerecht schneiden) • `+4 ★`
+  - 🎒 *Schul-Brotdose packen* (Gemüsesticks & Nüsse einpacken) • `+3 ★`
+  - 🍳 *Pfanne rühren* (Zutaten bei mittlerer Hitze wenden) • `+3 ★`
+  - 🍽️ *Geschirrspüler ausräumen* (Sauberes Geschirr verstauen) • `+4 ★`
+- **🧑‍🍳 Junior (15–18 Jahre)**:
+  - 🥘 *Eigenständiges One-Pan Gericht* (Komplettes Pfannengericht zubereiten) • `+6 ★`
+  - 🌙 *Overnight-Oats für alle vorbereiten* (Gläser für den Morgen anrühren) • `+4 ★`
+  - 🛒 *Frische-Pick im Markt abholen* (Auf dem Heimweg frische Zutaten besorgen) • `+5 ★`
+- **👨‍👩‍👦 Erwachsene (19+ Jahre)**:
+  - 🔥 *Herd-Regie & Heißes Braten* (Scharfes Anbraten, Kochstellen-Sicherheit) • `+3 ★`
+  - 📅 *Wochenplan & Prospekt-Abgleich* (Budget- & Angebotsprüfung) • `+3 ★`
+  - 🧹 *Küchen-Endreinigung* (Arbeitsplatten & Herd nach dem Kochen säubern) • `+4 ★`
+
+---
+
+## 📶 HALB-AUTARKES PEER-TO-PEER MESH (WLAN & BLUETOOTH LE)
+
+FitPlaner ist als **halb-autarkes Netzwerk** konzipiert:
+1. **Autark im Haushalt**: Alle Familiendaten (Einkaufslisten-Häkchen, Küchen-Ämtli, Trinkmengen, Wochenpläne, Vorratsstände) verbleiben ausschließlich auf den Geräten der Familie.
+2. **Direkte Synchronisation**: Die Handys der Familienmitglieder tauschen Daten direkt per **lokalem WLAN** oder **Bluetooth Low Energy (BLE)** aus, wenn sie sich begegnen.
+3. **Internet nur für Prospekte**: Eine Internetverbindung wird ausschließlich benötigt, wenn neue Supermarkt-Prospekte (Netto, Lidl, Aldi, Rewe etc.) heruntergeladen werden.
 
 ```mermaid
 graph TB
-    subgraph "Heimnetzwerk / Linux PC (Host: 0.0.0.0:8090)"
+    subgraph "Heimnetzwerk / Linux Server (Host: 0.0.0.0:8090)"
         CoreServer["FastAPI Core Application"]
         
-        subgraph "Engines & Fachlogik"
+        subgraph "Super App Engines"
+            VitalityEng["Vitalitäts-Radar & 30-Pflanzen-Engine"]
+            ChoreEng["Altersgerechte Küchen-Ämtli & Gamification"]
+            MeshSyncEng["P2P Mesh Engine (WLAN & BLE Bridge)"]
             RecipeUniv["Rezept-Universum (1.220+ Rezepte)"]
             MultiLeaflet["Multi-Supermarkt Prospekt-Engine"]
             TimelineEng["Timeline Engine & Tages-Regie"]
             NutritionEng["Mifflin-St Jeor & Tellertrick"]
             PantryEng["Vorrats- & Packungsgrößen-Engine"]
             PDFGen["ReportLab PDF-Export-Engine"]
-            UDPDiscovery["UDP Radar & Heartbeat (Port 8092)"]
         end
 
-        WebFrontend["React 19 + TypeScript + Tailwind (dist/)"]
+        WebFrontend["React 19 + TypeScript + Tailwind"]
     end
 
-    subgraph "Clients im Haushalt & Unterwegs"
-        MobileBrowser["Smartphone / Tablet Browser"]
-        AndroidApp["FitPlaner Native Android APK"]
-        PrintedPDF["Gedruckte Einkaufsliste (A4)"]
+    subgraph "Familienmitglieder (Mobile Devices in Reichweite)"
+        Phone1["📱 Handy Dennis (Papa / Adult)"]
+        Phone2["📱 Handy Sarah (Mama / Adult)"]
+        Phone3["📱 Tablet Lea (12J / Teen)"]
+        Phone4["📱 Handy Felix (8J / Kid)"]
     end
 
+    subgraph "Autarke Peer-to-Peer Vernetzung"
+        P2PWLAN["📶 Lokales WLAN (UDP Broadcast / Multicast)"]
+        P2PBLE["🔵 Bluetooth LE GATT Service (0000ffe0)"]
+    end
+
+    CoreServer --> VitalityEng
+    CoreServer --> ChoreEng
+    CoreServer --> MeshSyncEng
     CoreServer --> RecipeUniv
     CoreServer --> MultiLeaflet
     CoreServer --> TimelineEng
     CoreServer --> NutritionEng
     CoreServer --> PantryEng
     CoreServer --> PDFGen
-    CoreServer --> UDPDiscovery
     CoreServer --> WebFrontend
 
-    WebFrontend <-->|HTTP / WebSocket 8090| MobileBrowser
-    UDPDiscovery <-->|Broadcast Port 8092| AndroidApp
-    AndroidApp <-->|REST API Sync| CoreServer
-    PDFGen -->|Download| PrintedPDF
+    Phone1 <-->|P2P Mesh| P2PWLAN
+    Phone2 <-->|P2P Mesh| P2PWLAN
+    Phone3 <-->|P2P Mesh| P2PWLAN
+    Phone4 <-->|P2P Mesh| P2PWLAN
+
+    Phone1 <-->|Bluetooth LE Ad-hoc| P2PBLE
+    Phone2 <-->|Bluetooth LE Ad-hoc| P2PBLE
+    Phone3 <-->|Bluetooth LE Ad-hoc| P2PBLE
+    Phone4 <-->|Bluetooth LE Ad-hoc| P2PBLE
+
+    CoreServer <-->|LAN Sync / HTTP 8090| P2PWLAN
 ```
+
+### 🔵 Bluetooth LE GATT Spezifikation:
+- **Service UUID**: `0000ffe0-0000-1000-8000-00805f9b34fb`
+- **Data Characteristic UUID**: `0000ffe1-0000-1000-8000-00805f9b34fb` (Read, Write Without Response, Notify)
+- **Status Characteristic UUID**: `0000ffe2-0000-1000-8000-00805f9b34fb` (Read, Notify)
+- **Konfliktfreie Verschmelzung**: Verwendet Last-Write-Wins (LWW) und Set-Union für Einkaufs-Checkboxen und Ämtli-Status.
 
 ---
 
@@ -249,11 +386,11 @@ FitPlaner enthält eine kuratierte Offline-Bibliothek aus über 1.220 Rezepten, 
 
 ## 📱 ANDROID APP & AUTO-DISCOVERY RADAR
 
-Die native Android-App (`FitPlaner.apk`) verbindet sich vollautomatisch mit deinem PC:
+Die native Android-App (`FitPlaner.apk`) verbindet sich vollautomatisch mit deinem PC und anderen Familien-Smartphones:
 
-1. **APK Herunterladen**: Direkt im Dashboard über das Menü oder den Footer herunterladen (ca. 4,2 MB).
-2. **Im WLAN öffnen**: Die App lauscht auf den UDP-Broadcast auf **Port 8092**.
-3. **Zero-Config Sync**: Sobald du nach dem Einkauf nach Hause kommst, werden abgehakte Artikel und verbrauchte Vorräte automatisch mit dem Haupt-PC synchronisiert.
+1. **APK Herunterladen**: Direkt im Dashboard über das Menü, den P2P-Mesh-Button oder den Footer herunterladen.
+2. **Im WLAN öffnen**: Die App lauscht auf den UDP-Broadcast auf **Port 8092** und verbindet sich ohne manuelle Konfiguration.
+3. **P2P Mesh Sync**: Geräte in der Nähe gleichen Checkboxen, Küchen-Ämtli und Wasserstände direkt über Bluetooth LE & WLAN ab.
 4. **Offline-Funktion**: Im Supermarkt funktioniert die App auch im tiefsten Funkloch vollständig autark.
 
 ---
@@ -284,21 +421,24 @@ cd fitplaner
 
 ## 🧪 TESTSUITE & QUALITÄTSSICHERUNG
 
-FitPlaner wird durch eine lückenlose Testsuite aus **38 automatisierten Unit-Tests** abgesichert:
+FitPlaner wird durch eine lückenlose Testsuite aus **47 automatisierten Unit-Tests** abgesichert:
 
 ```bash
 .venv/bin/python3 -m unittest discover backend/tests
 ```
 
 ```
-......................................
+...............................................
 ----------------------------------------------------------------------
-Ran 38 tests in 0.449s
+Ran 47 tests in 0.943s
 
 OK
 ```
 
 ### Abgedeckte Testbereiche:
+- `test_family_vitality.py`: Testet 30-Pflanzen-Wochen-Challenge, Mikrobiom-Score, Hydrations-Tracker (ml/kg) und altersgerechte Nährstoffprofile.
+- `test_chores_engine.py`: Testet Entwicklungsstufen (Mini, Kid, Teen, Junior, Adult), Aufgaben-Katalog, Punktevergabe und Sternepott.
+- `test_mesh_sync.py`: Testet P2P-Delta-Erstellung, LWW-Konfliktlösung, Set-Union für Checkboxen und Bluetooth-UUIDs.
 - `test_pdf_export.py`: Validierung des PDF-Binärstreams (`%PDF-1.4`), Tabellenlayout und Header.
 - `test_recipe_universe.py`: Testet 1.220 Rezepte, alle 11 Ernährungsweisen, Rotationslogik und Prospekt-Horizont.
 - `test_timeline_schedule.py`: Testet die 13 chronologischen Stationen, Zeitanpassungen und Vorabend-Mealprep.
@@ -316,10 +456,11 @@ OK
 | Komponente | Technologie | Zweck / Besonderheit |
 | :--- | :--- | :--- |
 | **Backend-Framework** | Python 3.12, FastAPI, Uvicorn | Vollständig asynchron, Pydantic v2 validiert, gebunden an `0.0.0.0:8090` |
+| **Super App Engines** | Python Modular Engines | Vitalitäts-Radar (30 Pflanzen), Alters-Ämtli, P2P Mesh Synchronization |
 | **Frontend-UI** | React 19, TypeScript, Vite, Tailwind CSS | Schnelle Ladezeiten (< 1s Build), moderne Glasmorphismus-Komponenten |
 | **Dokumenten-Engine** | ReportLab PDF Engine | Druckfertige A4 Einkaufslisten mit Checkboxen und Vektorgrafiken |
-| **Netzwerk & Sync** | UDP Socket Broadcast, ARP Subnet-Probe | Port 8092 Auto-Discovery ohne manuelle IP-Eingabe |
-| **Mobile Runtime** | Capacitor 7, Android SDK 34/35 | Native Android APK (4,2 MB) mit Kamera-Barcode-Scanner |
+| **P2P Mesh & Sync** | Bluetooth LE GATT, UDP Broadcast | Dezentraler Direktabgleich zwischen Smartphones ohne externe Cloud |
+| **Mobile Runtime** | Capacitor 7, Android SDK 34/35 | Native Android APK mit Kamera-Barcode-Scanner & BLE-Permissions |
 | **Datenbestand** | Lokales JSON & SQLite | 100% offline nutzbar, null Tracking, absolute Datensouveränität |
 
 ---
@@ -327,4 +468,4 @@ OK
 ## 📄 LIZENZ & CREDITS
 
 Entwickelt für **Dennis & Familie** von `meinzeug`.  
-Open Source unter MIT-Lizenz. Frei nutzbar für maximale Gesundheit, stressfreien Familienalltag und faire Haushaltsfinanzen.
+Open Source unter MIT-Lizenz. Frei nutzbar für maximale Familiengesundheit, faire Aufgabenverteilung und stressfreies Kochen.

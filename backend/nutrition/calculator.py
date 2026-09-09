@@ -110,6 +110,38 @@ def enrich_family_member(member_data: Dict[str, Any]) -> FamilyMember:
     data["bmr"] = bmr
     data["tdee"] = tdee
     data.update(macros)
+
+    # Populate age-appropriate roles and water targets if not set
+    age = int(data.get("age", 30))
+    if age < 6:
+        data.setdefault("age_group", "mini")
+        data.setdefault("role_title", "🧸 Küchen-Wichtel")
+        data.setdefault("daily_water_target_ml", 1200)
+    elif age <= 9:
+        data.setdefault("age_group", "kid")
+        data.setdefault("role_title", "🥕 Nachwuchskoch")
+        data.setdefault("daily_water_target_ml", 1500)
+    elif age <= 14:
+        data.setdefault("age_group", "teen")
+        data.setdefault("role_title", "🔪 Sous-Chef")
+        data.setdefault("daily_water_target_ml", 1800)
+    elif age <= 18:
+        data.setdefault("age_group", "junior")
+        data.setdefault("role_title", "👨‍🍳 Küchen-Chef")
+        data.setdefault("daily_water_target_ml", 2200)
+    elif age <= 64:
+        data.setdefault("age_group", "adult")
+        data.setdefault("role_title", "👑 Chef de Cuisine")
+        data.setdefault("daily_water_target_ml", max(2000, int(float(data.get("weight_kg", 75)) * 35)))
+    else:
+        data.setdefault("age_group", "senior")
+        data.setdefault("role_title", "🌟 Gourmet-Mentor")
+        data.setdefault("daily_water_target_ml", 2000)
+
+    data.setdefault("chore_points", 0)
+    data.setdefault("water_intake_ml", 0)
+    data.setdefault("badges", [])
+
     return FamilyMember(**data)
 
 

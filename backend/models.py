@@ -62,6 +62,13 @@ class FamilyMember(BaseModel):
     target_protein_g: int = 140
     target_carbs_g: int = 220
     target_fat_g: int = 65
+    # Family Super App: Rollen & Gamification & Hydration
+    role_title: str = "Familienmitglied"
+    age_group: Literal["mini", "kid", "teen", "junior", "adult", "senior"] = "adult"
+    chore_points: int = 0
+    badges: List[str] = Field(default_factory=list)
+    water_intake_ml: int = 0
+    daily_water_target_ml: int = 2000
 
 
 class RecipeIngredient(BaseModel):
@@ -408,5 +415,93 @@ class UpdateScheduleSettingsRequest(BaseModel):
 class ToggleTaskRequest(BaseModel):
     task_id: Optional[str] = None
     is_completed: Optional[bool] = None
+
+
+# -------------------------------------------------------------
+# FAMILIEN SUPER APP: KÜCHEN-ÄMTLI, VITALITÄT & AUTARK-MESH
+# -------------------------------------------------------------
+
+class FamilyChore(BaseModel):
+    id: str
+    title: str
+    description: str
+    assigned_member_id: Optional[str] = None
+    assigned_member_name: Optional[str] = None
+    age_group: Literal["mini", "kid", "teen", "junior", "adult", "all"] = "all"
+    min_age: int = 3
+    difficulty: Literal["easy", "medium", "chef"] = "easy"
+    points: int = 10
+    meal_type: Literal["breakfast", "lunch", "dinner", "prep", "general"] = "general"
+    station_id: Optional[str] = None
+    day_index: int = 0
+    is_completed: bool = False
+    completed_by_name: Optional[str] = None
+    icon: str = "🌟"
+
+
+class MemberVitalityDetail(BaseModel):
+    member_id: str
+    member_name: str
+    age: int
+    age_group: str
+    role_title: str
+    score: int  # 0 to 100
+    status: str  # "Exzellent", "Sehr gut", "Auf Kurs", "Mehr Gemüse nötig"
+    calories_target: int
+    protein_target_g: int
+    fiber_target_g: int
+    water_intake_ml: int
+    water_target_ml: int
+    water_percent: int
+    key_focus_nutrient: str  # z. B. "Kalzium & Vitamin D für Knochen"
+    actionable_tip: str
+    badges: List[str] = Field(default_factory=list)
+
+
+class FamilyVitalityScore(BaseModel):
+    overall_score: int  # 0 - 100
+    status_label: str  # "Exzellent (Planetary & DGE Vorbild)"
+    status_color: str  # "emerald", "teal", "amber", "rose"
+    plants_count: int  # e.g. 26
+    plants_target: int = 30
+    plants_percent: int  # 86%
+    plants_list: List[str] = Field(default_factory=list)
+    missing_plant_types: List[str] = Field(default_factory=list)
+    fiber_score: int
+    omega3_score: int
+    sugar_radar_score: int
+    hydration_score: int
+    family_points_total: int
+    family_star_goal: int = 50
+    family_star_percent: int
+    members: List[MemberVitalityDetail] = Field(default_factory=list)
+    vitality_tips: List[str] = Field(default_factory=list)
+
+
+class MeshSyncPacket(BaseModel):
+    device_id: str
+    device_name: str
+    timestamp: str
+    sequence_id: int = 1
+    checked_shopping_items: List[str] = Field(default_factory=list)
+    completed_chores: List[str] = Field(default_factory=list)
+    member_points: Dict[str, int] = Field(default_factory=dict)
+    member_water: Dict[str, int] = Field(default_factory=dict)
+    lunchbox_packed: Optional[bool] = None
+    fresh_pick_bought: Optional[bool] = None
+    dinner_cooked: Optional[bool] = None
+
+
+class MeshStatusResponse(BaseModel):
+    mode: Literal["lan_mesh", "bluetooth_ready", "offline_autonomous", "internet_connected"] = "lan_mesh"
+    is_lan_available: bool = True
+    is_bluetooth_ready: bool = True
+    is_internet_available: bool = True
+    active_peers_count: int = 1
+    last_sync_time: str
+    offline_queue_length: int = 0
+    local_ip: str
+    bluetooth_service_uuid: str = "0000ffe0-0000-1000-8000-00805f9b34fb"
+
 
 

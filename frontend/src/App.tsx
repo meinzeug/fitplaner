@@ -11,17 +11,22 @@ import { LeafletViewer } from './components/LeafletViewer';
 import { OffersView } from './components/OffersView';
 import { RecipeModal } from './components/RecipeModal';
 import { DeviceInstallerModal } from './components/DeviceInstallerModal';
+import { FamilyVitalityView } from './components/FamilyVitalityView';
+import { FamilyChoresView } from './components/FamilyChoresView';
+import { LocalMeshSyncModal } from './components/LocalMeshSyncModal';
 import {
   Users, Calendar, ShoppingBag, Tag, Archive, BookOpen,
-  HeartPulse, Sparkles, X, Compass, ChevronRight, CheckCircle2, Smartphone, Download
+  HeartPulse, Sparkles, X, Compass, ChevronRight, CheckCircle2, Smartphone, Download,
+  Heart, Star, Radio
 } from 'lucide-react';
 
 export function App() {
-  // Main 3-Tab Architecture (Autopilot UX)
-  const [activeTab, setActiveTab] = useState<'heute' | 'woche' | 'einkauf'>('heute');
+  // Main Navigation Tabs (Super App Architecture)
+  const [activeTab, setActiveTab] = useState<'heute' | 'woche' | 'einkauf' | 'vitalitaet' | 'aemtli'>('heute');
 
   // Slide-over / Modal view for secondary tasks (Profiles, Leaflets, Offers, Installer)
   const [activeModalView, setActiveModalView] = useState<'profiles' | 'leaflets' | 'offers' | 'installer' | null>(null);
+  const [isMeshSyncModalOpen, setIsMeshSyncModalOpen] = useState(false);
 
   // Recipe Modal state
   const [recipeModalData, setRecipeModalData] = useState<{
@@ -418,52 +423,89 @@ export function App() {
               </div>
             </div>
 
-            {/* Die 3 Kern-Tabs (Intuitives Gesamterlebnis) */}
+            {/* Super App Kern-Navigation */}
             <nav className="hidden md:flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200/70">
               <button
                 onClick={() => setActiveTab('heute')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition ${
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition ${
                   activeTab === 'heute'
                     ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                 }`}
               >
-                <Sparkles className="w-4 h-4 text-amber-300" />
-                <span>🌟 Heute (Dein Tag)</span>
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>🌟 Heute</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('woche')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition ${
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition ${
                   activeTab === 'woche'
                     ? 'bg-slate-900 text-white shadow-md'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                 }`}
               >
-                <Calendar className="w-4 h-4 text-emerald-400" />
-                <span>📅 Woche & Budget</span>
+                <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                <span>📅 Woche</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('einkauf')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition ${
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition ${
                   activeTab === 'einkauf'
                     ? 'bg-slate-900 text-white shadow-md'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                 }`}
               >
-                <ShoppingBag className="w-4 h-4 text-amber-400" />
-                <span>🛒 Einkauf & Lager</span>
+                <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />
+                <span>🛒 Einkauf</span>
                 {expiringCount > 0 && (
                   <span className="text-[10px] bg-amber-500 text-slate-950 px-1.5 py-0.2 rounded-full font-black">
-                    {expiringCount} MHD
+                    {expiringCount}
                   </span>
                 )}
               </button>
+
+              <button
+                onClick={() => setActiveTab('vitalitaet')}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition ${
+                  activeTab === 'vitalitaet'
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <Heart className="w-3.5 h-3.5 text-rose-400" />
+                <span>🌿 Gesundheit</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('aemtli')}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition ${
+                  activeTab === 'aemtli'
+                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <Star className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+                <span>🤝 Aufgaben</span>
+              </button>
             </nav>
 
-            {/* Quick Actions (Smartphone, Prospekte, Familie, Angebote) */}
-            <div className="flex items-center gap-2">
+            {/* Quick Actions (P2P-Mesh, Smartphone, Prospekte, Familie, Angebote) */}
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setIsMeshSyncModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-extrabold transition shadow-2xs"
+                title="Halb-Autarke P2P-Synchronisation über lokales WLAN & Bluetooth LE"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+                <Radio className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="hidden sm:inline">P2P-Mesh</span>
+              </button>
+
               <a
                 href="/FitPlaner.apk"
                 download="FitPlaner.apk"
@@ -476,12 +518,11 @@ export function App() {
 
               <button
                 onClick={() => setActiveModalView('installer')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-extrabold transition shadow-xs"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
                 title="APK auf Smartphone installieren & im WLAN verbinden"
               >
                 <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="hidden sm:inline">📱 Handy verbinden</span>
-                <span className="sm:hidden">📱 Handy</span>
+                <span className="hidden sm:inline">📱 Handy</span>
               </button>
 
               <button
@@ -500,14 +541,6 @@ export function App() {
               >
                 <Users className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Familie ({members.length})</span>
-              </button>
-
-              <button
-                onClick={() => setActiveModalView('offers')}
-                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
-              >
-                <Tag className="w-3.5 h-3.5 text-red-600" />
-                <span>Angebote</span>
               </button>
             </div>
           </div>
@@ -557,6 +590,19 @@ export function App() {
           />
         )}
 
+        {activeTab === 'vitalitaet' && (
+          <FamilyVitalityView
+            onNavigateTab={setActiveTab}
+          />
+        )}
+
+        {activeTab === 'aemtli' && (
+          <FamilyChoresView
+            members={members}
+            onNavigateTab={setActiveTab}
+          />
+        )}
+
         {/* Dezent verlinkter Footer mit direktem APK-Download */}
         <footer className="mt-12 pt-6 border-t border-slate-200/70 text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center space-x-2">
@@ -568,6 +614,15 @@ export function App() {
           </div>
 
           <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setIsMeshSyncModalOpen(true)}
+              className="inline-flex items-center space-x-1.5 text-emerald-800 font-bold bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 transition"
+              title="Halb-autarker WLAN & Bluetooth P2P-Sync"
+            >
+              <Radio className="w-3.5 h-3.5 text-emerald-600" />
+              <span>P2P-Mesh Status</span>
+            </button>
+
             <a
               href="/FitPlaner.apk"
               download="FitPlaner.apk"
@@ -578,43 +633,37 @@ export function App() {
               <span>Android App (.apk, 4,2 MB)</span>
               <Download className="w-3 h-3 text-slate-400" />
             </a>
-
-            <button
-              onClick={() => setActiveModalView('installer')}
-              className="text-slate-400 hover:text-slate-700 underline text-xs transition"
-            >
-              WLAN-Kopplung
-            </button>
           </div>
         </footer>
       </main>
 
-      {/* Slide-over / Modal for Secondary Features (Prospekte, Familie, Angebote) */}
-      {activeModalView && activeModalView !== 'installer' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl border border-slate-100">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
-              <div className="flex items-center gap-2">
-                {activeModalView === 'leaflets' && <BookOpen className="w-5 h-5 text-emerald-600" />}
-                {activeModalView === 'profiles' && <Users className="w-5 h-5 text-emerald-600" />}
-                {activeModalView === 'offers' && <Tag className="w-5 h-5 text-red-600" />}
-                <h2 className="font-extrabold text-slate-800 text-base">
-                  {activeModalView === 'leaflets' && 'Netto & NP Blätterkataloge (Prospekte)'}
-                  {activeModalView === 'profiles' && 'Familienprofile & Kalorienbedarf'}
-                  {activeModalView === 'offers' && 'Alle Supermarkt-Angebote & PLZ'}
-                </h2>
-              </div>
+      {/* Slide-Over Drawer for Secondary Modals */}
+      {activeModalView && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex justify-end animate-fadeIn">
+          <div className="bg-white w-full max-w-2xl h-full shadow-2xl flex flex-col justify-between overflow-y-auto">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="text-xl font-extrabold text-slate-900 flex items-center space-x-2">
+                {activeModalView === 'profiles' && <span>👨‍👩‍👧‍👦 Familienmitglieder</span>}
+                {activeModalView === 'leaflets' && <span>📖 Supermarkt-Prospekte</span>}
+                {activeModalView === 'offers' && <span>🏷️ Aktuelle Angebote</span>}
+                {activeModalView === 'installer' && <span>📱 Smartphone WLAN-Kopplung</span>}
+              </h2>
               <button
                 onClick={() => setActiveModalView(null)}
-                className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 flex items-center justify-center transition"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto flex-1">
+            <div className="p-6 flex-1 overflow-y-auto">
+              {activeModalView === 'profiles' && (
+                <FamilyProfiles
+                  members={members}
+                  onSaveMember={handleSaveMember}
+                  onDeleteMember={handleDeleteMember}
+                />
+              )}
               {activeModalView === 'leaflets' && (
                 <LeafletViewer
                   leaflets={leaflets}
@@ -629,15 +678,6 @@ export function App() {
                   }}
                 />
               )}
-
-              {activeModalView === 'profiles' && (
-                <FamilyProfiles
-                  members={members}
-                  onSaveMember={handleSaveMember}
-                  onDeleteMember={handleDeleteMember}
-                />
-              )}
-
               {activeModalView === 'offers' && (
                 <OffersView
                   offers={offers}
@@ -655,17 +695,19 @@ export function App() {
                   onRefresh={() => fetchOffers(zipCode, onlyHealthy)}
                 />
               )}
+              {activeModalView === 'installer' && <DeviceInstallerModal onClose={() => setActiveModalView(null)} />}
             </div>
           </div>
         </div>
       )}
 
-      {/* Device Installer Modal (WLAN-Pairing & APK Download) */}
-      {activeModalView === 'installer' && (
-        <DeviceInstallerModal onClose={() => setActiveModalView(null)} />
-      )}
+      {/* P2P Mesh Sync Modal */}
+      <LocalMeshSyncModal
+        isOpen={isMeshSyncModalOpen}
+        onClose={() => setIsMeshSyncModalOpen(false)}
+      />
 
-      {/* Recipe Detail Modal for DailyMissionView */}
+      {/* Recipe Modal */}
       {recipeModalData && (
         <RecipeModal
           recipe={recipeModalData.recipe}
@@ -692,47 +734,59 @@ export function App() {
         />
       )}
 
-      {/* Mobile Bottom Tab Bar (3 Core Tabs + More) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 py-2 flex items-center justify-around shadow-lg">
+      {/* Mobile Bottom Tab Bar (5 Super-App Tabs) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-2 py-2 flex items-center justify-around shadow-lg">
         <button
           onClick={() => setActiveTab('heute')}
-          className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-[10px] font-extrabold ${
+          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl text-[10px] font-black ${
             activeTab === 'heute' ? 'text-emerald-700 bg-emerald-50' : 'text-slate-500'
           }`}
         >
-          <Sparkles className="w-5 h-5 text-amber-500" />
+          <Sparkles className="w-4 h-4 text-amber-500" />
           Heute
         </button>
 
         <button
           onClick={() => setActiveTab('woche')}
-          className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-[10px] font-extrabold ${
+          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl text-[10px] font-black ${
             activeTab === 'woche' ? 'text-emerald-700 bg-emerald-50' : 'text-slate-500'
           }`}
         >
-          <Calendar className="w-5 h-5" />
+          <Calendar className="w-4 h-4" />
           Woche
         </button>
 
         <button
           onClick={() => setActiveTab('einkauf')}
-          className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-[10px] font-extrabold relative ${
+          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl text-[10px] font-black relative ${
             activeTab === 'einkauf' ? 'text-emerald-700 bg-emerald-50' : 'text-slate-500'
           }`}
         >
-          <ShoppingBag className="w-5 h-5" />
+          <ShoppingBag className="w-4 h-4" />
           Einkauf
           {expiringCount > 0 && (
-            <span className="w-2 h-2 rounded-full bg-amber-500 absolute top-1 right-3" />
+            <span className="w-2 h-2 rounded-full bg-amber-500 absolute top-1 right-2" />
           )}
         </button>
 
         <button
-          onClick={() => setActiveModalView('leaflets')}
-          className="flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-[10px] font-bold text-slate-500"
+          onClick={() => setActiveTab('vitalitaet')}
+          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl text-[10px] font-black ${
+            activeTab === 'vitalitaet' ? 'text-emerald-700 bg-emerald-50' : 'text-slate-500'
+          }`}
         >
-          <BookOpen className="w-5 h-5" />
-          Prospekte
+          <Heart className="w-4 h-4 text-rose-500" />
+          Gesundheit
+        </button>
+
+        <button
+          onClick={() => setActiveTab('aemtli')}
+          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl text-[10px] font-black ${
+            activeTab === 'aemtli' ? 'text-amber-700 bg-amber-50' : 'text-slate-500'
+          }`}
+        >
+          <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+          Aufgaben
         </button>
       </div>
     </div>

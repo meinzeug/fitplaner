@@ -26,12 +26,14 @@ import {
   Snowflake,
   PackageCheck,
   ArrowRight,
+  Heart,
+  Star,
 } from 'lucide-react';
 
 interface Props {
   dailyHub: DailyHubResponse | null;
   onUpdateAction: (action: string, value?: string) => Promise<void>;
-  onNavigateTab: (tab: 'heute' | 'woche' | 'einkauf') => void;
+  onNavigateTab: (tab: 'heute' | 'woche' | 'einkauf' | 'vitalitaet' | 'aemtli') => void;
   onOpenRecipe: (dayIndex: number, mealType: 'breakfast' | 'lunch' | 'dinner', recipeOrId?: any) => void;
 }
 
@@ -139,20 +141,34 @@ export const DailyMissionView: React.FC<Props> = ({
                 </p>
               </div>
 
-              <div className="flex items-center space-x-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  onClick={() => onNavigateTab('vitalitaet')}
+                  className="px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm text-xs font-bold transition flex items-center space-x-1.5"
+                >
+                  <Heart className="w-3.5 h-3.5 text-rose-300" />
+                  <span>Vitalität (30-Pflanzen)</span>
+                </button>
+                <button
+                  onClick={() => onNavigateTab('aemtli')}
+                  className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black shadow-md transition flex items-center space-x-1.5"
+                >
+                  <Star className="w-3.5 h-3.5 text-slate-950 fill-slate-950" />
+                  <span>Küchen-Ämtli</span>
+                </button>
                 <button
                   onClick={() => onNavigateTab('woche')}
-                  className="px-4 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm text-sm font-semibold transition flex items-center space-x-1.5"
+                  className="px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm text-xs font-semibold transition flex items-center space-x-1.5"
                 >
-                  <Calendar className="w-4 h-4" />
+                  <Calendar className="w-3.5 h-3.5" />
                   <span>Wochenplan</span>
                 </button>
                 <button
                   onClick={() => onNavigateTab('einkauf')}
-                  className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-900 text-sm font-bold shadow-md transition flex items-center space-x-1.5"
+                  className="px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm text-xs font-semibold transition flex items-center space-x-1.5"
                 >
-                  <ShoppingBag className="w-4 h-4" />
-                  <span>Supermarkt-Gänge</span>
+                  <ShoppingBag className="w-3.5 h-3.5" />
+                  <span>Einkauf</span>
                 </button>
               </div>
             </div>
