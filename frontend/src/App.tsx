@@ -359,6 +359,43 @@ export function App() {
     (i) => i.shelf_life_status === 'expiring_soon' || i.shelf_life_status === 'expired'
   ).length;
 
+  const handleOpenRecipe = (
+    dayIdx: number,
+    mealType: 'breakfast' | 'lunch' | 'dinner',
+    recipeOrId?: Recipe | string
+  ) => {
+    let targetRecipe: Recipe | null = null;
+
+    if (typeof recipeOrId === 'object' && recipeOrId !== null) {
+      targetRecipe = recipeOrId;
+    } else if (typeof recipeOrId === 'string' && recipeOrId) {
+      targetRecipe = allRecipes.find((r) => r.id === recipeOrId) || null;
+    }
+
+    if (!targetRecipe && weeklyPlan && weeklyPlan.days && weeklyPlan.days[dayIdx]) {
+      const day = weeklyPlan.days[dayIdx];
+      targetRecipe = mealType === 'breakfast' ? day.breakfast : mealType === 'lunch' ? day.lunch : day.dinner;
+    }
+
+    if (!targetRecipe && dailyHub) {
+      if (mealType === 'breakfast' && dailyHub.breakfast_recipe) targetRecipe = dailyHub.breakfast_recipe;
+      else if (mealType === 'lunch' && dailyHub.lunch_recipe) targetRecipe = dailyHub.lunch_recipe;
+      else if (mealType === 'dinner' && dailyHub.dinner_recipe) targetRecipe = dailyHub.dinner_recipe;
+    }
+
+    if (!targetRecipe && allRecipes.length > 0) {
+      targetRecipe = allRecipes[0];
+    }
+
+    if (targetRecipe) {
+      setRecipeModalData({
+        dayIndex: dayIdx,
+        mealType: mealType,
+        recipe: targetRecipe,
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* Top Navigation Bar */}
@@ -484,15 +521,7 @@ export function App() {
             dailyHub={dailyHub}
             onUpdateAction={handleDailyHubAction}
             onNavigateTab={setActiveTab}
-            onOpenRecipe={(dayIdx, mealType) => {
-              if (weeklyPlan && weeklyPlan.days[dayIdx]) {
-                setRecipeModalData({
-                  dayIndex: dayIdx,
-                  mealType: mealType,
-                  recipe: weeklyPlan.days[dayIdx].dinner,
-                });
-              }
-            }}
+            onOpenRecipe={handleOpenRecipe}
           />
         )}
 
@@ -643,10 +672,20 @@ export function App() {
           dayIndex={recipeModalData.dayIndex}
           mealType={recipeModalData.mealType}
           activeMember={members[0] || ({} as FamilyMember)}
+          portion={weeklyPlan?.days?.[recipeModalData.dayIndex]?.portions?.[members[0]?.id]?.[recipeModalData.mealType]}
           pantryItems={pantryItems}
-          isCooked={dailyHub?.is_dinner_cooked}
+          isCooked={
+            recipeModalData.mealType === 'dinner'
+              ? dailyHub?.is_dinner_cooked
+              : recipeModalData.mealType === 'breakfast'
+              ? weeklyPlan?.days?.[recipeModalData.dayIndex]?.is_breakfast_cooked
+              : weeklyPlan?.days?.[recipeModalData.dayIndex]?.is_lunch_cooked
+          }
           onCookMeal={async (dayIdx, mealType) => {
-            await handleDailyHubAction('cook_dinner');
+            await handleCookMeal(dayIdx, mealType);
+            if (mealType === 'dinner') {
+              await handleDailyHubAction('cook_dinner');
+            }
             setRecipeModalData(null);
           }}
           onClose={() => setRecipeModalData(null)}

@@ -265,11 +265,18 @@ class DailyHubResponse(BaseModel):
     lunchbox_breakfast: Optional[Dict[str, Any]] = None
     lunchbox_lunch: Optional[Dict[str, Any]] = None
     is_lunchbox_packed: bool = False
+    breakfast_recipe: Optional[Recipe] = None
+    lunch_recipe: Optional[Recipe] = None
     dinner_recipe: Optional[Recipe] = None
+    tomorrow_breakfast_recipe: Optional[Recipe] = None
+    tomorrow_lunch_recipe: Optional[Recipe] = None
+    breakfast_plate_portions: Dict[str, str] = Field(default_factory=dict)
+    lunch_plate_portions: Dict[str, str] = Field(default_factory=dict)
     dinner_plate_portions: Dict[str, str] = Field(default_factory=dict)
     is_dinner_cooked: bool = False
     dishes_badge: str = "🍳 1 Pfanne / Topf"
     cook_time_badge: str = "⏱️ 20 Min."
+    prep_tomorrow_summary: Optional[Dict[str, Any]] = None
 
 
 class UpdateDailyStatusRequest(BaseModel):
@@ -351,13 +358,26 @@ class TimelineTask(BaseModel):
     action_type: Optional[str] = None
     recipe_preview: Optional[Dict[str, Any]] = None
     tip: Optional[str] = None
+    recipe_id: Optional[str] = None
+    meal_type: Optional[Literal["breakfast", "lunch", "dinner"]] = None
+    day_index: int = 0
+    action_url: Optional[str] = None
+    instructions: List[str] = Field(default_factory=list)
+    ingredients: List[str] = Field(default_factory=list)
+    plate_portions: Dict[str, str] = Field(default_factory=dict)
 
 
 class PrepTomorrowSummary(BaseModel):
     breakfast_title: str
     breakfast_prep_min: int
+    breakfast_recipe_id: Optional[str] = None
+    breakfast_instructions: List[str] = Field(default_factory=list)
+    breakfast_ingredients: List[str] = Field(default_factory=list)
     lunch_title: str
     lunch_prep_min: int
+    lunch_recipe_id: Optional[str] = None
+    lunch_instructions: List[str] = Field(default_factory=list)
+    lunch_ingredients: List[str] = Field(default_factory=list)
     overnight_tasks: List[str] = Field(default_factory=list)
     estimated_total_prep_min: int = 12
     is_prep_finished: bool = False

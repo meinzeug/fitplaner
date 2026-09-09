@@ -26,11 +26,16 @@ import {
   Moon,
   Calendar,
   AlertCircle,
-  Smartphone
+  Smartphone,
+  ChefHat,
+  BookOpen,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 interface Props {
-  onOpenRecipe?: (dayIndex: number, mealType: 'breakfast' | 'lunch' | 'dinner') => void;
+  onOpenRecipe?: (dayIndex: number, mealType: 'breakfast' | 'lunch' | 'dinner', recipeOrId?: any) => void;
   onNavigateTab?: (tab: 'heute' | 'woche' | 'einkauf') => void;
 }
 
@@ -42,6 +47,8 @@ export const TimelineScheduleView: React.FC<Props> = ({
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
+  const [showPortionsMap, setShowPortionsMap] = useState<Record<string, boolean>>({});
   const [settingsForm, setSettingsForm] = useState<ScheduleTimeSettings>({
     wake_up_time: '06:30',
     work_start_time: '08:00',
@@ -70,7 +77,6 @@ export const TimelineScheduleView: React.FC<Props> = ({
 
   useEffect(() => {
     fetchTimeline();
-    // Auto-refresh every 60 seconds to update 'is_current' and time cues
     const interval = setInterval(fetchTimeline, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -103,6 +109,14 @@ export const TimelineScheduleView: React.FC<Props> = ({
     } catch (e) {
       console.error('Failed to complete prep tomorrow:', e);
     }
+  };
+
+  const toggleTaskAccordion = (taskId: string) => {
+    setExpandedTasks((prev) => ({ ...prev, [taskId]: !prev[taskId] }));
+  };
+
+  const toggleTaskPortions = (taskId: string) => {
+    setShowPortionsMap((prev) => ({ ...prev, [taskId]: !prev[taskId] }));
   };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -202,7 +216,7 @@ export const TimelineScheduleView: React.FC<Props> = ({
                 Dein Ernährungs-Zeitplaner
               </h1>
               <p className="text-slate-400 text-xs sm:text-sm mt-1 max-w-xl">
-                Jede Minute genau wissen, was zu tun ist: Hydration, Vormittags-Snacks, Feierabend-Einkauf und der 12-Minuten-Vorabend-Trick für die Brotdose von morgen.
+                Jede Minute genau wissen, was zu tun ist: Alle Mahlzeiten sind direkt mit Rezept & Zubereitung verlinkt, Einkaufs-Stationen springen zur Einkaufsliste.
               </p>
             </div>
 
@@ -255,8 +269,8 @@ export const TimelineScheduleView: React.FC<Props> = ({
             </span>
           </div>
 
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-2">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+            <div className="space-y-3 flex-1">
               <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 flex items-center space-x-2">
                 {getCategoryIcon(focusTask.category)}
                 <span>{focusTask.title}</span>
@@ -264,6 +278,96 @@ export const TimelineScheduleView: React.FC<Props> = ({
               <p className="text-sm text-slate-700 max-w-2xl leading-relaxed">
                 {focusTask.description}
               </p>
+
+              {/* Action Buttons for Focus Task */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {(focusTask.category === 'meal' || focusTask.recipe_id || focusTask.meal_type) && (
+                  <button
+                    onClick={() => onOpenRecipe?.(focusTask.day_index || 0, focusTask.meal_type || 'dinner', focusTask.recipe_id)}
+                    className="px-4 py-2 rounded-xl text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition active:scale-95"
+                  >
+                    <ChefHat className="w-4 h-4" />
+                    <span>🍳 Rezept & Zubereitung öffnen</span>
+                  </button>
+                )}
+
+                {focusTask.instructions && focusTask.instructions.length > 0 && (
+                  <button
+                    onClick={() => toggleTaskAccordion(focusTask.id)}
+                    className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1.5 transition"
+                  >
+                    <BookOpen className="w-4 h-4 text-emerald-600" />
+                    <span>{expandedTasks[focusTask.id] ? 'Schritte ausblenden ▲' : '📖 Schritt-für-Schritt Schnellansicht ▼'}</span>
+                  </button>
+                )}
+
+                {(focusTask.category === 'fresh_pick' || focusTask.action_url === 'einkauf') && (
+                  <button
+                    onClick={() => onNavigateTab?.('einkauf')}
+                    className="px-4 py-2 rounded-xl text-xs font-extrabold bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5 shadow-md transition active:scale-95"
+                  >
+                    <ShoppingBag className="w-4 h-4" />
+                    <span>🛒 Auf Einkaufsliste anzeigen</span>
+                  </button>
+                )}
+
+                {focusTask.plate_portions && Object.keys(focusTask.plate_portions).length > 0 && (
+                  <button
+                    onClick={() => toggleTaskPortions(focusTask.id)}
+                    className="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 flex items-center gap-1.5 transition"
+                  >
+                    <Utensils className="w-4 h-4 text-amber-600" />
+                    <span>🍽️ Tellertrick-Kellenmaße</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Expandable Accordion: Instructions & Ingredients */}
+              {expandedTasks[focusTask.id] && (
+                <div className="bg-white p-4 rounded-2xl border border-emerald-200/80 shadow-xs space-y-3 animate-fadeIn">
+                  {focusTask.instructions && focusTask.instructions.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                        <ChefHat className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Zubereitungsschritte</span>
+                      </h4>
+                      <ol className="space-y-1.5 text-xs text-slate-700 pl-4 list-decimal">
+                        {focusTask.instructions.map((inst, idx) => (
+                          <li key={idx} className="leading-relaxed">{inst}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+
+                  {focusTask.ingredients && focusTask.ingredients.length > 0 && (
+                    <div className="pt-2 border-t border-slate-100">
+                      <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-1.5">
+                        Zutaten (Skaliert für Familie):
+                      </h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {focusTask.ingredients.map((ing, idx) => (
+                          <span key={idx} className="text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-medium">
+                            {ing}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Expandable Tellertrick Portions */}
+              {showPortionsMap[focusTask.id] && focusTask.plate_portions && (
+                <div className="bg-amber-50/70 p-3.5 rounded-2xl border border-amber-200 space-y-1.5 animate-fadeIn">
+                  <span className="text-xs font-bold text-amber-900 block uppercase">Kellen-Portionierung am Herd (ohne Wiegen):</span>
+                  {Object.entries(focusTask.plate_portions).map(([name, portion]) => (
+                    <div key={name} className="text-xs bg-white p-2 rounded-xl border border-amber-100 flex items-center justify-between">
+                      <span className="font-extrabold text-slate-900">{name}:</span>
+                      <span className="text-slate-700 text-[11px] font-medium">{portion}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {focusTask.tip && (
                 <div className="text-xs text-emerald-800 bg-emerald-100/60 p-2.5 rounded-xl inline-flex items-center space-x-1.5 font-medium">
@@ -317,30 +421,52 @@ export const TimelineScheduleView: React.FC<Props> = ({
         <div className="bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 translate-x-8 -translate-y-8 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-            <div>
-              <div className="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-md px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-start justify-between gap-5">
+            <div className="space-y-2 flex-1">
+              <div className="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-md px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider mb-1">
                 <Sparkles className="w-3.5 h-3.5 text-amber-200" />
                 <span>Mission Morgen früh • Der 12-Minuten-Vorabend-Trick</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black">
                 🥪 Brotdose für MORGEN vorbereiten (heute 20:00 Uhr)
               </h2>
-              <p className="text-amber-100 text-xs sm:text-sm mt-1 max-w-xl">
+              <p className="text-amber-100 text-xs sm:text-sm max-w-xl">
                 Bereite heute Abend in nur 12 Minuten die Dosen für morgen vor. Morgen früh greifst du sie einfach nur aus dem Kühlschrank – 0 Minuten Hektik!
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-4">
-                <div className="bg-black/20 backdrop-blur-sm p-3 rounded-2xl border border-white/10">
-                  <div className="text-[10px] uppercase font-bold text-amber-200">Morgiges Frühstück</div>
-                  <div className="text-sm font-bold text-white truncate">{data.prep_tomorrow.breakfast_title}</div>
-                  <div className="text-[11px] text-amber-200 mt-0.5">⏱️ {data.prep_tomorrow.breakfast_prep_min} Min. anrühren & über Nacht quellen</div>
+                <div className="bg-black/20 backdrop-blur-sm p-3.5 rounded-2xl border border-white/10 flex flex-col justify-between">
+                  <div>
+                    <div className="text-[10px] uppercase font-bold text-amber-200">Morgiges Frühstück</div>
+                    <div className="text-sm font-bold text-white truncate">{data.prep_tomorrow.breakfast_title}</div>
+                    <div className="text-[11px] text-amber-200 mt-0.5">⏱️ {data.prep_tomorrow.breakfast_prep_min} Min. anrühren & über Nacht quellen</div>
+                  </div>
+                  {data.prep_tomorrow.breakfast_recipe_id && (
+                    <button
+                      onClick={() => onOpenRecipe?.(1, 'breakfast', data.prep_tomorrow?.breakfast_recipe_id)}
+                      className="mt-2.5 py-1.5 px-3 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs flex items-center justify-center gap-1 transition"
+                    >
+                      <ChefHat className="w-3.5 h-3.5" />
+                      <span>Rezept & Zubereitung ansehen</span>
+                    </button>
+                  )}
                 </div>
 
-                <div className="bg-black/20 backdrop-blur-sm p-3 rounded-2xl border border-white/10">
-                  <div className="text-[10px] uppercase font-bold text-amber-200">Morgige Brotdose (Mittag to-go)</div>
-                  <div className="text-sm font-bold text-white truncate">{data.prep_tomorrow.lunch_title}</div>
-                  <div className="text-[11px] text-amber-200 mt-0.5">🍱 Box füllen & ab in den Kühlschrank</div>
+                <div className="bg-black/20 backdrop-blur-sm p-3.5 rounded-2xl border border-white/10 flex flex-col justify-between">
+                  <div>
+                    <div className="text-[10px] uppercase font-bold text-amber-200">Morgige Brotdose (Mittag to-go)</div>
+                    <div className="text-sm font-bold text-white truncate">{data.prep_tomorrow.lunch_title}</div>
+                    <div className="text-[11px] text-amber-200 mt-0.5">🍱 Box füllen & ab in den Kühlschrank</div>
+                  </div>
+                  {data.prep_tomorrow.lunch_recipe_id && (
+                    <button
+                      onClick={() => onOpenRecipe?.(1, 'lunch', data.prep_tomorrow?.lunch_recipe_id)}
+                      className="mt-2.5 py-1.5 px-3 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs flex items-center justify-center gap-1 transition"
+                    >
+                      <ChefHat className="w-3.5 h-3.5" />
+                      <span>Rezept & Zubereitung ansehen</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -427,7 +553,7 @@ export const TimelineScheduleView: React.FC<Props> = ({
           }`}
         >
           <ShoppingBag className="w-3.5 h-3.5" />
-          <span>Netto/NP Frische-Pick</span>
+          <span>Supermarkt Frische-Pick</span>
         </button>
       </div>
 
@@ -439,115 +565,225 @@ export const TimelineScheduleView: React.FC<Props> = ({
             <span>Chronologische Tages-Timeline (06:30 – 22:30 Uhr)</span>
           </h2>
           <span className="text-xs text-slate-400 font-medium">
-            1-Klick Abhaken zur Status-Synchronisation
+            Tiefenvernetzt mit Rezepten, Zubereitung & Einkaufsliste
           </span>
         </div>
 
         <div className="relative pl-6 sm:pl-8 space-y-6 before:absolute before:left-3 sm:before:left-4 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200">
-          {filteredTasks.map((task) => (
-            <div
-              key={task.id}
-              className={`relative flex items-start justify-between gap-4 p-4 rounded-2xl border transition ${
-                task.is_completed
-                  ? 'bg-slate-50/80 border-slate-200 opacity-60'
-                  : task.is_current
-                  ? 'bg-emerald-50/60 border-emerald-300 shadow-sm ring-2 ring-emerald-400/20'
-                  : 'bg-white border-slate-100 hover:border-slate-200 hover:shadow-xs'
-              }`}
-            >
-              {/* Timeline Marker Icon */}
+          {filteredTasks.map((task) => {
+            const isExpanded = !!expandedTasks[task.id];
+            const isPortionsOpen = !!showPortionsMap[task.id];
+
+            return (
               <div
-                className={`absolute -left-9 sm:-left-11 top-4 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition ${
+                key={task.id}
+                className={`relative flex items-start justify-between gap-4 p-4 rounded-2xl border transition ${
                   task.is_completed
-                    ? 'bg-emerald-500 border-emerald-500 text-white'
+                    ? 'bg-slate-50/80 border-slate-200 opacity-60'
                     : task.is_current
-                    ? 'bg-emerald-600 border-emerald-600 text-white animate-pulse'
-                    : 'bg-white border-slate-300 text-slate-600'
+                    ? 'bg-emerald-50/60 border-emerald-300 shadow-sm ring-2 ring-emerald-400/20'
+                    : 'bg-white border-slate-100 hover:border-slate-200 hover:shadow-xs'
                 }`}
               >
-                {task.is_completed ? <Check className="w-3.5 h-3.5" /> : getCategoryIcon(task.category)}
-              </div>
-
-              {/* Task Details */}
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                  <span className="font-mono text-xs font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md">
-                    {task.time_str} Uhr
-                  </span>
-
-                  <span
-                    className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border ${getCategoryBadge(
-                      task.category
-                    )}`}
-                  >
-                    {task.category}
-                  </span>
-
-                  {task.is_current && (
-                    <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md animate-pulse">
-                      🔴 JETZT AKTIV
-                    </span>
-                  )}
-
-                  <span className="text-xs text-slate-400">
-                    • ⏱️ {task.duration_minutes} Min.
-                  </span>
+                {/* Timeline Marker Icon */}
+                <div
+                  className={`absolute -left-9 sm:-left-11 top-4 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition ${
+                    task.is_completed
+                      ? 'bg-emerald-500 border-emerald-500 text-white'
+                      : task.is_current
+                      ? 'bg-emerald-600 border-emerald-600 text-white animate-pulse'
+                      : 'bg-white border-slate-300 text-slate-600'
+                  }`}
+                >
+                  {task.is_completed ? <Check className="w-3.5 h-3.5" /> : getCategoryIcon(task.category)}
                 </div>
 
-                <h3
-                  className={`text-sm sm:text-base font-bold ${
-                    task.is_completed ? 'line-through text-slate-500' : 'text-slate-800'
-                  }`}
-                >
-                  {task.title}
-                </h3>
+                {/* Task Details */}
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                    <span className="font-mono text-xs font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md">
+                      {task.time_str} Uhr
+                    </span>
 
-                <p className="text-xs text-slate-600 leading-relaxed max-w-2xl">
-                  {task.description}
-                </p>
+                    <span
+                      className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border ${getCategoryBadge(
+                        task.category
+                      )}`}
+                    >
+                      {task.category}
+                    </span>
 
-                {task.tip && !task.is_completed && (
-                  <p className="text-[11px] text-amber-800 bg-amber-50 p-2 rounded-xl mt-1.5 font-medium">
-                    💡 {task.tip}
-                  </p>
-                )}
-
-                {/* Assigned members */}
-                {task.assigned_members.length > 0 && (
-                  <div className="flex items-center space-x-1 pt-1">
-                    <span className="text-[10px] text-slate-400 uppercase font-semibold">Für:</span>
-                    {task.assigned_members.map((m) => (
-                      <span
-                        key={m}
-                        className="text-[11px] bg-slate-100 text-slate-600 font-medium px-1.5 py-0.5 rounded"
-                      >
-                        {m}
+                    {task.is_current && (
+                      <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md animate-pulse">
+                        🔴 JETZT AKTIV
                       </span>
-                    ))}
-                  </div>
-                )}
-              </div>
+                    )}
 
-              {/* Checkbox Button */}
-              <div className="shrink-0 flex items-center">
-                <button
-                  onClick={() => handleToggleTask(task.id, task.is_completed)}
-                  className={`p-2 rounded-xl transition ${
-                    task.is_completed
-                      ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                      : 'bg-slate-100 text-slate-400 hover:text-slate-700 hover:bg-slate-200'
-                  }`}
-                  title={task.is_completed ? 'Als unerledigt markieren' : 'Als erledigt markieren'}
-                >
-                  {task.is_completed ? (
-                    <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-                  ) : (
-                    <Circle className="w-6 h-6" />
+                    <span className="text-xs text-slate-400">
+                      • ⏱️ {task.duration_minutes} Min.
+                    </span>
+                  </div>
+
+                  <h3
+                    className={`text-sm sm:text-base font-bold ${
+                      task.is_completed ? 'line-through text-slate-500' : 'text-slate-800'
+                    }`}
+                  >
+                    {task.title}
+                  </h3>
+
+                  <p className="text-xs text-slate-600 leading-relaxed max-w-2xl">
+                    {task.description}
+                  </p>
+
+                  {/* Interaktive Aktions-Chips direkt auf jeder Karte */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    {(task.category === 'meal' || task.recipe_id || task.meal_type) && (
+                      <button
+                        onClick={() => onOpenRecipe?.(task.day_index || 0, task.meal_type || 'dinner', task.recipe_id)}
+                        className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 shadow-2xs transition active:scale-95"
+                      >
+                        <ChefHat className="w-3.5 h-3.5" />
+                        <span>🍳 Rezept & Zubereitung</span>
+                      </button>
+                    )}
+
+                    {task.instructions && task.instructions.length > 0 && (
+                      <button
+                        onClick={() => toggleTaskAccordion(task.id)}
+                        className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1 transition"
+                      >
+                        <BookOpen className="w-3.5 h-3.5 text-slate-500" />
+                        <span>{isExpanded ? 'Schritte schließen ▲' : '📖 Zubereitungsschritte ▼'}</span>
+                      </button>
+                    )}
+
+                    {(task.category === 'fresh_pick' || task.action_url === 'einkauf') && (
+                      <button
+                        onClick={() => onNavigateTab?.('einkauf')}
+                        className="px-2.5 py-1 rounded-lg text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1 shadow-2xs transition active:scale-95"
+                      >
+                        <ShoppingBag className="w-3.5 h-3.5" />
+                        <span>🛒 Zur Einkaufsliste</span>
+                      </button>
+                    )}
+
+                    {task.plate_portions && Object.keys(task.plate_portions).length > 0 && (
+                      <button
+                        onClick={() => toggleTaskPortions(task.id)}
+                        className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 flex items-center gap-1 transition"
+                      >
+                        <Utensils className="w-3.5 h-3.5 text-amber-600" />
+                        <span>🍽️ Tellertrick</span>
+                      </button>
+                    )}
+
+                    {task.id === 'task-prep-tomorrow' && (
+                      <>
+                        {data.prep_tomorrow?.breakfast_recipe_id && (
+                          <button
+                            onClick={() => onOpenRecipe?.((task.day_index || 0), 'breakfast', data.prep_tomorrow?.breakfast_recipe_id)}
+                            className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-1 transition"
+                          >
+                            <span>🥣 Morgen-Frühstück</span>
+                          </button>
+                        )}
+                        {data.prep_tomorrow?.lunch_recipe_id && (
+                          <button
+                            onClick={() => onOpenRecipe?.((task.day_index || 0), 'lunch', data.prep_tomorrow?.lunch_recipe_id)}
+                            className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-1 transition"
+                          >
+                            <span>🍱 Morgen-Mittagsbox</span>
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {/* Expandierbare Zubereitungsschritte */}
+                  {isExpanded && task.instructions && task.instructions.length > 0 && (
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/70 text-xs space-y-2 mt-2 animate-fadeIn">
+                      <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                        <ChefHat className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Schritt-für-Schritt Zubereitung:</span>
+                      </div>
+                      <ol className="space-y-1 text-slate-700 pl-4 list-decimal">
+                        {task.instructions.map((inst, i) => (
+                          <li key={i} className="leading-relaxed">{inst}</li>
+                        ))}
+                      </ol>
+
+                      {task.ingredients && task.ingredients.length > 0 && (
+                        <div className="pt-2 border-t border-slate-200">
+                          <span className="font-bold text-slate-700 block mb-1">Zutaten:</span>
+                          <div className="flex flex-wrap gap-1">
+                            {task.ingredients.map((ing, i) => (
+                              <span key={i} className="text-[10px] bg-white border border-slate-200 text-slate-600 px-1.5 py-0.2 rounded font-medium">
+                                {ing}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
-                </button>
+
+                  {/* Expandierbare Tellertrick Kellenmaße */}
+                  {isPortionsOpen && task.plate_portions && (
+                    <div className="bg-amber-50/70 p-3 rounded-xl border border-amber-200 space-y-1.5 mt-2 animate-fadeIn">
+                      <span className="text-xs font-bold text-amber-900 block">🥄 Kellen-Portionierung am Herd:</span>
+                      {Object.entries(task.plate_portions).map(([name, portion]) => (
+                        <div key={name} className="text-xs bg-white p-2 rounded-lg border border-amber-100 flex items-center justify-between">
+                          <span className="font-bold text-slate-800">{name}:</span>
+                          <span className="text-slate-600 text-[11px]">{portion}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {task.tip && !task.is_completed && (
+                    <p className="text-[11px] text-amber-800 bg-amber-50 p-2 rounded-xl mt-1.5 font-medium">
+                      💡 {task.tip}
+                    </p>
+                  )}
+
+                  {/* Assigned members */}
+                  {task.assigned_members.length > 0 && (
+                    <div className="flex items-center space-x-1 pt-1">
+                      <span className="text-[10px] text-slate-400 uppercase font-semibold">Für:</span>
+                      {task.assigned_members.map((m) => (
+                        <span
+                          key={m}
+                          className="text-[11px] bg-slate-100 text-slate-600 font-medium px-1.5 py-0.5 rounded"
+                        >
+                          {m}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Checkbox Button */}
+                <div className="shrink-0 flex items-center">
+                  <button
+                    onClick={() => handleToggleTask(task.id, task.is_completed)}
+                    className={`p-2 rounded-xl transition ${
+                      task.is_completed
+                        ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                        : 'bg-slate-100 text-slate-400 hover:text-slate-700 hover:bg-slate-200'
+                    }`}
+                    title={task.is_completed ? 'Als unerledigt markieren' : 'Als erledigt markieren'}
+                  >
+                    {task.is_completed ? (
+                      <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                    ) : (
+                      <Circle className="w-6 h-6" />
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

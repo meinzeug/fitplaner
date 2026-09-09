@@ -18,6 +18,20 @@ class TestDailyHubAndSubstitutes(unittest.TestCase):
         self.assertTrue(len(hub.dinner_plate_portions) > 0)
         self.assertIn("Dennis", hub.dinner_plate_portions)
 
+        # Enriched linked recipes & instructions
+        self.assertIsNotNone(hub.breakfast_recipe)
+        self.assertIsNotNone(hub.lunch_recipe)
+        self.assertIsNotNone(hub.lunchbox_breakfast)
+        self.assertIn("quick_instructions", hub.lunchbox_breakfast)
+        self.assertIsNotNone(hub.lunchbox_lunch)
+        self.assertIn("quick_instructions", hub.lunchbox_lunch)
+
+        # Station 4 Prep Tomorrow
+        self.assertIsNotNone(hub.prep_tomorrow_summary)
+        self.assertIn("breakfast_prep", hub.prep_tomorrow_summary)
+        self.assertIn("lunchbox_prep", hub.prep_tomorrow_summary)
+        self.assertEqual(hub.prep_tomorrow_summary["est_minutes"], 12)
+
     def test_work_end_time_and_store_status(self):
         updated = update_daily_action(UpdateDailyStatusRequest(action="set_work_time", value="16:15"))
         self.assertEqual(updated.work_end_time, "16:15")

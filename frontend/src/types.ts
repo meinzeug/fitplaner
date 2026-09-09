@@ -240,12 +240,14 @@ export interface FreshPickItem {
 }
 
 export interface LunchboxPreview {
+  id?: string;
   title: string;
   calories: number;
   protein: number;
   prep_time: number;
   lunchbox_ready: boolean;
   tip: string;
+  quick_instructions?: string;
 }
 
 export interface DailyHubResponse {
@@ -263,11 +265,23 @@ export interface DailyHubResponse {
   lunchbox_breakfast?: LunchboxPreview | null;
   lunchbox_lunch?: LunchboxPreview | null;
   is_lunchbox_packed: boolean;
+  breakfast_recipe?: Recipe | null;
+  lunch_recipe?: Recipe | null;
   dinner_recipe?: Recipe | null;
+  tomorrow_breakfast_recipe?: Recipe | null;
+  tomorrow_lunch_recipe?: Recipe | null;
+  breakfast_plate_portions: Record<string, string>;
+  lunch_plate_portions: Record<string, string>;
   dinner_plate_portions: Record<string, string>;
   is_dinner_cooked: boolean;
   dishes_badge: string;
   cook_time_badge: string;
+  prep_tomorrow_summary?: {
+    breakfast_prep?: string;
+    lunchbox_prep?: string;
+    defrost_needed?: string;
+    est_minutes: number;
+  } | null;
 }
 
 export interface ShoppingList {
@@ -340,18 +354,39 @@ export interface TimelineTask {
   urgency: 'upcoming' | 'now' | 'done' | 'missed';
   action_type?: string;
   recipe_preview?: {
+    id?: string;
     title: string;
     prep_time?: number;
     cook_time?: number;
+    calories?: number;
+    protein?: number;
+    image_url?: string;
+    breakfast_title?: string;
+    breakfast_id?: string;
+    lunch_title?: string;
+    lunch_id?: string;
   };
   tip?: string;
+  recipe_id?: string;
+  meal_type?: 'breakfast' | 'lunch' | 'dinner';
+  day_index?: number;
+  action_url?: string;
+  instructions?: string[];
+  ingredients?: string[];
+  plate_portions?: Record<string, string>;
 }
 
 export interface PrepTomorrowSummary {
   breakfast_title: string;
   breakfast_prep_min: number;
+  breakfast_recipe_id?: string;
+  breakfast_instructions?: string[];
+  breakfast_ingredients?: string[];
   lunch_title: string;
   lunch_prep_min: number;
+  lunch_recipe_id?: string;
+  lunch_instructions?: string[];
+  lunch_ingredients?: string[];
   overnight_tasks: string[];
   estimated_total_prep_min: number;
   is_prep_finished: boolean;

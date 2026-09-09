@@ -98,6 +98,34 @@ class TestTimelineSchedule(unittest.TestCase):
         self.assertEqual(task_water.urgency, "done")
         self.assertGreater(timeline_res.progress_percent, 0)
 
+    def test_timeline_tasks_deep_linking(self):
+        res = self.client.get("/api/schedule/timeline")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        tasks = data["timeline"]
+
+        # Check breakfast eat task has recipe details and instructions
+        breakfast_task = next(t for t in tasks if t["id"] == "task-breakfast-eat")
+        self.assertIsNotNone(breakfast_task["recipe_id"])
+        self.assertEqual(breakfast_task["meal_type"], "breakfast")
+        self.assertGreater(len(breakfast_task["instructions"]), 0)
+
+        # Check lunch eat task
+        lunch_task = next(t for t in tasks if t["id"] == "task-lunch-eat")
+        self.assertIsNotNone(lunch_task["recipe_id"])
+        self.assertEqual(lunch_task["meal_type"], "lunch")
+
+        # Check dinner cook task has instructions and plate portions
+        dinner_task = next(t for t in tasks if t["id"] == "task-dinner-cook")
+        self.assertIsNotNone(dinner_task["recipe_id"])
+        self.assertEqual(dinner_task["meal_type"], "dinner")
+        self.assertGreater(len(dinner_task["instructions"]), 0)
+        self.assertGreater(len(dinner_task["plate_portions"]), 0)
+
+        # Check supermarket visit task has shopping action url
+        store_task = next(t for t in tasks if t["id"] == "task-store-visit")
+        self.assertEqual(store_task["action_url"], "einkauf")
+
     def test_api_endpoints(self):
         # 1. GET /api/schedule/timeline
         res = self.client.get("/api/schedule/timeline")

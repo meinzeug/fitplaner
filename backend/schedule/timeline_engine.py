@@ -3,7 +3,7 @@ timeline_engine.py - Minutengenaue Tages-Regie & Ernährungs-Zeitplaner
 100% KI-frei, deterministisch, voll anpassbar.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Dict, Optional, Any
 from backend.models import (
     ScheduleTimeSettings,
@@ -72,12 +72,59 @@ def time_to_minutes(time_str: str) -> int:
     return h * 60 + m
 
 
+def calculate_tellertrick_portions(recipe_title: str, members: List[FamilyMember]) -> Dict[str, str]:
+    """Generates intuitive kitchen measures at the stove for each family member."""
+    main_word = recipe_title.split()[0] if recipe_title else "Portion"
+    portions: Dict[str, str] = {}
+    for m in members:
+        target_cals = getattr(m, "target_calories", 2000) or 2000
+        if m.goal == "gain_muscle" or target_cals >= 2400:
+            portions[m.name] = f"🥄 3 volle Kellen {main_word} + 1 gehäufte Handvoll Beilage / Salat"
+        elif m.goal == "lose_weight" or target_cals <= 1850:
+            portions[m.name] = f"🥄 1,5 Kellen {main_word} + 2 lockere Hände Gemüse / Salat"
+        else:
+            portions[m.name] = f"🥄 2 Kellen {main_word} + 1 Handvoll Beilage & Gemüse"
+    return portions
+
+
+def extract_recipe_instructions(recipe: Optional[Any]) -> List[str]:
+    """Extracts step-by-step instructions from a recipe object."""
+    if not recipe:
+        return []
+    if hasattr(recipe, "detailed_instructions") and recipe.detailed_instructions:
+        steps = []
+        if getattr(recipe.detailed_instructions, "prep_steps", None):
+            steps.extend([f"1. Schnippeln & Vorbereitung: {s}" for s in recipe.detailed_instructions.prep_steps])
+        if getattr(recipe.detailed_instructions, "cooking_steps", None):
+            steps.extend([f"2. Herd & Zubereitung: {s}" for s in recipe.detailed_instructions.cooking_steps])
+        if getattr(recipe.detailed_instructions, "lunchbox_tips", None):
+            steps.extend([f"3. Brotdosen-Tipp: {s}" for s in recipe.detailed_instructions.lunchbox_tips])
+        if steps:
+            return steps
+    if hasattr(recipe, "instructions") and recipe.instructions:
+        return list(recipe.instructions)
+    return []
+
+
+def extract_recipe_ingredients(recipe: Optional[Any], members_count: int = 2) -> List[str]:
+    """Formats ingredients with scaled quantities for instant preview."""
+    if not recipe or not hasattr(recipe, "ingredients") or not recipe.ingredients:
+        return []
+    res = []
+    scale = max(1, members_count)
+    for ing in recipe.ingredients:
+        total = round(ing.base_amount * scale, 1)
+        res.append(f"{total} {ing.unit} {ing.name}")
+    return res
+
+
 def generate_daily_timeline(
     today_plan: Optional[DayPlan],
     tomorrow_plan: Optional[DayPlan],
     family_members: List[FamilyMember],
     settings: Optional[ScheduleTimeSettings] = None,
     current_dt: Optional[datetime] = None,
+    day_index: int = 0,
 ) -> DailyTimelineResponse:
     if settings is None:
         settings = schedule_settings_store
@@ -89,18 +136,27 @@ def generate_daily_timeline(
     member_names = [m.name for m in family_members] if family_members else ["Dennis", "Sarah"]
 
     # Today recipes info
-    bf_title = today_plan.breakfast.title if today_plan and today_plan.breakfast else "Vollkorn-Müsli & Früchte"
-    bf_prep = today_plan.breakfast.prep_time_minutes if today_plan and today_plan.breakfast else 5
-    lunch_title = today_plan.lunch.title if today_plan and today_plan.lunch else "Vollkorn-Wrap & Gemüsesticks"
-    dinner_title = today_plan.dinner.title if today_plan and today_plan.dinner else "Frische Gemüse-Reispfanne"
-    dinner_prep = today_plan.dinner.prep_time_minutes if today_plan and today_plan.dinner else 10
-    dinner_cook = today_plan.dinner.cook_time_minutes if today_plan and today_plan.dinner else 15
+    bf_recipe = today_plan.breakfast if today_plan and today_plan.breakfast else None
+    bf_title = bf_recipe.title if bf_recipe else "Vollkorn-Müsli & Früchte"
+    bf_prep = bf_recipe.prep_time_minutes if bf_recipe else 5
+
+    lunch_recipe = today_plan.lunch if today_plan and today_plan.lunch else None
+    lunch_title = lunch_recipe.title if lunch_recipe else "Vollkorn-Wrap & Gemüsesticks"
+    lunch_prep = lunch_recipe.prep_time_minutes if lunch_recipe else 10
+
+    dinner_recipe = today_plan.dinner if today_plan and today_plan.dinner else None
+    dinner_title = dinner_recipe.title if dinner_recipe else "Frische Gemüse-Reispfanne"
+    dinner_prep = dinner_recipe.prep_time_minutes if dinner_recipe else 10
+    dinner_cook = dinner_recipe.cook_time_minutes if dinner_recipe else 15
 
     # Tomorrow recipes info
-    tom_bf_title = tomorrow_plan.breakfast.title if tomorrow_plan and tomorrow_plan.breakfast else "Overnight Oats mit Beeren"
-    tom_bf_prep = tomorrow_plan.breakfast.prep_time_minutes if tomorrow_plan and tomorrow_plan.breakfast else 5
-    tom_lunch_title = tomorrow_plan.lunch.title if tomorrow_plan and tomorrow_plan.lunch else "Quinoa-Bowl mit Kichererbsen"
-    tom_lunch_prep = tomorrow_plan.lunch.prep_time_minutes if tomorrow_plan and tomorrow_plan.lunch else 10
+    tom_bf_recipe = tomorrow_plan.breakfast if tomorrow_plan and tomorrow_plan.breakfast else None
+    tom_bf_title = tom_bf_recipe.title if tom_bf_recipe else "Overnight Oats mit Beeren"
+    tom_bf_prep = tom_bf_recipe.prep_time_minutes if tom_bf_recipe else 5
+
+    tom_lunch_recipe = tomorrow_plan.lunch if tomorrow_plan and tomorrow_plan.lunch else None
+    tom_lunch_title = tom_lunch_recipe.title if tom_lunch_recipe else "Quinoa-Bowl mit Kichererbsen"
+    tom_lunch_prep = tom_lunch_recipe.prep_time_minutes if tom_lunch_recipe else 10
 
     # Build individual tasks
     tasks: List[TimelineTask] = []
@@ -146,7 +202,20 @@ def generate_daily_timeline(
         assigned_members=member_names,
         is_completed=task_completion_store.get("task-breakfast-eat", False),
         action_type="open_recipe",
-        recipe_preview={"title": bf_title, "prep_time": bf_prep}
+        recipe_id=bf_recipe.id if bf_recipe else None,
+        meal_type="breakfast",
+        day_index=day_index,
+        recipe_preview={
+            "id": bf_recipe.id if bf_recipe else "",
+            "title": bf_title,
+            "prep_time": bf_prep,
+            "calories": bf_recipe.base_calories if bf_recipe else 450,
+            "protein": bf_recipe.base_protein_g if bf_recipe else 20,
+            "image_url": bf_recipe.image_url if bf_recipe else None,
+        },
+        instructions=extract_recipe_instructions(bf_recipe),
+        ingredients=extract_recipe_ingredients(bf_recipe, len(family_members)),
+        plate_portions=calculate_tellertrick_portions(bf_title, family_members)
     ))
 
     # 4. Vormittags-Snack
@@ -175,7 +244,20 @@ def generate_daily_timeline(
         assigned_members=member_names,
         is_completed=task_completion_store.get("task-lunch-eat", False),
         action_type="open_recipe",
-        recipe_preview={"title": lunch_title}
+        recipe_id=lunch_recipe.id if lunch_recipe else None,
+        meal_type="lunch",
+        day_index=day_index,
+        recipe_preview={
+            "id": lunch_recipe.id if lunch_recipe else "",
+            "title": lunch_title,
+            "prep_time": lunch_prep,
+            "calories": lunch_recipe.base_calories if lunch_recipe else 550,
+            "protein": lunch_recipe.base_protein_g if lunch_recipe else 35,
+            "image_url": lunch_recipe.image_url if lunch_recipe else None,
+        },
+        instructions=extract_recipe_instructions(lunch_recipe),
+        ingredients=extract_recipe_ingredients(lunch_recipe, len(family_members)),
+        plate_portions=calculate_tellertrick_portions(lunch_title, family_members)
     ))
 
     # 6. Nachmittags-Hydration & Power
@@ -197,14 +279,15 @@ def generate_daily_timeline(
     tasks.append(TimelineTask(
         id="task-store-alert",
         time_str=t_shop_alarm,
-        title="⏰ 15 Min. vor Feierabend: Netto/NP Alarm",
+        title="⏰ 15 Min. vor Feierabend: Einkaufs-Alarm",
         category="fresh_pick",
         duration_minutes=5,
-        description="Gleich Feierabend! Auf dem Heimweg 10 Minuten Halt bei Netto/NP für die frischen Zutaten des heutigen Abendessens.",
+        description="Gleich Feierabend! Auf dem Heimweg 10 Minuten Halt für die frischen Zutaten des heutigen Abendessens.",
         assigned_members=member_names[:1],
         is_completed=task_completion_store.get("task-store-alert", False),
-        action_type="toggle_fresh_pick",
-        tip="Spart Lagerplatz im heimischen Kühlschrank und sorgt für pure Frische."
+        action_type="navigate_tab",
+        action_url="einkauf",
+        tip="Direkter Klick öffnet die Einkaufsliste: Jetzt nachsehen, was im Markt gebraucht wird!"
     ))
 
     # 8. Frische-Pick im Markt
@@ -212,13 +295,15 @@ def generate_daily_timeline(
     tasks.append(TimelineTask(
         id="task-store-visit",
         time_str=t_shop,
-        title="🛒 Netto / NP Frische-Pick (Just-in-Time)",
+        title="🛒 Frische-Pick im Markt (Just-in-Time)",
         category="fresh_pick",
         duration_minutes=15,
-        description="Kurzer Stopp: Frischen Lachs, Fleisch oder knackigen Spinat für das Abendessen mitnehmen. Markt hat bis 20:00 Uhr geöffnet.",
+        description="Kurzer Stopp: Frischen Lachs, Geflügel oder knackigen Spinat für das Abendessen mitnehmen. Markt hat bis 20:00 Uhr geöffnet.",
         assigned_members=member_names[:1],
         is_completed=task_completion_store.get("task-store-visit", False),
-        action_type="toggle_fresh_pick"
+        action_type="navigate_tab",
+        action_url="einkauf",
+        tip="Spart Lagerplatz im heimischen Kühlschrank und garantiert maximale Frische."
     ))
 
     # 9. Herd-Regie & Kochen
@@ -229,11 +314,25 @@ def generate_daily_timeline(
         title=f"🍳 Herd-Regie: {dinner_title}",
         category="prep",
         duration_minutes=dinner_cook + dinner_prep,
-        description=f"Pfanne / Ofen anheizen. Zubereitungszeit: ~{dinner_cook + dinner_prep} Min. Schnelle Zubereitung in nur 1 Pfanne/Topf.",
+        description=f"Pfanne / Ofen anheizen. Zubereitungszeit: ~{dinner_cook + dinner_prep} Min. Schnelle Zubereitung in meist nur 1 Pfanne/Topf.",
         assigned_members=member_names,
         is_completed=task_completion_store.get("task-dinner-cook", False),
-        action_type="cook_dinner",
-        recipe_preview={"title": dinner_title, "cook_time": dinner_cook}
+        action_type="open_recipe",
+        recipe_id=dinner_recipe.id if dinner_recipe else None,
+        meal_type="dinner",
+        day_index=day_index,
+        recipe_preview={
+            "id": dinner_recipe.id if dinner_recipe else "",
+            "title": dinner_title,
+            "prep_time": dinner_prep,
+            "cook_time": dinner_cook,
+            "calories": dinner_recipe.base_calories if dinner_recipe else 600,
+            "protein": dinner_recipe.base_protein_g if dinner_recipe else 40,
+            "image_url": dinner_recipe.image_url if dinner_recipe else None,
+        },
+        instructions=extract_recipe_instructions(dinner_recipe),
+        ingredients=extract_recipe_ingredients(dinner_recipe, len(family_members)),
+        plate_portions=calculate_tellertrick_portions(dinner_title, family_members)
     ))
 
     # 10. Abendessen & Der faire Tellertrick
@@ -247,14 +346,21 @@ def generate_daily_timeline(
         description="Servieren ohne Küchenwaage nach dem fairen Tellertrick: Kellenmaße pro Person direkt am Herd.",
         assigned_members=member_names,
         is_completed=task_completion_store.get("task-dinner-eat", False),
+        action_type="open_recipe",
+        recipe_id=dinner_recipe.id if dinner_recipe else None,
+        meal_type="dinner",
+        day_index=day_index,
+        instructions=extract_recipe_instructions(dinner_recipe),
+        ingredients=extract_recipe_ingredients(dinner_recipe, len(family_members)),
+        plate_portions=calculate_tellertrick_portions(dinner_title, family_members),
         tip="Dennis: 3 volle Kellen Hauptgericht; Sarah: 1,5 Kellen + reichlich Salat/Gemüse."
     ))
 
     # 11. Brotdose für MORGEN vorbereiten (Evening Meal-Prep)
     t_prep_tom = settings.evening_prep_time
     overnight_steps = [
-        f"1. Frühstück für morgen anrühren: {tom_bf_title} ({tom_bf_prep} Min.)",
-        f"2. Brotdose Mittagessen to-go füllen: {tom_lunch_title} ({tom_lunch_prep} Min.)",
+        f"1. Frühstück für morgen: {tom_bf_title} ({tom_bf_prep} Min. anrühren & quellen lassen)",
+        f"2. Brotdose Mittagessen to-go: {tom_lunch_title} ({tom_lunch_prep} Min. in Dose packen)",
         "3. Snackbox mit Nüssen & Obst bestücken",
         "4. Alles zusammen in das oberste Kühlschrankfach stellen"
     ]
@@ -267,7 +373,17 @@ def generate_daily_timeline(
         description=f"Der 12-Minuten-Vorabend-Trick: {tom_bf_title} & {tom_lunch_title} vorbereiten. Spart morgen früh 15 Min. Hektik!",
         assigned_members=member_names,
         is_completed=task_completion_store.get("task-prep-tomorrow", False),
-        action_type="toggle_lunchbox",
+        action_type="open_recipe",
+        recipe_id=tom_bf_recipe.id if tom_bf_recipe else None,
+        meal_type="breakfast",
+        day_index=day_index + 1,
+        instructions=overnight_steps,
+        recipe_preview={
+            "breakfast_title": tom_bf_title,
+            "breakfast_id": tom_bf_recipe.id if tom_bf_recipe else "",
+            "lunch_title": tom_lunch_title,
+            "lunch_id": tom_lunch_recipe.id if tom_lunch_recipe else "",
+        },
         tip="Overnight-Oats quellen über Nacht cremig auf – morgens einfach nur die Box greifen."
     ))
 
@@ -282,7 +398,8 @@ def generate_daily_timeline(
         description="Tiefkühlfisch oder Fleisch für die nächsten Tage schonend aus dem Eisfach in das Null-Grad-Fach / den Kühlschrank legen.",
         assigned_members=member_names[:1],
         is_completed=task_completion_store.get("task-defrost-check", False),
-        action_type="open_pantry",
+        action_type="navigate_tab",
+        action_url="einkauf",
         tip="Schonendes Auftauen im Kühlschrank bewahrt Saftigkeit und Nährstoffe optimal."
     ))
 
@@ -350,8 +467,14 @@ def generate_daily_timeline(
     prep_summary = PrepTomorrowSummary(
         breakfast_title=tom_bf_title,
         breakfast_prep_min=tom_bf_prep,
+        breakfast_recipe_id=tom_bf_recipe.id if tom_bf_recipe else None,
+        breakfast_instructions=extract_recipe_instructions(tom_bf_recipe),
+        breakfast_ingredients=extract_recipe_ingredients(tom_bf_recipe, len(family_members)),
         lunch_title=tom_lunch_title,
         lunch_prep_min=tom_lunch_prep,
+        lunch_recipe_id=tom_lunch_recipe.id if tom_lunch_recipe else None,
+        lunch_instructions=extract_recipe_instructions(tom_lunch_recipe),
+        lunch_ingredients=extract_recipe_ingredients(tom_lunch_recipe, len(family_members)),
         overnight_tasks=overnight_steps,
         estimated_total_prep_min=12,
         is_prep_finished=task_completion_store.get("task-prep-tomorrow", False)

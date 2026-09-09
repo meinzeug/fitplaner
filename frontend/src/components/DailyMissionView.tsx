@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DailyHubResponse, FamilyMember, PantryItem } from '../types';
+import { DailyHubResponse, FamilyMember, PantryItem, Recipe } from '../types';
 import {
   Clock,
   CheckCircle2,
@@ -18,13 +18,21 @@ import {
   ShieldCheck,
   Smartphone,
   Download,
+  ChefHat,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  Moon,
+  Snowflake,
+  PackageCheck,
+  ArrowRight,
 } from 'lucide-react';
 
 interface Props {
   dailyHub: DailyHubResponse | null;
   onUpdateAction: (action: string, value?: string) => Promise<void>;
   onNavigateTab: (tab: 'heute' | 'woche' | 'einkauf') => void;
-  onOpenRecipe: (dayIndex: number, mealType: 'breakfast' | 'lunch' | 'dinner') => void;
+  onOpenRecipe: (dayIndex: number, mealType: 'breakfast' | 'lunch' | 'dinner', recipeOrId?: any) => void;
 }
 
 import { TimelineScheduleView } from './TimelineScheduleView';
@@ -39,6 +47,9 @@ export const DailyMissionView: React.FC<Props> = ({
   const [editingWorkTime, setEditingWorkTime] = useState(false);
   const [workTimeInput, setWorkTimeInput] = useState(dailyHub?.work_end_time || '17:00');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [expandedBreakfast, setExpandedBreakfast] = useState(false);
+  const [expandedLunch, setExpandedLunch] = useState(false);
+  const [expandedDinner, setExpandedDinner] = useState(false);
 
   if (!dailyHub) {
     return (
@@ -168,30 +179,144 @@ export const DailyMissionView: React.FC<Props> = ({
 
             <div className="space-y-3 mb-5">
               {dailyHub.lunchbox_breakfast && (
-                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                  <div className="text-[11px] uppercase font-bold text-slate-400">Frühstück</div>
-                  <div className="text-sm font-semibold text-slate-800 truncate">
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] uppercase font-bold text-slate-400">Frühstück</span>
+                    <span className="text-xs text-slate-500 flex items-center space-x-1.5 font-medium">
+                      <span>⏱️ {dailyHub.lunchbox_breakfast.prep_time} Min.</span>
+                      <span>•</span>
+                      <span>🔥 {dailyHub.lunchbox_breakfast.calories} kcal</span>
+                    </span>
+                  </div>
+                  <div className="text-sm font-bold text-slate-800">
                     {dailyHub.lunchbox_breakfast.title}
                   </div>
-                  <div className="text-xs text-slate-500 mt-0.5 flex items-center space-x-2">
-                    <span>⏱️ {dailyHub.lunchbox_breakfast.prep_time} Min.</span>
-                    <span>•</span>
-                    <span>🔥 {dailyHub.lunchbox_breakfast.calories} kcal</span>
+
+                  {/* Actions for Breakfast */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <button
+                      onClick={() => onOpenRecipe(dailyHub.day_index, 'breakfast', dailyHub.breakfast_recipe?.id || dailyHub.lunchbox_breakfast?.id)}
+                      className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 flex items-center gap-1 transition"
+                    >
+                      <ChefHat className="w-3.5 h-3.5" />
+                      <span>Rezept & Zubereitung</span>
+                    </button>
+
+                    {(dailyHub.breakfast_recipe?.instructions?.length || dailyHub.lunchbox_breakfast.quick_instructions) && (
+                      <button
+                        onClick={() => setExpandedBreakfast(!expandedBreakfast)}
+                        className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1 transition"
+                      >
+                        <BookOpen className="w-3 h-3 text-slate-500" />
+                        <span>{expandedBreakfast ? 'Schritte ▲' : 'Schritte ▼'}</span>
+                      </button>
+                    )}
                   </div>
+
+                  {/* Breakfast Accordion Steps */}
+                  {expandedBreakfast && (
+                    <div className="bg-white p-3 rounded-xl border border-amber-200/80 text-xs space-y-2 animate-fadeIn mt-2">
+                      <div className="font-bold text-slate-800 flex items-center gap-1">
+                        <BookOpen className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Zubereitungsschritte:</span>
+                      </div>
+                      {dailyHub.breakfast_recipe?.instructions && dailyHub.breakfast_recipe.instructions.length > 0 ? (
+                        <ol className="space-y-1.5 pl-4 list-decimal text-slate-600 text-[11px] leading-relaxed">
+                          {dailyHub.breakfast_recipe.instructions.map((step, idx) => (
+                            <li key={idx}>{step}</li>
+                          ))}
+                        </ol>
+                      ) : (
+                        <p className="text-slate-600 text-[11px] leading-relaxed">
+                          {dailyHub.lunchbox_breakfast.quick_instructions || 'Zutaten verrühren, kalt stellen oder direkt to-go einpacken.'}
+                        </p>
+                      )}
+                      {dailyHub.breakfast_plate_portions && Object.keys(dailyHub.breakfast_plate_portions).length > 0 && (
+                        <div className="pt-2 border-t border-slate-100">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Tellertrick-Portionen:</span>
+                          <div className="space-y-1">
+                            {Object.entries(dailyHub.breakfast_plate_portions).map(([name, portion]) => (
+                              <div key={name} className="text-[11px] bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 flex justify-between">
+                                <span className="font-semibold text-slate-700">{name}</span>
+                                <span className="text-slate-500">{portion}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
               {dailyHub.lunchbox_lunch && (
-                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                  <div className="text-[11px] uppercase font-bold text-slate-400">Mittagessen to-go</div>
-                  <div className="text-sm font-semibold text-slate-800 truncate">
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] uppercase font-bold text-slate-400">Mittagessen to-go</span>
+                    <span className="text-xs text-slate-500 flex items-center space-x-1.5 font-medium">
+                      <span>💪 {dailyHub.lunchbox_lunch.protein}g Protein</span>
+                      <span>•</span>
+                      <span className="text-emerald-600 font-semibold">Kalt genießbar</span>
+                    </span>
+                  </div>
+                  <div className="text-sm font-bold text-slate-800">
                     {dailyHub.lunchbox_lunch.title}
                   </div>
-                  <div className="text-xs text-slate-500 mt-0.5 flex items-center space-x-2">
-                    <span>💪 {dailyHub.lunchbox_lunch.protein}g Protein</span>
-                    <span>•</span>
-                    <span className="text-emerald-600 font-medium">Kalt genießbar</span>
+
+                  {/* Actions for Lunch */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <button
+                      onClick={() => onOpenRecipe(dailyHub.day_index, 'lunch', dailyHub.lunch_recipe?.id || dailyHub.lunchbox_lunch?.id)}
+                      className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 flex items-center gap-1 transition"
+                    >
+                      <ChefHat className="w-3.5 h-3.5" />
+                      <span>Rezept & Zubereitung</span>
+                    </button>
+
+                    {(dailyHub.lunch_recipe?.instructions?.length || dailyHub.lunchbox_lunch.quick_instructions) && (
+                      <button
+                        onClick={() => setExpandedLunch(!expandedLunch)}
+                        className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1 transition"
+                      >
+                        <BookOpen className="w-3 h-3 text-slate-500" />
+                        <span>{expandedLunch ? 'Schritte ▲' : 'Schritte ▼'}</span>
+                      </button>
+                    )}
                   </div>
+
+                  {/* Lunch Accordion Steps */}
+                  {expandedLunch && (
+                    <div className="bg-white p-3 rounded-xl border border-amber-200/80 text-xs space-y-2 animate-fadeIn mt-2">
+                      <div className="font-bold text-slate-800 flex items-center gap-1">
+                        <BookOpen className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Zubereitungsschritte:</span>
+                      </div>
+                      {dailyHub.lunch_recipe?.instructions && dailyHub.lunch_recipe.instructions.length > 0 ? (
+                        <ol className="space-y-1.5 pl-4 list-decimal text-slate-600 text-[11px] leading-relaxed">
+                          {dailyHub.lunch_recipe.instructions.map((step, idx) => (
+                            <li key={idx}>{step}</li>
+                          ))}
+                        </ol>
+                      ) : (
+                        <p className="text-slate-600 text-[11px] leading-relaxed">
+                          {dailyHub.lunchbox_lunch.quick_instructions || 'Frisch portionieren, Dressing separat verpacken, Deckel fest verschließen.'}
+                        </p>
+                      )}
+                      {dailyHub.lunch_plate_portions && Object.keys(dailyHub.lunch_plate_portions).length > 0 && (
+                        <div className="pt-2 border-t border-slate-100">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Tellertrick-Portionen:</span>
+                          <div className="space-y-1">
+                            {Object.entries(dailyHub.lunch_plate_portions).map(([name, portion]) => (
+                              <div key={name} className="text-[11px] bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 flex justify-between">
+                                <span className="font-semibold text-slate-700">{name}</span>
+                                <span className="text-slate-500">{portion}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -272,7 +397,7 @@ export const DailyMissionView: React.FC<Props> = ({
             </p>
 
             {dailyHub.fresh_pick_item ? (
-              <div className="bg-amber-50/70 border border-amber-200/70 rounded-2xl p-4 mb-5">
+              <div className="bg-amber-50/70 border border-amber-200/70 rounded-2xl p-4 mb-5 space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-amber-900 mb-1">
                   <span className="flex items-center space-x-1">
                     <Store className="w-3.5 h-3.5 text-red-600" />
@@ -294,6 +419,15 @@ export const DailyMissionView: React.FC<Props> = ({
                     📍 {dailyHub.fresh_pick_item.tip}
                   </div>
                 )}
+                <div className="pt-2">
+                  <button
+                    onClick={() => onNavigateTab('einkauf')}
+                    className="w-full py-2 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition active:scale-98"
+                  >
+                    <ShoppingBag className="w-3.5 h-3.5" />
+                    <span>🛒 Auf Einkaufsliste anzeigen</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="bg-slate-50 rounded-2xl p-4 text-center text-xs text-slate-500 mb-5">
@@ -344,9 +478,10 @@ export const DailyMissionView: React.FC<Props> = ({
               </h2>
               {dailyHub.dinner_recipe && (
                 <button
-                  onClick={() => onOpenRecipe(dailyHub.day_index, 'dinner')}
+                  onClick={() => onOpenRecipe(dailyHub.day_index, 'dinner', dailyHub.dinner_recipe?.id)}
                   className="text-xs text-emerald-600 hover:text-emerald-700 font-bold flex items-center space-x-1"
                 >
+                  <ChefHat className="w-3.5 h-3.5" />
                   <span>Rezept öffnen</span>
                   <ExternalLink className="w-3 h-3" />
                 </button>
@@ -355,20 +490,50 @@ export const DailyMissionView: React.FC<Props> = ({
 
             {dailyHub.dinner_recipe ? (
               <div className="mb-4">
-                <div className="relative rounded-2xl overflow-hidden h-28 mb-3 bg-slate-900 group cursor-pointer"
-                  onClick={() => onOpenRecipe(dailyHub.day_index, 'dinner')}
+                <div
+                  className="relative rounded-2xl overflow-hidden h-28 mb-3 bg-slate-900 group cursor-pointer"
+                  onClick={() => onOpenRecipe(dailyHub.day_index, 'dinner', dailyHub.dinner_recipe?.id)}
                 >
                   <img
                     src={dailyHub.dinner_recipe.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600'}
                     alt={dailyHub.dinner_recipe.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-300 opacity-90"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-3">
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-3 justify-between">
                     <div className="text-white text-sm font-bold truncate">
                       {dailyHub.dinner_recipe.title}
                     </div>
+                    <span className="text-[10px] bg-emerald-500/90 text-slate-950 px-2 py-0.5 rounded-md font-extrabold shrink-0">
+                      Öffnen ↗
+                    </span>
                   </div>
                 </div>
+
+                {/* Inline Quick Steps Toggle */}
+                {dailyHub.dinner_recipe.instructions && dailyHub.dinner_recipe.instructions.length > 0 && (
+                  <div className="mb-2">
+                    <button
+                      onClick={() => setExpandedDinner(!expandedDinner)}
+                      className="w-full py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center justify-between transition"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Schritt-für-Schritt Schnellansicht</span>
+                      </span>
+                      <span>{expandedDinner ? '▲' : '▼'}</span>
+                    </button>
+
+                    {expandedDinner && (
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 mt-1.5 text-xs space-y-1.5 animate-fadeIn">
+                        <ol className="space-y-1.5 pl-4 list-decimal text-slate-700 text-[11px] leading-relaxed">
+                          {dailyHub.dinner_recipe.instructions.map((step, idx) => (
+                            <li key={idx}>{step}</li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Der faire Tellertrick */}
                 <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-100 mb-2">
@@ -419,6 +584,116 @@ export const DailyMissionView: React.FC<Props> = ({
           </button>
         </div>
       </div>
+
+      {/* 🌙 CARD 4: Der 12-Minuten-Vorabend-Trick für MORGEN */}
+      {dailyHub.prep_tomorrow_summary && (
+        <div className="bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-950 text-white rounded-3xl p-6 sm:p-7 border border-indigo-900/50 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 -translate-y-8 translate-x-8 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5 border-b border-indigo-800/40 pb-4">
+            <div>
+              <div className="inline-flex items-center space-x-2 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
+                <Moon className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Station 4 • Vorabend ~21:00 Uhr</span>
+              </div>
+              <h3 className="text-xl font-extrabold tracking-tight flex items-center gap-2">
+                <span>🌙 Der 12-Minuten-Vorabend-Trick für MORGEN</span>
+              </h3>
+              <p className="text-xs text-indigo-200/80 mt-1 max-w-xl">
+                12 Minuten jetzt sparen dir morgen früh 30 Minuten Hektik und Frust. Direkt alles bereitstellen!
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs font-bold bg-indigo-900/60 border border-indigo-700/50 text-indigo-200 px-3 py-1.5 rounded-xl">
+                ⏱️ ca. {dailyHub.prep_tomorrow_summary.est_minutes || 12} Min.
+              </span>
+            </div>
+          </div>
+
+          <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Defrost Box */}
+            {dailyHub.prep_tomorrow_summary.defrost_needed ? (
+              <div className="bg-indigo-900/30 border border-indigo-500/30 rounded-2xl p-4 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-black text-cyan-300 uppercase tracking-wide mb-1.5">
+                    <Snowflake className="w-4 h-4 text-cyan-400" />
+                    <span>Tiefkühl-Check</span>
+                  </div>
+                  <p className="text-xs text-indigo-100 font-semibold leading-relaxed">
+                    {dailyHub.prep_tomorrow_summary.defrost_needed}
+                  </p>
+                </div>
+                <div className="text-[11px] text-indigo-300/80 mt-3 pt-2 border-t border-indigo-800/50">
+                  🧊 In den Kühlschrank zum schonenden Auftauen über Nacht
+                </div>
+              </div>
+            ) : (
+              <div className="bg-indigo-900/20 border border-indigo-800/30 rounded-2xl p-4 flex items-center gap-3">
+                <PackageCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+                <div className="text-xs text-indigo-200">
+                  <span className="font-bold block text-white">Kein Auftauen nötig</span>
+                  <span>Alle morgigen Zutaten sind frisch oder im Vorrat!</span>
+                </div>
+              </div>
+            )}
+
+            {/* Tomorrow Breakfast Box */}
+            <div className="bg-indigo-900/30 border border-indigo-500/30 rounded-2xl p-4 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between text-xs font-black text-amber-300 uppercase tracking-wide mb-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <Utensils className="w-4 h-4 text-amber-400" />
+                    <span>Frühstück morgen</span>
+                  </span>
+                </div>
+                <p className="text-xs text-indigo-100 font-semibold leading-relaxed">
+                  {dailyHub.prep_tomorrow_summary.breakfast_prep || dailyHub.tomorrow_breakfast_recipe?.title || 'Haferflocken & Zutaten bereitstellen'}
+                </p>
+              </div>
+              <div className="mt-3 pt-2 border-t border-indigo-800/50 flex items-center justify-between">
+                <span className="text-[11px] text-indigo-300/80">3 Min. ansetzen</span>
+                {dailyHub.tomorrow_breakfast_recipe && (
+                  <button
+                    onClick={() => onOpenRecipe((dailyHub.day_index + 1) % 7, 'breakfast', dailyHub.tomorrow_breakfast_recipe?.id)}
+                    className="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-extrabold flex items-center gap-1 transition"
+                  >
+                    <ChefHat className="w-3.5 h-3.5" />
+                    <span>Rezept</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Tomorrow Lunch Box */}
+            <div className="bg-indigo-900/30 border border-indigo-500/30 rounded-2xl p-4 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between text-xs font-black text-emerald-300 uppercase tracking-wide mb-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <ShoppingBag className="w-4 h-4 text-emerald-400" />
+                    <span>Mittagessen morgen</span>
+                  </span>
+                </div>
+                <p className="text-xs text-indigo-100 font-semibold leading-relaxed">
+                  {dailyHub.prep_tomorrow_summary.lunchbox_prep || dailyHub.tomorrow_lunch_recipe?.title || 'Brotdose und Snack bereitstellen'}
+                </p>
+              </div>
+              <div className="mt-3 pt-2 border-t border-indigo-800/50 flex items-center justify-between">
+                <span className="text-[11px] text-indigo-300/80">5 Min. to-go Dose</span>
+                {dailyHub.tomorrow_lunch_recipe && (
+                  <button
+                    onClick={() => onOpenRecipe((dailyHub.day_index + 1) % 7, 'lunch', dailyHub.tomorrow_lunch_recipe?.id)}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-xs font-extrabold flex items-center gap-1 transition"
+                  >
+                    <ChefHat className="w-3.5 h-3.5" />
+                    <span>Rezept</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Zero-Effort Quick Info Banner */}
       <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">

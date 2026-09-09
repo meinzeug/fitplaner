@@ -633,41 +633,75 @@ def get_daily_hub():
             "tip": "Direkt auf dem Heimweg im Markt einpacken."
         }
 
+    # Tomorrow plan
+    if plan.days and day_idx + 1 < len(plan.days):
+        tomorrow_plan = plan.days[day_idx + 1]
+    else:
+        next_week_plan = get_or_create_weekly_plan(1)
+        tomorrow_plan = next_week_plan.days[0] if next_week_plan.days else None
+
     # Lunchbox to-go previews
     lunchbox_breakfast = None
     if day_plan and day_plan.breakfast:
+        b_instr = " ".join(day_plan.breakfast.instructions[:2]) if day_plan.breakfast.instructions else "Zutaten verrühren und kalt stellen."
         lunchbox_breakfast = {
+            "id": day_plan.breakfast.id,
             "title": day_plan.breakfast.title,
             "calories": day_plan.breakfast.base_calories,
             "protein": day_plan.breakfast.base_protein_g,
             "prep_time": day_plan.breakfast.prep_time_minutes,
             "lunchbox_ready": day_plan.breakfast.lunchbox_ready,
-            "tip": "Morgens in 3 Min. angerührt oder direkt mitnehmen."
+            "tip": "Morgens in 3 Min. angerührt oder direkt mitnehmen.",
+            "quick_instructions": b_instr,
         }
 
     lunchbox_lunch = None
     if day_plan and day_plan.lunch:
+        l_instr = " ".join(day_plan.lunch.instructions[:2]) if day_plan.lunch.instructions else "Frisch portionieren, Dressing separat verpacken."
         lunchbox_lunch = {
+            "id": day_plan.lunch.id,
             "title": day_plan.lunch.title,
             "calories": day_plan.lunch.base_calories,
             "protein": day_plan.lunch.base_protein_g,
             "prep_time": day_plan.lunch.prep_time_minutes,
             "lunchbox_ready": day_plan.lunch.lunchbox_ready,
-            "tip": "Perfekt für die Mittagspause to-go – kalt genießbar oder kurz erwärmen."
+            "tip": "Perfekt für die Mittagspause to-go – kalt genießbar oder kurz erwärmen.",
+            "quick_instructions": l_instr,
         }
 
     # Fairer Tellertrick (Haushaltsmaße am Herd)
-    dinner_portions: Dict[str, str] = {}
-    if day_plan and day_plan.dinner:
-        main_word = day_plan.dinner.title.split()[0]
+    def calculate_portions_for_meal(title: str) -> Dict[str, str]:
+        main_word = title.split()[0] if title else "Portion"
+        p_map = {}
         for m in family_profiles:
             target_cals = getattr(m, "target_calories", 2000) or 2000
             if m.goal == "gain_muscle" or target_cals >= 2400:
-                dinner_portions[m.name] = f"🥄 3 volle Kellen {main_word} + 1 gehäufte Handvoll Beilage / Salat"
+                p_map[m.name] = f"🥄 3 volle Kellen {main_word} + 1 gehäufte Handvoll Beilage / Salat"
             elif m.goal == "lose_weight" or target_cals <= 1850:
-                dinner_portions[m.name] = f"🥄 1,5 Kellen {main_word} + 2 lockere Hände Gemüse / Salat"
+                p_map[m.name] = f"🥄 1,5 Kellen {main_word} + 2 lockere Hände Gemüse / Salat"
             else:
-                dinner_portions[m.name] = f"🥄 2 Kellen {main_word} + 1 Handvoll Beilage & Gemüse"
+                p_map[m.name] = f"🥄 2 Kellen {main_word} + 1 Handvoll Beilage & Gemüse"
+        return p_map
+
+    breakfast_portions = calculate_portions_for_meal(day_plan.breakfast.title) if day_plan and day_plan.breakfast else {}
+    lunch_portions = calculate_portions_for_meal(day_plan.lunch.title) if day_plan and day_plan.lunch else {}
+    dinner_portions = calculate_portions_for_meal(day_plan.dinner.title) if day_plan and day_plan.dinner else {}
+
+    # Vorabend-Vorbereitung für morgen
+    defrost_needed = None
+    if tomorrow_plan and tomorrow_plan.dinner:
+        for ing in tomorrow_plan.dinner.ingredients:
+            if any(k in ing.name.lower() for k in ["lachs", "fisch", "hähnchen", "fleisch", "hack", "garnelen"]):
+                total_need = round(ing.base_amount * max(1, len(family_profiles)), 1)
+                defrost_needed = f"{ing.name} ({total_need} {ing.unit}) aus dem Gefrierfach nehmen & im Kühlschrank auftauen lassen"
+                break
+
+    prep_tomorrow_summary = {
+        "breakfast_prep": f"{tomorrow_plan.breakfast.title} vorbereiten (z. B. Haferflocken einweichen)" if tomorrow_plan and tomorrow_plan.breakfast else "Frühstück für morgen vorbereiten",
+        "lunchbox_prep": f"Brotdose für {tomorrow_plan.lunch.title} bereitstellen" if tomorrow_plan and tomorrow_plan.lunch else "Lunchbox für morgen bereitstellen",
+        "defrost_needed": defrost_needed,
+        "est_minutes": 12,
+    }
 
     return DailyHubResponse(
         current_day_name=current_day_name,
@@ -684,11 +718,18 @@ def get_daily_hub():
         lunchbox_breakfast=lunchbox_breakfast,
         lunchbox_lunch=lunchbox_lunch,
         is_lunchbox_packed=daily_hub_state.get("lunchbox_packed", False),
+        breakfast_recipe=day_plan.breakfast if day_plan else None,
+        lunch_recipe=day_plan.lunch if day_plan else None,
         dinner_recipe=day_plan.dinner if day_plan else None,
+        tomorrow_breakfast_recipe=tomorrow_plan.breakfast if tomorrow_plan else None,
+        tomorrow_lunch_recipe=tomorrow_plan.lunch if tomorrow_plan else None,
+        breakfast_plate_portions=breakfast_portions,
+        lunch_plate_portions=lunch_portions,
         dinner_plate_portions=dinner_portions,
         is_dinner_cooked=daily_hub_state.get("dinner_cooked", False),
         dishes_badge="🍳 1 Pfanne / Topf (Zero-Stress)",
-        cook_time_badge=f"⏱️ {day_plan.dinner.cook_time_minutes if day_plan and day_plan.dinner else 15} Min."
+        cook_time_badge=f"⏱️ {day_plan.dinner.cook_time_minutes if day_plan and day_plan.dinner else 15} Min.",
+        prep_tomorrow_summary=prep_tomorrow_summary,
     )
 
 
@@ -748,7 +789,8 @@ def get_schedule_timeline():
         tomorrow_plan=tomorrow_plan,
         family_members=family_profiles,
         settings=get_schedule_settings(),
-        current_dt=datetime.now()
+        current_dt=datetime.now(),
+        day_index=today_idx
     )
 
 
