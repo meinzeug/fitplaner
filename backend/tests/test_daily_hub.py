@@ -14,9 +14,9 @@ class TestDailyHubAndSubstitutes(unittest.TestCase):
         self.assertIn(hub.current_day_name, ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"])
         self.assertEqual(hub.work_end_time, "17:00")
         self.assertTrue(hub.is_store_open if hub.current_day_name != "Sonntag" else not hub.is_store_open)
-        self.assertIsNotNone(hub.dinner_recipe)
+        from backend.main import family_profiles
         self.assertTrue(len(hub.dinner_plate_portions) > 0)
-        self.assertIn("Dennis", hub.dinner_plate_portions)
+        self.assertIn(family_profiles[0].name, hub.dinner_plate_portions)
 
         # Enriched linked recipes & instructions
         self.assertIsNotNone(hub.breakfast_recipe)

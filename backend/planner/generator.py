@@ -75,274 +75,19 @@ def prioritize_recipes(
     return p0 + p1 + p2
 
 
-ALLERGEN_KEYWORD_MAP: Dict[str, List[str]] = {
-    "laktose": [
-        "milch", "quark", "käse", "kaese", "feta", "joghurt", "butter",
-        "mozzarella", "hüttenkäse", "huettenkaese", "sahne", "parmesan",
-        "skyr", "schmand", "creme fraiche", "crème fraîche", "mascarpone",
-        "ricotta", "gouda", "cheddar", "frischkäse", "frischkaese", "molke"
-    ],
-    "gluten": [
-        "gluten", "weizen", "dinkel", "dinkelflocken", "roggen", "gerste", "hafer",
-        "haferflocken", "nudeln", "spaghetti", "penne", "pasta", "brot", "toast",
-        "baguette", "brötchen", "broetchen", "mehl", "couscous", "bulgur", "seitan",
-        "knäckebrot", "knaeckebrot", "wrap", "wraps", "panade", "grieß", "griess"
-    ],
-    "nuesse": [
-        "nuss", "nüsse", "nuesse", "erdnuss", "erdnüsse", "erdnuesse", "erdnussmus",
-        "walnuss", "walnüsse", "walnuesse", "haselnuss", "haselnüsse", "haselnuesse",
-        "cashew", "cashewkerne", "mandel", "mandeln", "pistazie", "pistazien",
-        "pekannuss", "paranuss", "macadamia"
-    ],
-    "fisch": [
-        "fisch", "lachs", "thunfisch", "kabeljau", "forelle", "forellenfilet",
-        "garnele", "garnelen", "seelachs", "dorade", "shrimp", "shrimps", "scampi",
-        "meeresfrüchte", "meeresfruechte", "sardine", "sardinen", "hering", "makrele"
-    ],
-    "eier": [
-        "ei", "eier", "hühnerei", "huehnerei", "rührei", "ruehrei", "spiegelei",
-        "eigelb", "eiweiß", "eiweiss"
-    ],
-    "soja": [
-        "soja", "sojasoße", "sojasosse", "sojasauce", "tofu", "naturtofu",
-        "räuchertofu", "raeuchertofu", "edamame", "tempeh", "miso"
-    ],
-    "sesam": [
-        "sesam", "sesamöl", "sesamoel", "sesamsaat", "sesamsamen", "tahin", "tahina", "tahini"
-    ],
-}
+from backend.nutrition.diet_validator import (
+    ALLERGEN_KEYWORD_MAP,
+    PLANT_DAIRY_EXCLUSIONS,
+    ALLERGEN_NORMALIZATION,
+    DISLIKE_SYNONYMS,
+    recipe_violates_allergies,
+    recipe_violates_dislikes,
+    is_recipe_diet_compatible,
+    is_recipe_diet_and_allergy_compatible,
+    is_recipe_compatible_with_member,
+    filter_recipes_for_family,
+)
 
-PLANT_DAIRY_EXCLUSIONS = [
-    "hafermilch", "mandelmilch", "sojamilch", "kokosmilch",
-    "reismilch", "erbsenmilch", "dinkelmilch", "cashewmilch",
-    "haferdrink", "mandeldrink", "sojadrink", "kokosdrink",
-    "reisdrink", "erbsendrink", "dinkeldrink",
-    "kokosjoghurt", "sojajoghurt", "haferjoghurt", "mandeljoghurt",
-    "erdnussmus", "erdnussbutter", "mandelbutter", "cashewmus", "mandelmus",
-    "vegan", "pflanzlich"
-]
-
-ALLERGEN_NORMALIZATION: Dict[str, str] = {
-    "laktose": "laktose", "lactose": "laktose", "milch": "laktose",
-    "gluten": "gluten", "weizen": "gluten",
-    "nuesse": "nuesse", "nüsse": "nuesse", "nuts": "nuesse", "erdnuss": "nuesse", "erdnüsse": "nuesse",
-    "fisch": "fisch", "fish": "fisch", "meeresfrüchte": "fisch", "meeresfruechte": "fisch",
-    "eier": "eier", "ei": "eier", "egg": "eier", "eggs": "eier",
-    "soja": "soja", "soy": "soja",
-    "sesam": "sesam", "sesame": "sesam",
-}
-
-DISLIKE_SYNONYMS: Dict[str, List[str]] = {
-    "pilz": ["pilz", "champignon", "pfifferling", "steinpilz", "seitling", "shiitake", "austernpilz", "trüffel"],
-    "pilze": ["pilz", "champignon", "pfifferling", "steinpilz", "seitling", "shiitake", "austernpilz", "trüffel"],
-    "champignon": ["champignon", "pilz"],
-    "champignons": ["champignon", "pilz"],
-    "fisch": ["fisch", "lachs", "thunfisch", "forelle", "kabeljau", "seelachs", "dorade", "garnele", "garnelen"],
-    "meeresfrüchte": ["garnele", "garnelen", "shrimp", "shrimps", "scampi", "muschel", "tintenfisch", "calamari"],
-    "olive": ["oliv"],
-    "oliven": ["oliv"],
-    "tomate": ["tomat"],
-    "tomaten": ["tomat"],
-    "zwiebel": ["zwiebel", "schalotte"],
-    "zwiebeln": ["zwiebel", "schalotte"],
-    "knoblauch": ["knoblauch"],
-    "brokkoli": ["brokkoli", "broccoli"],
-    "aubergine": ["aubergine"],
-    "auberginen": ["aubergine"],
-    "zucchini": ["zucchini"],
-    "spinat": ["spinat"],
-    "koriander": ["koriander"],
-    "sellerie": ["sellerie"],
-    "rosenkohl": ["rosenkohl"],
-    "ingwer": ["ingwer"],
-    "paprika": ["paprika"],
-    "rosinen": ["rosin", "sultanin"],
-}
-
-
-def recipe_violates_allergies(recipe: Recipe, allergies: List[str]) -> bool:
-    """
-    Checks if a recipe violates any declared allergies by inspecting both
-    declared recipe.allergens and the ingredients list against ALLERGEN_KEYWORD_MAP.
-    Excludes plant-based milk and dairy alternatives (e.g. hafermilch, mandelmilch)
-    from triggering lactose violations.
-    """
-    if not allergies:
-        return False
-
-    normalized_allergies = {
-        ALLERGEN_NORMALIZATION.get(a.lower().strip(), a.lower().strip())
-        for a in allergies if a.strip()
-    }
-
-    # 1. Check declared recipe.allergens
-    for declared in recipe.allergens:
-        norm_decl = ALLERGEN_NORMALIZATION.get(declared.lower().strip(), declared.lower().strip())
-        if norm_decl in normalized_allergies:
-            return True
-
-    # 2. Check ingredients against ALLERGEN_KEYWORD_MAP
-    for ing in recipe.ingredients:
-        ing_l = ing.name.lower()
-        for allergen_key in normalized_allergies:
-            keywords = ALLERGEN_KEYWORD_MAP.get(allergen_key, [allergen_key])
-            if allergen_key == "laktose":
-                if any(ex in ing_l for ex in PLANT_DAIRY_EXCLUSIONS):
-                    continue
-                if any(kw in ing_l for kw in keywords):
-                    return True
-            elif allergen_key == "eier":
-                if re.search(r'\b(ei|eier|eiern|eies|hühnerei|hühnereier|rührei|spiegelei|eigelb|eiweiß|eiweiss)\b', ing_l):
-                    return True
-            else:
-                if any(kw in ing_l for kw in keywords):
-                    return True
-
-    return False
-
-
-def recipe_violates_dislikes(recipe: Recipe, disliked_foods: List[str]) -> bool:
-    """
-    Checks if a recipe contains any disliked foods by checking stems and synonyms
-    in both the recipe title and its ingredients list.
-    E.g. dislike 'pilze' or 'pilz' filters 'Champignons', 'Pfifferlinge', 'Pilzpfanne'.
-    """
-    if not disliked_foods:
-        return False
-
-    title_l = recipe.title.lower()
-    ing_names_l = [ing.name.lower() for ing in recipe.ingredients]
-
-    for d in disliked_foods:
-        d_clean = d.lower().strip()
-        if not d_clean:
-            continue
-
-        search_terms = {d_clean}
-        if d_clean in DISLIKE_SYNONYMS:
-            search_terms.update(DISLIKE_SYNONYMS[d_clean])
-
-        # Stemming: strip trailing 'en', 'e', 's'
-        if d_clean.endswith("en") and len(d_clean) > 4:
-            stem = d_clean[:-2]
-            search_terms.add(stem)
-            if stem in DISLIKE_SYNONYMS:
-                search_terms.update(DISLIKE_SYNONYMS[stem])
-        elif d_clean.endswith("e") and len(d_clean) > 3:
-            stem = d_clean[:-1]
-            search_terms.add(stem)
-            if stem in DISLIKE_SYNONYMS:
-                search_terms.update(DISLIKE_SYNONYMS[stem])
-        elif d_clean.endswith("s") and len(d_clean) > 4:
-            stem = d_clean[:-1]
-            search_terms.add(stem)
-            if stem in DISLIKE_SYNONYMS:
-                search_terms.update(DISLIKE_SYNONYMS[stem])
-
-        for term in search_terms:
-            if term in title_l:
-                return True
-            if any(term in ing_l for ing_l in ing_names_l):
-                return True
-
-    return False
-
-
-def is_recipe_compatible_with_member(
-    recipe: Recipe,
-    member: FamilyMember,
-    strict_macro: bool = False
-) -> bool:
-    """
-    Checks if a recipe meets a family member's diet type, allergies, and disliked foods.
-    Hard dietary exclusions (vegetarian, vegan, pescetarian, no_pork) and allergies/dislikes
-    are always strictly enforced.
-    Soft macro preferences (high_protein, low_carb, etc.) are only enforced if strict_macro is True.
-    """
-    diet = member.dietary_preference
-
-    # 1. Hard Dietary Exclusions
-    if diet == "vegetarian":
-        if "vegetarian" not in recipe.diet_types and "vegan" not in recipe.diet_types:
-            return False
-        for ing in recipe.ingredients:
-            ing_l = ing.name.lower()
-            if any(w in ing_l for w in [
-                "hähnchen", "huhn", "hühn", "pute", "rind", "schwein", "hackfleisch",
-                "lachs", "thunfisch", "fisch", "garnele", "salami", "schinken", "speck"
-            ]):
-                return False
-    elif diet == "vegan":
-        if "vegan" not in recipe.diet_types:
-            return False
-        for ing in recipe.ingredients:
-            ing_l = ing.name.lower()
-            if any(w in ing_l for w in [
-                "hähnchen", "huhn", "hühn", "pute", "rind", "schwein", "hackfleisch",
-                "lachs", "thunfisch", "fisch", "garnele", "salami", "schinken", "speck",
-                "quark", "milch", "käse", "feta", "joghurt", "ei", "eier", "butter", "mozzarella", "hüttenkäse"
-            ]):
-                return False
-    elif diet == "pescetarian":
-        if not any(d in recipe.diet_types for d in ["pescetarian", "vegetarian", "vegan"]):
-            return False
-        for ing in recipe.ingredients:
-            ing_l = ing.name.lower()
-            if any(w in ing_l for w in ["hähnchen", "huhn", "hühn", "pute", "rind", "schwein", "hackfleisch", "salami", "schinken", "speck"]):
-                return False
-    elif diet == "no_pork":
-        if "no_pork" not in recipe.diet_types:
-            for ing in recipe.ingredients:
-                ing_l = ing.name.lower()
-                if any(w in ing_l for w in ["schwein", "salami", "schinken", "speck"]):
-                    return False
-
-    # 2. Soft Macro Preferences (only when strict_macro is requested)
-    if strict_macro:
-        if diet in ["high_protein", "low_carb", "gluten_free", "lactose_free", "mediterranean", "clean_eating"]:
-            if diet not in recipe.diet_types:
-                return False
-
-    # 3. Allergies Check (Hard constraint)
-    if member.allergies:
-        if recipe_violates_allergies(recipe, member.allergies):
-            return False
-
-    # 4. Disliked Foods Check (Hard constraint)
-    if member.disliked_foods:
-        if recipe_violates_dislikes(recipe, member.disliked_foods):
-            return False
-
-    return True
-
-
-def filter_recipes_for_family(recipes: List[Recipe], family: List[FamilyMember]) -> List[Recipe]:
-    """
-    Finds recipes that satisfy the hard dietary constraints (vegetarian, vegan, pescetarian,
-    no_pork, allergies, dislikes) of ALL family members simultaneously.
-    Guarantees that a shared family pot (Option A) never exposes any member to incompatible food.
-    """
-    if not family:
-        return recipes
-
-    compatible = [
-        r for r in recipes
-        if all(is_recipe_compatible_with_member(r, m, strict_macro=False) for m in family)
-    ]
-    if compatible:
-        return compatible
-
-    # If mutually exclusive edge cases exist, protect members with hard exclusions:
-    hard_restricted = [m for m in family if m.dietary_preference in ["vegetarian", "vegan", "pescetarian", "no_pork"]]
-    if hard_restricted:
-        sub_compat = [
-            r for r in recipes
-            if all(is_recipe_compatible_with_member(r, m, strict_macro=False) for m in hard_restricted)
-        ]
-        if sub_compat:
-            return sub_compat
-
-    return recipes
 
 
 def generate_weekly_plan(
@@ -418,7 +163,8 @@ def generate_weekly_plan(
             filtered = filter_recipes_for_family(recipe_list, family_members)
             prioritized = prioritize_recipes(filtered, active_retailers, shuffle=should_shuffle, rng=rng)
             if not prioritized:
-                prioritized = prioritize_recipes(recipe_list, active_retailers, shuffle=should_shuffle, rng=rng)
+                safe_fallback = [r for r in recipe_list if all(is_recipe_diet_compatible(r, m.dietary_preference) for m in family_members if m.dietary_preference in ["vegan", "vegetarian", "pescetarian", "no_pork"])]
+                prioritized = prioritize_recipes(safe_fallback or filtered or recipe_list, active_retailers, shuffle=should_shuffle, rng=rng)
             meal_shared_pools[meal_key] = prioritized
         else:
             member_dict: Dict[str, List[Recipe]] = {}
@@ -428,6 +174,10 @@ def generate_weekly_plan(
                     m_pool = m_strict
                 else:
                     m_pool = [r for r in recipe_list if is_recipe_compatible_with_member(r, member, strict_macro=False)]
+                if not m_pool:
+                    m_pool = [r for r in recipe_list if is_recipe_diet_and_allergy_compatible(r, member)]
+                if not m_pool:
+                    m_pool = [r for r in recipe_list if is_recipe_diet_compatible(r, member.dietary_preference)]
                 if not m_pool:
                     m_pool = recipe_list
                 member_dict[member.id] = prioritize_recipes(m_pool, active_retailers, shuffle=should_shuffle, rng=rng)
@@ -619,19 +369,31 @@ def swap_meal_in_plan(
         if is_recipe_compatible_with_member(day.breakfast, member, strict_macro=False):
             mem_bf = day.breakfast
         else:
-            alt = next((r for r in all_recipes if r.meal_type == "breakfast_lunchbox" and is_recipe_compatible_with_member(r, member, strict_macro=False)), day.breakfast)
+            alt = next((r for r in all_recipes if r.meal_type == "breakfast_lunchbox" and is_recipe_compatible_with_member(r, member, strict_macro=False)), None)
+            if not alt:
+                alt = next((r for r in all_recipes if r.meal_type == "breakfast_lunchbox" and is_recipe_diet_and_allergy_compatible(r, member)), None)
+            if not alt:
+                alt = next((r for r in all_recipes if r.meal_type == "breakfast_lunchbox" and is_recipe_diet_compatible(r, member.dietary_preference)), day.breakfast)
             mem_bf = sanitize_recipe(alt, active_retailers, primary_retailer)
 
         if is_recipe_compatible_with_member(day.lunch, member, strict_macro=False):
             mem_lu = day.lunch
         else:
-            alt = next((r for r in all_recipes if r.meal_type == "lunch_lunchbox" and is_recipe_compatible_with_member(r, member, strict_macro=False)), day.lunch)
+            alt = next((r for r in all_recipes if r.meal_type == "lunch_lunchbox" and is_recipe_compatible_with_member(r, member, strict_macro=False)), None)
+            if not alt:
+                alt = next((r for r in all_recipes if r.meal_type == "lunch_lunchbox" and is_recipe_diet_and_allergy_compatible(r, member)), None)
+            if not alt:
+                alt = next((r for r in all_recipes if r.meal_type == "lunch_lunchbox" and is_recipe_diet_compatible(r, member.dietary_preference)), day.lunch)
             mem_lu = sanitize_recipe(alt, active_retailers, primary_retailer)
 
         if is_recipe_compatible_with_member(day.dinner, member, strict_macro=False):
             mem_di = day.dinner
         else:
-            alt = next((r for r in all_recipes if r.meal_type == "dinner_home" and is_recipe_compatible_with_member(r, member, strict_macro=False)), day.dinner)
+            alt = next((r for r in all_recipes if r.meal_type == "dinner_home" and is_recipe_compatible_with_member(r, member, strict_macro=False)), None)
+            if not alt:
+                alt = next((r for r in all_recipes if r.meal_type == "dinner_home" and is_recipe_diet_and_allergy_compatible(r, member)), None)
+            if not alt:
+                alt = next((r for r in all_recipes if r.meal_type == "dinner_home" and is_recipe_diet_compatible(r, member.dietary_preference)), day.dinner)
             mem_di = sanitize_recipe(alt, active_retailers, primary_retailer)
 
         bf_portion = scale_recipe_for_person(mem_bf, member, "breakfast_lunchbox", active_retailers=active_retailers, primary_retailer=primary_retailer)

@@ -8,6 +8,12 @@ import os
 import json
 from typing import List, Dict, Optional, Any
 from backend.models import Recipe, RecipeIngredient, DetailedInstruction
+from backend.nutrition.diet_validator import (
+    is_recipe_diet_compatible,
+    recipe_violates_allergies,
+    recipe_violates_dislikes,
+    sanitize_recipe_diets_and_allergens,
+)
 
 _RECIPES_CACHE: Optional[List[Recipe]] = None
 _RECIPES_BY_ID: Dict[str, Recipe] = {}
@@ -118,7 +124,7 @@ def filter_universe_recipes(
 ) -> List[Recipe]:
     """
     Ultra-fast filtering of the universe database by meal_type, diet style,
-    allergies, and disliked ingredients.
+    allergies, and disliked ingredients using single-source-of-truth validator.
     """
     _load_universe_if_needed()
 
@@ -128,51 +134,21 @@ def filter_universe_recipes(
         candidates = _RECIPES_CACHE or []
 
     results: List[Recipe] = []
-    norm_allergens = [a.lower().strip() for a in (exclude_allergens or []) if a.strip()]
-    norm_dislikes = [d.lower().strip() for d in (disliked_foods or []) if d.strip()]
 
     for r in candidates:
         # 1. Dietary Preference Check
         if diet and diet != "all":
-            if diet == "vegetarian":
-                if "vegetarian" not in r.diet_types and "vegan" not in r.diet_types:
-                    continue
-            elif diet == "vegan":
-                if "vegan" not in r.diet_types:
-                    continue
-            elif diet == "pescetarian":
-                if not any(d in r.diet_types for d in ["pescetarian", "vegetarian", "vegan"]):
-                    continue
-            elif diet == "no_pork":
-                if "no_pork" not in r.diet_types:
-                    if any("schwein" in ing.name.lower() or "salami" in ing.name.lower() for ing in r.ingredients):
-                        continue
-            elif diet in ["high_protein", "low_carb", "gluten_free", "lactose_free", "mediterranean", "clean_eating"]:
-                if diet not in r.diet_types:
-                    continue
+            if not is_recipe_diet_compatible(r, diet):
+                continue
 
         # 2. Allergen Check
-        if norm_allergens:
-            has_allergen = False
-            for a in r.allergens:
-                if a.lower().strip() in norm_allergens:
-                    has_allergen = True
-                    break
-            if has_allergen:
+        if exclude_allergens:
+            if recipe_violates_allergies(r, exclude_allergens):
                 continue
 
         # 3. Disliked Foods Check
-        if norm_dislikes:
-            has_dislike = False
-            for ing in r.ingredients:
-                ing_lower = ing.name.lower()
-                for bad in norm_dislikes:
-                    if bad in ing_lower:
-                        has_dislike = True
-                        break
-                if has_dislike:
-                    break
-            if has_dislike:
+        if disliked_foods:
+            if recipe_violates_dislikes(r, disliked_foods):
                 continue
 
         results.append(r)
@@ -214,6 +190,7 @@ def persist_universe_to_file() -> None:
 def add_universe_recipe(recipe: Recipe) -> Recipe:
     """Adds a new recipe to in-memory store and persists to disk."""
     _load_universe_if_needed()
+    recipe = sanitize_recipe_diets_and_allergens(recipe)
     _RECIPES_BY_ID[recipe.id] = recipe
     if _RECIPES_CACHE is not None:
         _RECIPES_CACHE.insert(0, recipe)
@@ -232,6 +209,7 @@ def update_universe_recipe(recipe_id: str, updated: Recipe) -> Optional[Recipe]:
     _load_universe_if_needed()
     if recipe_id not in _RECIPES_BY_ID:
         return None
+    updated = sanitize_recipe_diets_and_allergens(updated)
     old = _RECIPES_BY_ID[recipe_id]
     _RECIPES_BY_ID[recipe_id] = updated
     if _RECIPES_CACHE is not None:

@@ -72,22 +72,74 @@ def create_recipe(
     assert 2 <= len(lunchbox_tips) <= 4, f"{r_id}: lunchbox_tips length {len(lunchbox_tips)} not in [2, 4]"
     assert 4 <= len(instructions) <= 6, f"{r_id}: instructions length {len(instructions)} not in [4, 6]"
 
-    diets = list(diet_types)
-    if "omnivore" not in diets:
-        diets.append("omnivore")
-    if "schwein" not in [i["name"].lower() for i in ingredients]:
-        if "no_pork" not in diets:
-            diets.append("no_pork")
-    if "gluten" not in allergens and "gluten_free" not in diets:
-        diets.append("gluten_free")
-    if "laktose" not in allergens and "lactose_free" not in diets:
-        diets.append("lactose_free")
-    if prot >= 30 and "high_protein" not in diets:
-        diets.append("high_protein")
-    if carbs <= 30 and "low_carb" not in diets:
-        diets.append("low_carb")
-    if "clean_eating" not in diets:
-        diets.append("clean_eating")
+    from backend.nutrition.diet_validator import (
+        is_meat_ingredient, is_seafood_ingredient, is_dairy_ingredient,
+        is_egg_ingredient, is_honey_ingredient, is_pork_ingredient, ALLERGEN_KEYWORD_MAP
+    )
+
+    detected_allergens = set(allergens or [])
+    for ing in ingredients:
+        iname = ing["name"]
+        il = iname.lower()
+        if is_dairy_ingredient(iname):
+            detected_allergens.add("laktose")
+        if is_egg_ingredient(iname):
+            detected_allergens.add("eier")
+        if is_seafood_ingredient(iname):
+            detected_allergens.add("fisch")
+        for allergen_key, keywords in ALLERGEN_KEYWORD_MAP.items():
+            if allergen_key not in ["laktose", "eier", "fisch"]:
+                if any(kw in il for kw in keywords):
+                    detected_allergens.add(allergen_key)
+    final_allergens = sorted(list(detected_allergens))
+
+    has_meat = any(is_meat_ingredient(i["name"]) for i in ingredients)
+    has_seafood = any(is_seafood_ingredient(i["name"]) for i in ingredients)
+    has_dairy = any(is_dairy_ingredient(i["name"]) for i in ingredients)
+    has_egg = any(is_egg_ingredient(i["name"]) for i in ingredients)
+    has_honey = any(is_honey_ingredient(i["name"]) for i in ingredients)
+    has_pork = any(is_pork_ingredient(i["name"]) for i in ingredients)
+
+    diets = set(diet_types)
+    diets.add("omnivore")
+
+    if not has_pork:
+        diets.add("no_pork")
+    else:
+        diets.discard("no_pork")
+
+    if not has_meat:
+        diets.add("pescetarian")
+    else:
+        diets.discard("pescetarian")
+
+    if not has_meat and not has_seafood:
+        diets.add("vegetarian")
+    else:
+        diets.discard("vegetarian")
+
+    if not has_meat and not has_seafood and not has_dairy and not has_egg and not has_honey:
+        diets.add("vegan")
+    else:
+        diets.discard("vegan")
+
+    if "gluten" not in final_allergens:
+        diets.add("gluten_free")
+    else:
+        diets.discard("gluten_free")
+
+    if "laktose" not in final_allergens:
+        diets.add("lactose_free")
+    else:
+        diets.discard("lactose_free")
+
+    if prot >= 30:
+        diets.add("high_protein")
+    if carbs <= 30:
+        diets.add("low_carb")
+    diets.add("clean_eating")
+
+    final_diets = sorted(list(diets))
 
     return {
         "id": r_id,
@@ -101,8 +153,8 @@ def create_recipe(
         "base_protein_g": prot,
         "base_carbs_g": carbs,
         "base_fat_g": fat,
-        "allergens": allergens,
-        "diet_types": diets,
+        "allergens": final_allergens,
+        "diet_types": final_diets,
         "ingredients": ingredients,
         "instructions": instructions,
         "detailed_instructions": {

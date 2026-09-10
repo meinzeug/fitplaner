@@ -223,31 +223,50 @@ class MemberInput(BaseModel):
     goal: str
     dietary_preference: str = "all"
     allergies: List[str] = []
+    disliked_foods: List[str] = []
 
 
 @app.post("/api/profiles", response_model=FamilyMember)
 def save_family_member(input_data: MemberInput):
     member_dict = input_data.model_dump()
     if not member_dict.get("id"):
-        member_dict["id"] = f"mem-{len(family_profiles) + 1}"
+        existing_ids = {m.id for m in family_profiles}
+        existing_nums = []
+        for m in family_profiles:
+            if m.id.startswith("mem-"):
+                part = m.id.split("-")[1]
+                if part.isdigit():
+                    existing_nums.append(int(part))
+        next_num = max(existing_nums, default=0) + 1
+        candidate_id = f"mem-{next_num}"
+        while candidate_id in existing_ids:
+            next_num += 1
+            candidate_id = f"mem-{next_num}"
+        member_dict["id"] = candidate_id
 
     enriched = enrich_family_member(member_dict)
     for i, m in enumerate(family_profiles):
         if m.id == enriched.id:
             family_profiles[i] = enriched
             save_family_profiles(family_profiles)
+            weekly_plans_store.clear()
+            save_weekly_plans(weekly_plans_store)
             return enriched
 
     family_profiles.append(enriched)
     save_family_profiles(family_profiles)
+    weekly_plans_store.clear()
+    save_weekly_plans(weekly_plans_store)
     return enriched
 
 
 @app.delete("/api/profiles/{member_id}")
 def delete_family_member(member_id: str):
     global family_profiles
-    family_profiles = [m for m in family_profiles if m.id != member_id]
+    family_profiles[:] = [m for m in family_profiles if m.id != member_id]
     save_family_profiles(family_profiles)
+    weekly_plans_store.clear()
+    save_weekly_plans(weekly_plans_store)
     return {"success": True, "deleted_id": member_id}
 
 
