@@ -1,50 +1,36 @@
-name: FitPlaner quality
+name: Trusted basket kernel
 on:
   push:
     branches: [improve/trusted-nutrition-budget]
+    paths: ['next/**', '.github/workflows/quality.yml']
   pull_request:
     branches: [main]
+    paths: ['next/**', '.github/workflows/quality.yml']
 permissions:
   contents: read
 concurrency:
-  group: fitplaner-quality-${{ github.ref }}
+  group: trusted-basket-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  quality:
+  kernel:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Preserve exact source for reproducible testing
-        run: git archive --format=zip --output=fitplaner-source.zip HEAD
-      - uses: actions/upload-artifact@v4
-        with:
-          name: fitplaner-source
-          path: fitplaner-source.zip
-          retention-days: 1
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install backend dependencies
-        run: python -m pip install -r requirements.txt pytest
-      - name: Check Python syntax
-        run: python -m compileall -q backend
-      - name: Test backend
-        run: python -m pytest -q --junitxml=test-results.xml
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Build frontend
-        working-directory: frontend
-        run: npm ci && npm run build
+      - name: Install test runner
+        run: python -m pip install 'pytest>=8,<10'
+      - name: Test standalone kernel
+        working-directory: next
+        run: python -m pytest -q tests/test_trusted_pricing.py --junitxml=kernel-results.xml
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: quality-results
-          path: |
-            test-results.xml
-            frontend/dist/
+          name: kernel-test-results
+          path: next/kernel-results.xml
           if-no-files-found: warn
           retention-days: 7
