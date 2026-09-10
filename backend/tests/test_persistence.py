@@ -92,5 +92,33 @@ class TestPersistenceLayer(unittest.TestCase):
         cleaned = [i for i in reloaded if i.id != "custom-test-456"]
         save_custom_shopping_items(cleaned)
 
+    def test_empty_profiles_persistence_not_overwritten_by_defaults(self):
+        # Save empty list explicitly
+        save_family_profiles([])
+        self.assertEqual(load_family_profiles(), [])
+
+        # Attempt to load with default members fallback - MUST NOT overwrite with defaults!
+        dummy_default = [FamilyMember(
+            id="mem-default",
+            name="Default Person",
+            gender="female",
+            age=30,
+            height_cm=165,
+            weight_kg=60,
+            activity_level="moderate",
+            goal="maintain",
+        )]
+        reloaded = load_family_profiles(default_members=dummy_default)
+        self.assertEqual(reloaded, [], "Empty profiles list must be preserved and NOT overwritten by defaults!")
+
+    def test_test_isolation_guarantee(self):
+        from backend.persistence import get_data_dir
+        from backend.settings_storage import get_settings_file
+        data_dir = get_data_dir()
+        settings_file = get_settings_file()
+        self.assertNotIn("backend/data", data_dir, "Tests MUST NOT use production backend/data directory!")
+        self.assertNotIn("backend/app_settings.json", settings_file, "Tests MUST NOT use production app_settings.json!")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -167,8 +167,7 @@ daily_hub_state: Dict[str, Any] = load_daily_hub_state({
 
 def get_or_create_weekly_plan(week_offset: int = 0) -> WeeklyPlan:
     global weekly_plans_store, weekly_budgets_store, family_profiles
-    if not family_profiles:
-        family_profiles = load_family_profiles(DEFAULT_INITIAL_MEMBERS)
+    plan_members = family_profiles if family_profiles else DEFAULT_INITIAL_MEMBERS
     settings = get_app_settings()
     if week_offset not in weekly_budgets_store:
         weekly_budgets_store[week_offset] = settings.default_weekly_budget
@@ -185,7 +184,7 @@ def get_or_create_weekly_plan(week_offset: int = 0) -> WeeklyPlan:
 
     if cached_plan is None:
         weekly_plans_store[week_offset] = generate_weekly_plan(
-            family_members=family_profiles,
+            family_members=plan_members,
             week_offset=week_offset,
             budget=budget,
             active_retailers=settings.active_retailers,
