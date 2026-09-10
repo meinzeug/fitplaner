@@ -62,6 +62,8 @@ class TestRecipeShoppingConsistency(unittest.TestCase):
         # Collect all ingredient names from the plan
         plan_ingredient_names = set()
         for day in plan.days:
+            if not getattr(day, "is_planned", True):
+                continue
             for member_id, portions in day.portions.items():
                 for meal_key in ["breakfast", "lunch", "dinner"]:
                     portion = portions.get(meal_key)

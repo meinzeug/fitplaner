@@ -77,7 +77,7 @@ export const RecipeModal: React.FC<Props> = ({
             {isAll && (
               <div className="mb-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-400 text-emerald-950 shadow-md">
-                  👨‍👩‍👧‍👦 {countDisplay ? `Gesamtmenge für alle ${countDisplay} Familienmitglieder` : 'Gesamtmenge für die Familie'} ({portion?.scaled_calories || recipe.base_calories} kcal gesamt)
+                  👨‍👩‍👧‍👦 Gesamtmenge für die Familie ({portion?.scaled_calories || recipe.base_calories} kcal gesamt)
                 </span>
               </div>
             )}
@@ -138,7 +138,7 @@ export const RecipeModal: React.FC<Props> = ({
               <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                 <Utensils className="w-4 h-4 text-emerald-600" />
                 {isAll
-                  ? `Zutaten (Gesamtmenge für alle ${countDisplay || ''} Familienmitglieder)`
+                  ? (countDisplay ? `Zutaten (Gesamtmenge für alle ${countDisplay} Familienmitglieder)` : 'Zutaten (Gesamtmenge für die Familie)')
                   : `Zutaten (Exakt abgemessen für ${activeMember.name})`}
               </h3>
               <span className="text-xs text-slate-400 font-medium">Lagerbestand wird geprüft</span>
@@ -167,7 +167,7 @@ export const RecipeModal: React.FC<Props> = ({
                       <span className="font-mono font-bold text-slate-900">{ing.amount} {ing.unit}</span>
                       {ing.matched_retailer && (
                         <span className={`ml-1.5 text-[10px] px-2 py-0.5 rounded-md font-bold shadow-xs ${getRetailerBadgeClass(ing.matched_retailer)}`}>
-                          {ing.matched_retailer} Deal
+                          {ing.matched_retailer}
                         </span>
                       )}
                     </div>

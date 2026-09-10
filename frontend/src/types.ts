@@ -137,6 +137,7 @@ export interface DayPlan {
   breakfast: Recipe;
   lunch: Recipe;
   dinner: Recipe;
+  is_planned?: boolean;
   is_breakfast_cooked?: boolean;
   is_lunch_cooked?: boolean;
   is_dinner_cooked?: boolean;
@@ -311,6 +312,7 @@ export interface ShoppingList {
   budget?: number;
   budget_status?: 'ok' | 'warning' | 'exceeded';
   budget_difference?: number;
+  selected_days?: string[];
 }
 
 export interface LeafletHotspot {
@@ -526,6 +528,12 @@ export interface AppSettings {
   microbiome_plant_target: number;
   sync_auto_discovery: boolean;
   device_role: 'host' | 'client';
+  planned_days?: string[];
+  meal_sharing?: {
+    breakfast: 'shared' | 'individual';
+    lunch: 'shared' | 'individual';
+    dinner: 'shared' | 'individual';
+  };
 }
 
 

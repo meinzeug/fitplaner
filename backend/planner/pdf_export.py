@@ -189,7 +189,11 @@ def generate_shopping_list_pdf(shopping_list: ShoppingList) -> bytes:
             ))
         ],
         [
-            Paragraph("Gedruckte Markt-Einkaufsliste mit EAN-13 Barcodes, Marken & Gang-Laufweg", subtitle_style),
+            Paragraph(
+                "Gedruckte Markt-Einkaufsliste mit EAN-13 Barcodes, Marken & Gang-Laufweg" +
+                (f"<br/><b>Geplante Einkaufstage:</b> {', '.join(shopping_list.selected_days)}" if shopping_list.selected_days and len(shopping_list.selected_days) < 7 else ""),
+                subtitle_style
+            ),
             Paragraph(f"Budget-Status: <b>{shopping_list.budget_status.upper()}</b>", ParagraphStyle(
                 'StatusBadge', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8.5, alignment=2,
                 textColor=colors.HexColor("#059669") if shopping_list.budget_status == "ok" else colors.HexColor("#dc2626")

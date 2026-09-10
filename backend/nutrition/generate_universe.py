@@ -1886,6 +1886,57 @@ def generate_all_recipes() -> List[Dict[str, Any]]:
             cal, p, c, f, alg, diets, ings, instrs, p_steps, c_steps, l_tips, tags, img
         ))
 
+    # 1. Enrich the 105 base curated recipes with rich culinary instructions
+    try:
+        from backend.nutrition.recipe_enrichment.breakfast import BREAKFAST_ENRICHMENT
+        from backend.nutrition.recipe_enrichment.lunch import LUNCH_ENRICHMENT
+        from backend.nutrition.recipe_enrichment.dinner import DINNER_ENRICHMENT
+
+        enrichments = {}
+        enrichments.update(BREAKFAST_ENRICHMENT)
+        enrichments.update(LUNCH_ENRICHMENT)
+        enrichments.update(DINNER_ENRICHMENT)
+
+        for r in recipes:
+            r_id = r["id"]
+            if r_id in enrichments:
+                enr = enrichments[r_id]
+                r["instructions"] = enr["instructions"]
+                r["detailed_instructions"] = {
+                    "prep_steps": enr["prep_steps"],
+                    "cooking_steps": enr["cooking_steps"],
+                    "lunchbox_tips": enr["lunchbox_tips"],
+                }
+    except Exception as e:
+        print(f"Warning: Base enrichment loading error: {e}")
+
+    # 2. Generate 975 extended diverse authentic German supermarket recipes
+    # (325 breakfasts, 325 lunches, 325 dinners -> total 1,080 recipes)
+    from backend.nutrition.extended_recipes.breakfast_gen import generate_extended_breakfasts
+    from backend.nutrition.extended_recipes.lunch_gen import generate_extended_lunches
+    from backend.nutrition.extended_recipes.dinner_gen import generate_extended_dinners
+
+    existing_titles = set(r["title"] for r in recipes)
+
+    ext_bf = generate_extended_breakfasts(existing_titles, start_idx=36, target_count=325)
+    recipes.extend(ext_bf)
+    existing_titles.update(r["title"] for r in ext_bf)
+
+    ext_lu = generate_extended_lunches(existing_titles, start_idx=36, target_count=325)
+    recipes.extend(ext_lu)
+    existing_titles.update(r["title"] for r in ext_lu)
+
+    ext_di = generate_extended_dinners(existing_titles, start_idx=36, target_count=325)
+    recipes.extend(ext_di)
+    existing_titles.update(r["title"] for r in ext_di)
+
+    # 3. Deduplication & Constraint Audit
+    assert len(recipes) == 1080, f"Expected 1,080 recipes, got {len(recipes)}"
+    all_titles = [r["title"] for r in recipes]
+    all_ids = [r["id"] for r in recipes]
+    assert len(set(all_titles)) == 1080, f"Duplicate titles found! {len(all_titles)} vs {len(set(all_titles))}"
+    assert len(set(all_ids)) == 1080, f"Duplicate IDs found! {len(all_ids)} vs {len(set(all_ids))}"
+
     return recipes
 
 
@@ -1895,19 +1946,18 @@ def build_universe():
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(recipes, f, ensure_ascii=False, indent=2)
 
-    try:
-        from backend.nutrition.recipe_enrichment.enrich_universe import enrich_recipes_universe
-        enrich_recipes_universe()
-    except Exception as e:
-        print(f"Warning: Enrichment step failed: {e}")
+    bf_count = sum(1 for r in recipes if r["meal_type"] == "breakfast_lunchbox")
+    lu_count = sum(1 for r in recipes if r["meal_type"] == "lunch_lunchbox")
+    di_count = sum(1 for r in recipes if r["meal_type"] == "dinner_home")
 
     print(f"✅ Generated {len(recipes)} recipes successfully:")
-    print(f"   - Breakfasts: {sum(1 for r in recipes if r['meal_type'] == 'breakfast_lunchbox')}")
-    print(f"   - Lunches:    {sum(1 for r in recipes if r['meal_type'] == 'lunch_lunchbox')}")
-    print(f"   - Dinners:    {sum(1 for r in recipes if r['meal_type'] == 'dinner_home')}")
+    print(f"   - Breakfasts: {bf_count}")
+    print(f"   - Lunches:    {lu_count}")
+    print(f"   - Dinners:    {di_count}")
     print(f"   - Saved to:   {out_path}")
 
 
 if __name__ == "__main__":
     build_universe()
+
 

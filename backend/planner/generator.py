@@ -4,10 +4,11 @@ strict allergy filtering, disliked foods exclusion, zero-repetition universe cyc
 and realistic supermarket leaflet validity horizons.
 """
 
+import re
 import random
 import uuid
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Set
 from backend.models import (
     FamilyMember, Recipe, DayPlan, WeeklyPlan, PersonMealPortion
 )
@@ -74,6 +75,179 @@ def prioritize_recipes(
     return p0 + p1 + p2
 
 
+ALLERGEN_KEYWORD_MAP: Dict[str, List[str]] = {
+    "laktose": [
+        "milch", "quark", "käse", "kaese", "feta", "joghurt", "butter",
+        "mozzarella", "hüttenkäse", "huettenkaese", "sahne", "parmesan",
+        "skyr", "schmand", "creme fraiche", "crème fraîche", "mascarpone",
+        "ricotta", "gouda", "cheddar", "frischkäse", "frischkaese", "molke"
+    ],
+    "gluten": [
+        "gluten", "weizen", "dinkel", "dinkelflocken", "roggen", "gerste", "hafer",
+        "haferflocken", "nudeln", "spaghetti", "penne", "pasta", "brot", "toast",
+        "baguette", "brötchen", "broetchen", "mehl", "couscous", "bulgur", "seitan",
+        "knäckebrot", "knaeckebrot", "wrap", "wraps", "panade", "grieß", "griess"
+    ],
+    "nuesse": [
+        "nuss", "nüsse", "nuesse", "erdnuss", "erdnüsse", "erdnuesse", "erdnussmus",
+        "walnuss", "walnüsse", "walnuesse", "haselnuss", "haselnüsse", "haselnuesse",
+        "cashew", "cashewkerne", "mandel", "mandeln", "pistazie", "pistazien",
+        "pekannuss", "paranuss", "macadamia"
+    ],
+    "fisch": [
+        "fisch", "lachs", "thunfisch", "kabeljau", "forelle", "forellenfilet",
+        "garnele", "garnelen", "seelachs", "dorade", "shrimp", "shrimps", "scampi",
+        "meeresfrüchte", "meeresfruechte", "sardine", "sardinen", "hering", "makrele"
+    ],
+    "eier": [
+        "ei", "eier", "hühnerei", "huehnerei", "rührei", "ruehrei", "spiegelei",
+        "eigelb", "eiweiß", "eiweiss"
+    ],
+    "soja": [
+        "soja", "sojasoße", "sojasosse", "sojasauce", "tofu", "naturtofu",
+        "räuchertofu", "raeuchertofu", "edamame", "tempeh", "miso"
+    ],
+    "sesam": [
+        "sesam", "sesamöl", "sesamoel", "sesamsaat", "sesamsamen", "tahin", "tahina", "tahini"
+    ],
+}
+
+PLANT_DAIRY_EXCLUSIONS = [
+    "hafermilch", "mandelmilch", "sojamilch", "kokosmilch",
+    "reismilch", "erbsenmilch", "dinkelmilch", "cashewmilch",
+    "haferdrink", "mandeldrink", "sojadrink", "kokosdrink",
+    "reisdrink", "erbsendrink", "dinkeldrink",
+    "kokosjoghurt", "sojajoghurt", "haferjoghurt", "mandeljoghurt",
+    "erdnussmus", "erdnussbutter", "mandelbutter", "cashewmus", "mandelmus",
+    "vegan", "pflanzlich"
+]
+
+ALLERGEN_NORMALIZATION: Dict[str, str] = {
+    "laktose": "laktose", "lactose": "laktose", "milch": "laktose",
+    "gluten": "gluten", "weizen": "gluten",
+    "nuesse": "nuesse", "nüsse": "nuesse", "nuts": "nuesse", "erdnuss": "nuesse", "erdnüsse": "nuesse",
+    "fisch": "fisch", "fish": "fisch", "meeresfrüchte": "fisch", "meeresfruechte": "fisch",
+    "eier": "eier", "ei": "eier", "egg": "eier", "eggs": "eier",
+    "soja": "soja", "soy": "soja",
+    "sesam": "sesam", "sesame": "sesam",
+}
+
+DISLIKE_SYNONYMS: Dict[str, List[str]] = {
+    "pilz": ["pilz", "champignon", "pfifferling", "steinpilz", "seitling", "shiitake", "austernpilz", "trüffel"],
+    "pilze": ["pilz", "champignon", "pfifferling", "steinpilz", "seitling", "shiitake", "austernpilz", "trüffel"],
+    "champignon": ["champignon", "pilz"],
+    "champignons": ["champignon", "pilz"],
+    "fisch": ["fisch", "lachs", "thunfisch", "forelle", "kabeljau", "seelachs", "dorade", "garnele", "garnelen"],
+    "meeresfrüchte": ["garnele", "garnelen", "shrimp", "shrimps", "scampi", "muschel", "tintenfisch", "calamari"],
+    "olive": ["oliv"],
+    "oliven": ["oliv"],
+    "tomate": ["tomat"],
+    "tomaten": ["tomat"],
+    "zwiebel": ["zwiebel", "schalotte"],
+    "zwiebeln": ["zwiebel", "schalotte"],
+    "knoblauch": ["knoblauch"],
+    "brokkoli": ["brokkoli", "broccoli"],
+    "aubergine": ["aubergine"],
+    "auberginen": ["aubergine"],
+    "zucchini": ["zucchini"],
+    "spinat": ["spinat"],
+    "koriander": ["koriander"],
+    "sellerie": ["sellerie"],
+    "rosenkohl": ["rosenkohl"],
+    "ingwer": ["ingwer"],
+    "paprika": ["paprika"],
+    "rosinen": ["rosin", "sultanin"],
+}
+
+
+def recipe_violates_allergies(recipe: Recipe, allergies: List[str]) -> bool:
+    """
+    Checks if a recipe violates any declared allergies by inspecting both
+    declared recipe.allergens and the ingredients list against ALLERGEN_KEYWORD_MAP.
+    Excludes plant-based milk and dairy alternatives (e.g. hafermilch, mandelmilch)
+    from triggering lactose violations.
+    """
+    if not allergies:
+        return False
+
+    normalized_allergies = {
+        ALLERGEN_NORMALIZATION.get(a.lower().strip(), a.lower().strip())
+        for a in allergies if a.strip()
+    }
+
+    # 1. Check declared recipe.allergens
+    for declared in recipe.allergens:
+        norm_decl = ALLERGEN_NORMALIZATION.get(declared.lower().strip(), declared.lower().strip())
+        if norm_decl in normalized_allergies:
+            return True
+
+    # 2. Check ingredients against ALLERGEN_KEYWORD_MAP
+    for ing in recipe.ingredients:
+        ing_l = ing.name.lower()
+        for allergen_key in normalized_allergies:
+            keywords = ALLERGEN_KEYWORD_MAP.get(allergen_key, [allergen_key])
+            if allergen_key == "laktose":
+                if any(ex in ing_l for ex in PLANT_DAIRY_EXCLUSIONS):
+                    continue
+                if any(kw in ing_l for kw in keywords):
+                    return True
+            elif allergen_key == "eier":
+                if re.search(r'\b(ei|eier|eiern|eies|hühnerei|hühnereier|rührei|spiegelei|eigelb|eiweiß|eiweiss)\b', ing_l):
+                    return True
+            else:
+                if any(kw in ing_l for kw in keywords):
+                    return True
+
+    return False
+
+
+def recipe_violates_dislikes(recipe: Recipe, disliked_foods: List[str]) -> bool:
+    """
+    Checks if a recipe contains any disliked foods by checking stems and synonyms
+    in both the recipe title and its ingredients list.
+    E.g. dislike 'pilze' or 'pilz' filters 'Champignons', 'Pfifferlinge', 'Pilzpfanne'.
+    """
+    if not disliked_foods:
+        return False
+
+    title_l = recipe.title.lower()
+    ing_names_l = [ing.name.lower() for ing in recipe.ingredients]
+
+    for d in disliked_foods:
+        d_clean = d.lower().strip()
+        if not d_clean:
+            continue
+
+        search_terms = {d_clean}
+        if d_clean in DISLIKE_SYNONYMS:
+            search_terms.update(DISLIKE_SYNONYMS[d_clean])
+
+        # Stemming: strip trailing 'en', 'e', 's'
+        if d_clean.endswith("en") and len(d_clean) > 4:
+            stem = d_clean[:-2]
+            search_terms.add(stem)
+            if stem in DISLIKE_SYNONYMS:
+                search_terms.update(DISLIKE_SYNONYMS[stem])
+        elif d_clean.endswith("e") and len(d_clean) > 3:
+            stem = d_clean[:-1]
+            search_terms.add(stem)
+            if stem in DISLIKE_SYNONYMS:
+                search_terms.update(DISLIKE_SYNONYMS[stem])
+        elif d_clean.endswith("s") and len(d_clean) > 4:
+            stem = d_clean[:-1]
+            search_terms.add(stem)
+            if stem in DISLIKE_SYNONYMS:
+                search_terms.update(DISLIKE_SYNONYMS[stem])
+
+        for term in search_terms:
+            if term in title_l:
+                return True
+            if any(term in ing_l for ing_l in ing_names_l):
+                return True
+
+    return False
+
+
 def is_recipe_compatible_with_member(
     recipe: Recipe,
     member: FamilyMember,
@@ -91,7 +265,6 @@ def is_recipe_compatible_with_member(
     if diet == "vegetarian":
         if "vegetarian" not in recipe.diet_types and "vegan" not in recipe.diet_types:
             return False
-        # Extra safety check against meat, poultry, fish, seafood, bacon/salami
         for ing in recipe.ingredients:
             ing_l = ing.name.lower()
             if any(w in ing_l for w in [
@@ -132,24 +305,13 @@ def is_recipe_compatible_with_member(
 
     # 3. Allergies Check (Hard constraint)
     if member.allergies:
-        member_allergies = [a.lower().strip() for a in member.allergies if a.strip()]
-        for allergen in recipe.allergens:
-            if allergen.lower().strip() in member_allergies:
-                return False
-        for ing in recipe.ingredients:
-            ing_l = ing.name.lower()
-            for al in member_allergies:
-                if al in ing_l:
-                    return False
+        if recipe_violates_allergies(recipe, member.allergies):
+            return False
 
     # 4. Disliked Foods Check (Hard constraint)
     if member.disliked_foods:
-        disliked = [d.lower().strip() for d in member.disliked_foods if d.strip()]
-        for ing in recipe.ingredients:
-            ing_l = ing.name.lower()
-            for bad_food in disliked:
-                if bad_food in ing_l:
-                    return False
+        if recipe_violates_dislikes(recipe, member.disliked_foods):
+            return False
 
     return True
 
@@ -192,32 +354,43 @@ def generate_weekly_plan(
     primary_retailer: Optional[str] = None,
     shuffle: bool = False,
     seed: Optional[int] = None,
+    planned_days: Optional[List[str]] = None,
+    meal_sharing: Optional[Dict[str, str]] = None,
 ) -> WeeklyPlan:
     """
     Generates a 7-day meal plan tailored to all family members for a specific week offset (0 = current week, +1 = next week, etc.),
-    respecting allergies, dislikes, budget targets, supermarket leaflet validity horizon, active retailers, and primary retailer.
-    Prioritizes recipes compatible with active_retailers (P0, P1, P2) and shuffles if requested.
-    Remaps any non-pantry ingredient with an unselected retailer to primary_retailer.
+    respecting allergies, dislikes, budget targets, supermarket leaflet validity horizon, active retailers, primary retailer,
+    planned_days (e.g. Mon-Fri planned, Sat-Sun un-planned), and meal_sharing modes (shared family pot vs. individual).
     """
-    if active_retailers is None:
+    if active_retailers is None or primary_retailer is None or planned_days is None or meal_sharing is None:
         try:
             from backend.settings_storage import get_app_settings
             settings = get_app_settings()
-            active_retailers = settings.active_retailers
+            if active_retailers is None:
+                active_retailers = settings.active_retailers
             if primary_retailer is None:
                 primary_retailer = settings.primary_retailer
+            if planned_days is None:
+                planned_days = getattr(settings, "planned_days", None)
+            if meal_sharing is None:
+                meal_sharing = getattr(settings, "meal_sharing", None)
         except Exception:
-            active_retailers = ["Netto", "NP", "Lidl", "Aldi Nord", "Aldi Süd", "Rewe", "Kaufland", "Edeka"]
+            pass
+
+    if active_retailers is None:
+        active_retailers = ["Netto", "NP", "Lidl", "Aldi Nord", "Aldi Süd", "Rewe", "Kaufland", "Edeka"]
 
     if not primary_retailer:
-        try:
-            from backend.settings_storage import get_app_settings
-            primary_retailer = get_app_settings().primary_retailer
-        except Exception:
-            primary_retailer = "Netto"
+        primary_retailer = "Netto"
 
     if active_retailers and primary_retailer not in active_retailers:
         primary_retailer = active_retailers[0]
+
+    if planned_days is None:
+        planned_days = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
+
+    if meal_sharing is None:
+        meal_sharing = {"breakfast": "individual", "lunch": "individual", "dinner": "shared"}
 
     db = preferred_recipes if preferred_recipes is not None else get_all_universe_recipes()
 
@@ -229,44 +402,36 @@ def generate_weekly_plan(
     should_shuffle = shuffle or (seed is not None)
     rng = random.Random(seed) if should_shuffle else None
 
-    # OPTION A (Empfohlen - Familien-Standard):
-    # 1. Dinner (dinner_home): Cooked in 1 pot/pan for the entire family.
-    #    Must ALWAYS be 100% vegetarian-compliant if any family member is vegetarian/vegan,
-    #    so nobody has to cook twice. The omnivore's protein need is met by portion scaling
-    #    and rich plant/vegetarian proteins (lentils, tofu, beans, cheese, eggs).
-    filtered_dinners = filter_recipes_for_family(all_dinners, family_members)
-    dinners = prioritize_recipes(filtered_dinners, active_retailers, shuffle=should_shuffle, rng=rng)
+    # Determine pools for each meal based on mode ("shared" vs "individual")
+    meals_spec = {
+        "breakfast": ("breakfast_lunchbox", all_breakfasts),
+        "lunch": ("lunch_lunchbox", all_lunches),
+        "dinner": ("dinner_home", all_dinners),
+    }
 
-    # 2. Breakfast & Lunch (breakfast_lunchbox, lunch_lunchbox):
-    #    Individualized for work/school/home!
-    #    Omnivores/High-Protein members can have high-protein meals; vegetarians strictly receive vegetarian meals.
-    member_breakfasts: Dict[str, List[Recipe]] = {}
-    member_lunches: Dict[str, List[Recipe]] = {}
+    meal_shared_pools: Dict[str, List[Recipe]] = {}
+    meal_member_pools: Dict[str, Dict[str, List[Recipe]]] = {}
 
-    for member in family_members:
-        # Try strict macro preferences (e.g. high_protein) first:
-        m_bf_strict = [r for r in all_breakfasts if is_recipe_compatible_with_member(r, member, strict_macro=True)]
-        if len(m_bf_strict) >= 7:
-            m_bf_pool = m_bf_strict
+    for meal_key, (meal_type_str, recipe_list) in meals_spec.items():
+        mode = meal_sharing.get(meal_key, "shared" if meal_key == "dinner" else "individual")
+        if mode == "shared":
+            filtered = filter_recipes_for_family(recipe_list, family_members)
+            prioritized = prioritize_recipes(filtered, active_retailers, shuffle=should_shuffle, rng=rng)
+            if not prioritized:
+                prioritized = prioritize_recipes(recipe_list, active_retailers, shuffle=should_shuffle, rng=rng)
+            meal_shared_pools[meal_key] = prioritized
         else:
-            m_bf_pool = [r for r in all_breakfasts if is_recipe_compatible_with_member(r, member, strict_macro=False)]
-        if not m_bf_pool:
-            m_bf_pool = all_breakfasts
-        member_breakfasts[member.id] = prioritize_recipes(m_bf_pool, active_retailers, shuffle=should_shuffle, rng=rng)
-
-        # Same for lunch:
-        m_lu_strict = [r for r in all_lunches if is_recipe_compatible_with_member(r, member, strict_macro=True)]
-        if len(m_lu_strict) >= 7:
-            m_lu_pool = m_lu_strict
-        else:
-            m_lu_pool = [r for r in all_lunches if is_recipe_compatible_with_member(r, member, strict_macro=False)]
-        if not m_lu_pool:
-            m_lu_pool = all_lunches
-        member_lunches[member.id] = prioritize_recipes(m_lu_pool, active_retailers, shuffle=should_shuffle, rng=rng)
-
-    primary_m_id = family_members[0].id if family_members else None
-    primary_bfs = member_breakfasts.get(primary_m_id, all_breakfasts) if primary_m_id else all_breakfasts
-    primary_lus = member_lunches.get(primary_m_id, all_lunches) if primary_m_id else all_lunches
+            member_dict: Dict[str, List[Recipe]] = {}
+            for member in family_members:
+                m_strict = [r for r in recipe_list if is_recipe_compatible_with_member(r, member, strict_macro=True)]
+                if len(m_strict) >= 7:
+                    m_pool = m_strict
+                else:
+                    m_pool = [r for r in recipe_list if is_recipe_compatible_with_member(r, member, strict_macro=False)]
+                if not m_pool:
+                    m_pool = recipe_list
+                member_dict[member.id] = prioritize_recipes(m_pool, active_retailers, shuffle=should_shuffle, rng=rng)
+            meal_member_pools[meal_key] = member_dict
 
     days: List[DayPlan] = []
     today = datetime.now()
@@ -302,49 +467,60 @@ def generate_weekly_plan(
     for i, day_name in enumerate(DAYS_OF_WEEK):
         day_date = monday + timedelta(days=i)
         date_str = day_date.strftime("%d.%m.%Y")
+        is_planned = day_name in planned_days
 
-        # Option A: Dinner is cooked in 1 shared family pot (strictly vegetarian-compliant for mixed families)
-        di_recipe = sanitize_recipe(dinners[(base_offset + i) % len(dinners)], active_retailers, primary_retailer)
+        day_recipes: Dict[str, Recipe] = {}
+        portions_by_member: Dict[str, Dict[str, PersonMealPortion]] = {
+            m.id: {} for m in family_members
+        }
 
-        # Primary default recipe for day (used for overview or when all members have the same dish)
-        bf_recipe = sanitize_recipe(primary_bfs[(base_offset + i) % len(primary_bfs)], active_retailers, primary_retailer)
-        lu_recipe = sanitize_recipe(primary_lus[(base_offset + i) % len(primary_lus)], active_retailers, primary_retailer)
+        for meal_key, (meal_type_str, recipe_list) in meals_spec.items():
+            mode = meal_sharing.get(meal_key, "shared" if meal_key == "dinner" else "individual")
+            if mode == "shared":
+                pool = meal_shared_pools[meal_key]
+                chosen = sanitize_recipe(pool[(base_offset + i) % len(pool)], active_retailers, primary_retailer)
+                day_recipes[meal_key] = chosen
+                for member in family_members:
+                    portion = scale_recipe_for_person(
+                        chosen, member, meal_type_str,
+                        active_retailers=active_retailers, primary_retailer=primary_retailer
+                    )
+                    portions_by_member[member.id][meal_key] = portion
+            else:
+                member_dict = meal_member_pools[meal_key]
+                primary_m_id = family_members[0].id if family_members else None
+                primary_list = member_dict.get(primary_m_id, recipe_list) if primary_m_id else recipe_list
+                day_recipes[meal_key] = sanitize_recipe(primary_list[(base_offset + i) % len(primary_list)], active_retailers, primary_retailer)
+                for member in family_members:
+                    m_list = member_dict.get(member.id, primary_list)
+                    m_chosen = sanitize_recipe(m_list[(base_offset + i) % len(m_list)], active_retailers, primary_retailer)
+                    portion = scale_recipe_for_person(
+                        m_chosen, member, meal_type_str,
+                        active_retailers=active_retailers, primary_retailer=primary_retailer
+                    )
+                    portions_by_member[member.id][meal_key] = portion
 
-        portions_by_member: Dict[str, Dict[str, PersonMealPortion]] = {}
         daily_nutrition_by_member: Dict[str, Dict[str, int]] = {}
-
         for member in family_members:
-            m_bf_list = member_breakfasts.get(member.id, primary_bfs)
-            m_lu_list = member_lunches.get(member.id, primary_lus)
-
-            mem_bf = sanitize_recipe(m_bf_list[(base_offset + i) % len(m_bf_list)], active_retailers, primary_retailer)
-            mem_lu = sanitize_recipe(m_lu_list[(base_offset + i) % len(m_lu_list)], active_retailers, primary_retailer)
-            mem_di = di_recipe  # 1-pot shared family dinner for everyone!
-
-            bf_portion = scale_recipe_for_person(mem_bf, member, "breakfast_lunchbox", active_retailers=active_retailers, primary_retailer=primary_retailer)
-            lu_portion = scale_recipe_for_person(mem_lu, member, "lunch_lunchbox", active_retailers=active_retailers, primary_retailer=primary_retailer)
-            di_portion = scale_recipe_for_person(mem_di, member, "dinner_home", active_retailers=active_retailers, primary_retailer=primary_retailer)
-
-            portions_by_member[member.id] = {
-                "breakfast": bf_portion,
-                "lunch": lu_portion,
-                "dinner": di_portion,
-            }
-
+            m_portions = portions_by_member[member.id]
+            bf_p = m_portions.get("breakfast")
+            lu_p = m_portions.get("lunch")
+            di_p = m_portions.get("dinner")
             daily_nutrition_by_member[member.id] = {
-                "calories": bf_portion.scaled_calories + lu_portion.scaled_calories + di_portion.scaled_calories,
-                "protein": bf_portion.scaled_protein_g + lu_portion.scaled_protein_g + di_portion.scaled_protein_g,
-                "carbs": bf_portion.scaled_carbs_g + lu_portion.scaled_carbs_g + di_portion.scaled_carbs_g,
-                "fat": bf_portion.scaled_fat_g + lu_portion.scaled_fat_g + di_portion.scaled_fat_g,
+                "calories": (bf_p.scaled_calories if bf_p else 0) + (lu_p.scaled_calories if lu_p else 0) + (di_p.scaled_calories if di_p else 0),
+                "protein": (bf_p.scaled_protein_g if bf_p else 0) + (lu_p.scaled_protein_g if lu_p else 0) + (di_p.scaled_protein_g if di_p else 0),
+                "carbs": (bf_p.scaled_carbs_g if bf_p else 0) + (lu_p.scaled_carbs_g if lu_p else 0) + (di_p.scaled_carbs_g if di_p else 0),
+                "fat": (bf_p.scaled_fat_g if bf_p else 0) + (lu_p.scaled_fat_g if lu_p else 0) + (di_p.scaled_fat_g if di_p else 0),
             }
 
         days.append(
             DayPlan(
                 day_name=day_name,
                 date=date_str,
-                breakfast=bf_recipe,
-                lunch=lu_recipe,
-                dinner=di_recipe,
+                breakfast=day_recipes["breakfast"],
+                lunch=day_recipes["lunch"],
+                dinner=day_recipes["dinner"],
+                is_planned=is_planned,
                 portions=portions_by_member,
                 daily_nutrition_by_member=daily_nutrition_by_member,
             )

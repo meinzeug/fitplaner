@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingList, ShoppingItem, CustomShoppingItem, PantryItem } from '../types';
 import { PantryView } from './PantryView';
 import {
@@ -22,8 +22,19 @@ interface Props {
   onRefreshPantry?: () => void;
 }
 
+const ALL_DAYS_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+const DAY_MAP: Record<string, string> = {
+  Mo: 'Montag',
+  Di: 'Dienstag',
+  Mi: 'Mittwoch',
+  Do: 'Donnerstag',
+  Fr: 'Freitag',
+  Sa: 'Samstag',
+  So: 'Sonntag',
+};
+
 export const ShoppingListView: React.FC<Props> = ({
-  shoppingList,
+  shoppingList: initialShoppingList,
   selectedWeekOffset,
   onChangeWeek,
   onRefresh,
@@ -35,6 +46,42 @@ export const ShoppingListView: React.FC<Props> = ({
   onDeletePantryItem,
   onRefreshPantry,
 }) => {
+  const [selectedDays, setSelectedDays] = useState<string[]>(['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']);
+  const [activeList, setActiveList] = useState<ShoppingList | null>(initialShoppingList);
+
+  useEffect(() => {
+    setActiveList(initialShoppingList);
+  }, [initialShoppingList]);
+
+  useEffect(() => {
+    fetchFilteredList(selectedDays, selectedWeekOffset);
+  }, [selectedDays, selectedWeekOffset]);
+
+  const fetchFilteredList = async (days: string[], weekOffset: number) => {
+    try {
+      const dayNames = days.map((d) => DAY_MAP[d] || d);
+      const daysQuery = days.length === 7 ? '' : `&days=${encodeURIComponent(dayNames.join(','))}`;
+      const res = await fetch(`/api/shopping-list?week_offset=${weekOffset}${daysQuery}`);
+      if (res.ok) {
+        const data = await res.json();
+        setActiveList(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch filtered shopping list:', e);
+    }
+  };
+
+  const toggleDayFilter = (d: string) => {
+    setSelectedDays((prev) => {
+      if (prev.includes(d)) {
+        if (prev.length <= 1) return prev;
+        return prev.filter((item) => item !== d);
+      }
+      return ALL_DAYS_SHORT.filter((item) => prev.includes(item) || item === d);
+    });
+  };
+
+  const shoppingList = activeList || initialShoppingList;
   // Main Sub-Tab: 'list' (Einkaufsliste) or 'pantry' (Vorratskammer & Scanner)
   const [subTab, setSubTab] = useState<'list' | 'pantry'>('list');
 
@@ -80,7 +127,8 @@ export const ShoppingListView: React.FC<Props> = ({
 
   const handleCopyWhatsApp = async () => {
     try {
-      const res = await fetch('/api/shopping-list/export-whatsapp');
+      const daysQuery = selectedDays.length < 7 ? `?days=${encodeURIComponent(selectedDays.map((d) => DAY_MAP[d] || d).join(','))}` : '';
+      const res = await fetch(`/api/shopping-list/export-whatsapp${daysQuery}`);
       const data = await res.json();
       if (data.text) {
         await navigator.clipboard.writeText(data.text);
@@ -96,7 +144,8 @@ export const ShoppingListView: React.FC<Props> = ({
 
   const handleDownloadPdf = () => {
     setIsDownloadingPdf(true);
-    const downloadUrl = `/api/shopping-list/export-pdf?week_offset=${selectedWeekOffset}`;
+    const daysQuery = selectedDays.length < 7 ? `&days=${encodeURIComponent(selectedDays.map((d) => DAY_MAP[d] || d).join(','))}` : '';
+    const downloadUrl = `/api/shopping-list/export-pdf?week_offset=${selectedWeekOffset}${daysQuery}`;
     const link = document.createElement('a');
     link.href = downloadUrl;
     link.setAttribute('download', `Einkaufsliste_KW${selectedWeekOffset}.pdf`);
@@ -417,6 +466,66 @@ export const ShoppingListView: React.FC<Props> = ({
               >
                 <Layers className="w-3.5 h-3.5 text-slate-500" />
                 <span>🏪 Nach Filiale</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Day Filter Bar */}
+          <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5 mr-1">
+                <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                🛒 Einkauf für Tage:
+              </span>
+              {ALL_DAYS_SHORT.map((dayShort) => {
+                const isSelected = selectedDays.includes(dayShort);
+                return (
+                  <button
+                    key={dayShort}
+                    onClick={() => toggleDayFilter(dayShort)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
+                      isSelected
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800'
+                    }`}
+                  >
+                    {dayShort}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] font-bold text-slate-400 mr-1">Schnellwahl:</span>
+              <button
+                onClick={() => setSelectedDays([...ALL_DAYS_SHORT])}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                  selectedDays.length === 7
+                    ? 'bg-emerald-100 text-emerald-800 font-bold border border-emerald-300'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                }`}
+              >
+                Alle Tage
+              </button>
+              <button
+                onClick={() => setSelectedDays(['Mo', 'Di', 'Mi'])}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                  selectedDays.length === 3 && selectedDays.every((d) => ['Mo', 'Di', 'Mi'].includes(d))
+                    ? 'bg-emerald-100 text-emerald-800 font-bold border border-emerald-300'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                }`}
+              >
+                Mo–Mi
+              </button>
+              <button
+                onClick={() => setSelectedDays(['Do', 'Fr', 'Sa'])}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                  selectedDays.length === 3 && selectedDays.every((d) => ['Do', 'Fr', 'Sa'].includes(d))
+                    ? 'bg-emerald-100 text-emerald-800 font-bold border border-emerald-300'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                }`}
+              >
+                Do–Sa
               </button>
             </div>
           </div>

@@ -1,14 +1,69 @@
 import React, { useState, useEffect } from 'react';
 import { WeeklyPlan, FamilyMember, Recipe, PantryItem, PersonMealPortion, ScaledIngredient, DayPlan } from '../types';
 import { RecipeModal } from './RecipeModal';
-import { getRetailerBadgeClass } from '../utils/retailerBadges';
 import {
   Calendar, RefreshCw, Box, UtensilsCrossed, Clock, Flame, Sparkles,
   ArrowRightLeft, ChefHat, Sun, Moon, Coffee,
   ChevronLeft, ChevronRight, Wallet, AlertTriangle, Users, BookOpen
 } from 'lucide-react';
 
-export { getRetailerBadgeClass };
+/**
+ * Utility to return authentic brand colors and border classes for German retailers.
+ * Supports Netto, NP, Lidl, Aldi Nord/Süd, Rewe, Kaufland, Edeka, Vorratskammer, etc.
+ */
+export function getRetailerBadgeClass(retailer?: string): string {
+  if (!retailer) {
+    return 'bg-slate-100 text-slate-700 border border-slate-300 font-bold';
+  }
+
+  const r = retailer.toLowerCase().trim();
+
+  // Netto Marken-Discount (Yellow & Red/Black)
+  if (r.includes('netto')) {
+    return 'bg-amber-400 text-stone-950 border border-amber-500 font-black';
+  }
+
+  // NP Discount (Red & White)
+  if (r === 'np' || r.includes('np discount') || r.includes('np-') || r.startsWith('np ')) {
+    return 'bg-red-600 text-white border border-red-700 font-bold';
+  }
+
+  // Lidl (Blue & Yellow)
+  if (r.includes('lidl')) {
+    return 'bg-blue-600 text-white border border-blue-700 font-bold';
+  }
+
+  // Aldi Süd / Aldi Nord
+  if (r.includes('aldi')) {
+    if (r.includes('süd') || r.includes('sued')) {
+      return 'bg-indigo-700 text-white border border-indigo-800 font-bold';
+    }
+    return 'bg-sky-800 text-white border border-sky-900 font-bold';
+  }
+
+  // Rewe (Red & White)
+  if (r.includes('rewe')) {
+    return 'bg-red-700 text-white border border-red-800 font-bold';
+  }
+
+  // Kaufland (Dark Red / Crimson)
+  if (r.includes('kaufland')) {
+    return 'bg-rose-900 text-white border border-rose-950 font-bold';
+  }
+
+  // Edeka (Yellow & Blue)
+  if (r.includes('edeka')) {
+    return 'bg-yellow-400 text-blue-950 border border-blue-600 font-bold';
+  }
+
+  // Vorratskammer (Pantry Green)
+  if (r.includes('vorrat')) {
+    return 'bg-emerald-100 text-emerald-800 border border-emerald-400 font-bold';
+  }
+
+  // Default / Other
+  return 'bg-slate-100 text-slate-700 border border-slate-300 font-bold';
+}
 
 /**
  * Calculates aggregated portions and ingredients summed across all family members
@@ -456,7 +511,10 @@ export const WeeklyPlanView: React.FC<Props> = ({
               </span>
             </div>
             <p className="text-xs text-slate-600">
-              {plan.leaflet_availability_note || 'Reale Angebote mit deutschen Supermärkten synchronisiert (Netto, NP, Lidl, Aldi, Rewe, Kaufland, Edeka).'}
+              {plan.leaflet_availability_note ||
+                (plan.active_retailers && plan.active_retailers.length > 0
+                  ? `Reale Angebote mit aktiven Supermärkten synchronisiert (${plan.active_retailers.join(', ')}).`
+                  : 'Reale Angebote mit Netto & NP synchronisiert.')}
             </p>
           </div>
         </div>
@@ -612,31 +670,59 @@ export const WeeklyPlanView: React.FC<Props> = ({
                     {day.day_name}
                   </span>
                   <span className="text-xs text-slate-400 font-medium">({day.date})</span>
+                  {day.is_planned === false && (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                      🏖️ Planungsfrei
+                    </span>
+                  )}
                 </div>
 
                 {/* Target Progress Bar */}
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-slate-300">
-                    {isAllSelected ? (
-                      <>Tages-Ziel <span className="font-bold text-white">Gesamt-Familie ({members.length} Personen)</span>:</>
-                    ) : (
-                      <>Tages-Ziel <span className="font-bold text-white">{currentMember.name}</span>:</>
-                    )}
-                  </span>
-                  <span className="text-xs font-bold text-emerald-300">
-                    {plannedCals} / {targetCals} kcal
-                  </span>
-                  <div className="w-24 bg-slate-700 h-2 rounded-full overflow-hidden">
-                    <div
-                      className="bg-emerald-400 h-full rounded-full transition-all"
-                      style={{ width: `${calPercent}%` }}
-                    />
+                {day.is_planned !== false ? (
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-slate-300">
+                      {isAllSelected ? (
+                        <>Tages-Ziel <span className="font-bold text-white">Gesamt-Familie ({members.length} Personen)</span>:</>
+                      ) : (
+                        <>Tages-Ziel <span className="font-bold text-white">{currentMember.name}</span>:</>
+                      )}
+                    </span>
+                    <span className="text-xs font-bold text-emerald-300">
+                      {plannedCals} / {targetCals} kcal
+                    </span>
+                    <div className="w-24 bg-slate-700 h-2 rounded-full overflow-hidden">
+                      <div
+                        className="bg-emerald-400 h-full rounded-full transition-all"
+                        style={{ width: `${calPercent}%` }}
+                      />
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <span className="text-xs text-amber-300/80 font-medium italic">
+                    Keine Mahlzeiten eingeplant
+                  </span>
+                )}
               </div>
 
-              {/* 3 Meals Columns */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
+              {day.is_planned === false ? (
+                /* Planungsfreier Tag Relax-Kachel */
+                <div className="p-8 sm:p-12 text-center bg-gradient-to-b from-amber-50/40 via-white to-amber-50/20 flex flex-col items-center justify-center gap-3.5 border-t border-slate-100">
+                  <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-700 flex items-center justify-center text-3xl shadow-xs">
+                    🏖️
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-base sm:text-lg font-black text-slate-800">
+                      🏖️ Planungsfreier Tag (Kein Kochen geplant)
+                    </h4>
+                    <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                      Für <strong>{day.day_name}</strong> ist laut deinen Haushalts-Einstellungen kein Kochen vorgesehen.
+                      Perfekt für Restaurantbesuche, Familienausflüge oder Resteessen aus deiner Vorratskammer!
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                /* 3 Meals Columns */
+                <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
                 {/* 1. FRÜHSTÜCK (BROTDOSE) */}
                 <div className="p-5 flex flex-col justify-between space-y-4 hover:bg-slate-50/50 transition">
                   <div>
@@ -913,6 +999,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
                   </div>
                 </div>
               </div>
+            )}
             </div>
           );
         })}
@@ -924,7 +1011,15 @@ export const WeeklyPlanView: React.FC<Props> = ({
           recipe={selectedRecipeModal.recipe}
           dayIndex={selectedRecipeModal.dayIndex}
           mealType={selectedRecipeModal.mealType}
-          activeMember={selectedRecipeModal.targetMember || currentMember}
+          activeMember={
+            isAllSelected && !selectedRecipeModal.targetMember
+              ? {
+                  ...currentMember,
+                  id: 'all',
+                  name: `Gesamte Familie (${members.length} Personen)`,
+                }
+              : selectedRecipeModal.targetMember || currentMember
+          }
           portion={
             isAllSelected && !selectedRecipeModal.targetMember
               ? getAggregatedMealPortion(

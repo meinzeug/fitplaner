@@ -9,7 +9,10 @@ from backend.nutrition.calculator import enrich_family_member, scale_recipe_for_
 from backend.nutrition.recipe_universe import (
     get_all_universe_recipes, filter_universe_recipes, get_universe_stats, get_recipe_by_id
 )
-from backend.planner.generator import generate_weekly_plan, swap_meal_in_plan
+from backend.planner.generator import (
+    generate_weekly_plan, swap_meal_in_plan,
+    recipe_violates_allergies, recipe_violates_dislikes, ALLERGEN_KEYWORD_MAP
+)
 from backend.scrapers.leaflets import get_all_leaflets, get_leaflet_by_retailer
 from backend.planner.shopping_list import generate_shopping_list_from_plan
 
@@ -307,6 +310,133 @@ class TestRecipeUniverseAndSupermarkets(unittest.TestCase):
                     self.assertNotIn("fisch", ing.name.lower())
                     self.assertNotIn("lachs", ing.name.lower())
                     self.assertNotIn("thunfisch", ing.name.lower())
+
+    def test_allergen_keyword_map_and_plant_milk_exemption(self):
+        """Verifies 7 main allergens detection and plant milk exemption for lactose."""
+        # 1. Check ALLERGEN_KEYWORD_MAP contains the 7 main allergens
+        required_allergens = ["laktose", "gluten", "nuesse", "fisch", "eier", "soja", "sesam"]
+        for a in required_allergens:
+            self.assertIn(a, ALLERGEN_KEYWORD_MAP)
+            self.assertGreater(len(ALLERGEN_KEYWORD_MAP[a]), 0)
+
+        all_recipes = get_all_universe_recipes()
+
+        # 2. Plant milk exemption: Porridge with Hafermilch must NOT violate lactose
+        porridge = next(r for r in all_recipes if "Warmer Apfel-Zimt-Porridge mit Mandeln" in r.title)
+        self.assertFalse(
+            recipe_violates_allergies(porridge, ["laktose"]),
+            "Porridge with plant milk (Hafermilch) must NOT trigger lactose violation"
+        )
+
+        # 3. Real dairy recipe MUST violate lactose
+        quark_recipe = next(
+            r for r in all_recipes
+            if any(k in ing.name.lower() for ing in r.ingredients for k in ["quark", "feta", "gouda", "mozzarella"])
+        )
+        self.assertTrue(recipe_violates_allergies(quark_recipe, ["laktose"]))
+
+        # 4. Egg allergen detection: Must not falsely match 'Naturreis'
+        egg_recipe = next(r for r in all_recipes if any("eier" in ing.name.lower() for ing in r.ingredients))
+        self.assertTrue(recipe_violates_allergies(egg_recipe, ["eier"]))
+
+        rice_recipe = next(
+            r for r in all_recipes
+            if any("naturreis" in ing.name.lower() for ing in r.ingredients)
+            and not any("eier" in ing.name.lower() for ing in r.ingredients)
+            and "eier" not in r.allergens
+        )
+        self.assertFalse(recipe_violates_allergies(rice_recipe, ["eier"]))
+
+    def test_dislike_stemming_and_synonyms(self):
+        """Verifies that dislikes like 'pilze' or 'pilz' filter 'Champignons' and mushroom recipes."""
+        all_recipes = get_all_universe_recipes()
+        champignon_recipe = next(
+            r for r in all_recipes
+            if any("champignon" in ing.name.lower() for ing in r.ingredients)
+        )
+        # Both "pilze" and "pilz" must flag this recipe
+        self.assertTrue(recipe_violates_dislikes(champignon_recipe, ["pilze"]))
+        self.assertTrue(recipe_violates_dislikes(champignon_recipe, ["pilz"]))
+
+        # Non-mushroom recipe must not be flagged
+        apple_recipe = next(
+            r for r in all_recipes
+            if not any("champignon" in ing.name.lower() or "pilz" in ing.name.lower() for ing in r.ingredients)
+            and "pilz" not in r.title.lower()
+        )
+        self.assertFalse(recipe_violates_dislikes(apple_recipe, ["pilze"]))
+
+    def test_planned_days_configuration(self):
+        """Verifies that non-planned days have is_planned=False and are excluded from shopping list."""
+        weekdays_only = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag"]
+        plan = generate_weekly_plan(
+            family_members=self.family,
+            week_offset=0,
+            planned_days=weekdays_only
+        )
+
+        for day in plan.days:
+            if day.day_name in weekdays_only:
+                self.assertTrue(day.is_planned, f"{day.day_name} should be planned")
+            else:
+                self.assertFalse(day.is_planned, f"{day.day_name} should NOT be planned")
+
+        shopping_list = generate_shopping_list_from_plan(plan)
+        self.assertEqual(shopping_list.selected_days, weekdays_only)
+
+    def test_meal_sharing_modes(self):
+        """Verifies shared vs. individual meal sharing modes for mixed families."""
+        dennis = enrich_family_member({
+            "id": "mem-1", "name": "Dennis", "gender": "male", "age": 42,
+            "height_cm": 172, "weight_kg": 65, "activity_level": "moderate",
+            "goal": "gain_muscle", "dietary_preference": "high_protein", "allergies": []
+        })
+        juna = enrich_family_member({
+            "id": "mem-3", "name": "Juna Fee", "gender": "female", "age": 12,
+            "height_cm": 150, "weight_kg": 42, "activity_level": "moderate",
+            "goal": "maintain", "dietary_preference": "vegetarian", "allergies": []
+        })
+        family = [dennis, juna]
+
+        # Case 1: All meals shared -> every meal is 100% vegetarian for both members
+        all_shared = {"breakfast": "shared", "lunch": "shared", "dinner": "shared"}
+        plan_shared = generate_weekly_plan(
+            family_members=family,
+            week_offset=0,
+            meal_sharing=all_shared,
+            seed=42
+        )
+        for day in plan_shared.days:
+            d_p = day.portions[dennis.id]
+            j_p = day.portions[juna.id]
+            for m_key in ["breakfast", "lunch", "dinner"]:
+                self.assertEqual(
+                    d_p[m_key].recipe_id, j_p[m_key].recipe_id,
+                    f"Shared {m_key} must have identical recipe_id for both members"
+                )
+                self.assertEqual(
+                    d_p[m_key].recipe_title, j_p[m_key].recipe_title,
+                    f"Shared {m_key} must have identical recipe title"
+                )
+
+        # Case 2: Individual breakfast/lunch, shared dinner
+        mixed_sharing = {"breakfast": "individual", "lunch": "individual", "dinner": "shared"}
+        plan_mixed = generate_weekly_plan(
+            family_members=family,
+            week_offset=0,
+            meal_sharing=mixed_sharing,
+            seed=42
+        )
+        for day in plan_mixed.days:
+            d_p = day.portions[dennis.id]
+            j_p = day.portions[juna.id]
+            # Dinner shared
+            self.assertEqual(d_p["dinner"].recipe_id, j_p["dinner"].recipe_id)
+            # Juna's breakfast and lunch must strictly be vegetarian/vegan
+            j_bf = get_recipe_by_id(j_p["breakfast"].recipe_id)
+            j_lu = get_recipe_by_id(j_p["lunch"].recipe_id)
+            self.assertTrue("vegetarian" in j_bf.diet_types or "vegan" in j_bf.diet_types)
+            self.assertTrue("vegetarian" in j_lu.diet_types or "vegan" in j_lu.diet_types)
 
 
 if __name__ == "__main__":

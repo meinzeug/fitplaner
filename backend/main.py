@@ -40,7 +40,8 @@ from backend.nutrition.ingredient_analyzer import (
 )
 from backend.nutrition.recipe_database import RECIPES_DATABASE
 from backend.nutrition.recipe_universe import (
-    get_all_universe_recipes, filter_universe_recipes, get_universe_stats
+    get_all_universe_recipes, filter_universe_recipes, get_universe_stats,
+    get_recipe_by_id, add_universe_recipe, update_universe_recipe, delete_universe_recipe
 )
 from backend.schedule.timeline_engine import (
     generate_daily_timeline, get_schedule_settings,
@@ -177,7 +178,8 @@ def get_or_create_weekly_plan(week_offset: int = 0) -> WeeklyPlan:
     cached_plan = weekly_plans_store.get(week_offset)
     if cached_plan is not None:
         cached_retailers = getattr(cached_plan, "active_retailers", None)
-        if cached_retailers != settings.active_retailers:
+        cached_days = [d.day_name for d in cached_plan.days if getattr(d, "is_planned", True)]
+        if cached_retailers != settings.active_retailers or cached_days != settings.planned_days:
             cached_plan = None
             weekly_plans_store.pop(week_offset, None)
 
@@ -188,6 +190,8 @@ def get_or_create_weekly_plan(week_offset: int = 0) -> WeeklyPlan:
             budget=budget,
             active_retailers=settings.active_retailers,
             primary_retailer=settings.primary_retailer,
+            planned_days=settings.planned_days,
+            meal_sharing=settings.meal_sharing,
         )
         save_weekly_plans(weekly_plans_store)
     return weekly_plans_store[week_offset]
@@ -484,9 +488,16 @@ async def analyze_product(query: IngredientQuery):
 def get_recipes(
     meal_type: Optional[str] = None,
     diet: Optional[str] = None,
+    query: Optional[str] = None,
     limit: Optional[int] = Query(None, description="Max recipes to return (default all)")
 ):
     recipes = filter_universe_recipes(meal_type=meal_type, diet=diet)
+    if query:
+        q = query.lower().strip()
+        recipes = [
+            r for r in recipes
+            if q in r.title.lower() or any(q in i.name.lower() for i in r.ingredients) or any(q in t.lower() for t in r.tags)
+        ]
     if limit and limit > 0:
         return recipes[:limit]
     return recipes
@@ -495,6 +506,36 @@ def get_recipes(
 @app.get("/api/recipes/stats")
 def get_recipe_statistics():
     return get_universe_stats()
+
+
+@app.get("/api/recipes/{recipe_id}", response_model=Recipe)
+def get_single_recipe(recipe_id: str):
+    r = get_recipe_by_id(recipe_id)
+    if not r:
+        raise HTTPException(status_code=404, detail="Rezept nicht gefunden.")
+    return r
+
+
+@app.post("/api/recipes", response_model=Recipe)
+@app.post("/api/recipes/", response_model=Recipe, include_in_schema=False)
+def create_recipe(recipe: Recipe):
+    return add_universe_recipe(recipe)
+
+
+@app.put("/api/recipes/{recipe_id}", response_model=Recipe)
+def update_recipe_endpoint(recipe_id: str, recipe: Recipe):
+    res = update_universe_recipe(recipe_id, recipe)
+    if not res:
+        raise HTTPException(status_code=404, detail="Rezept nicht gefunden.")
+    return res
+
+
+@app.delete("/api/recipes/{recipe_id}")
+def delete_recipe_endpoint(recipe_id: str):
+    success = delete_universe_recipe(recipe_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Rezept nicht gefunden.")
+    return {"status": "deleted", "id": recipe_id}
 
 
 @app.get("/api/settings", response_model=AppSettings)
@@ -528,6 +569,8 @@ def create_weekly_plan(week_offset: int = Query(0, description="Week offset from
         primary_retailer=settings.primary_retailer,
         shuffle=True,
         seed=seed,
+        planned_days=settings.planned_days,
+        meal_sharing=settings.meal_sharing,
     )
     weekly_plans_store[week_offset] = plan
     save_weekly_plans(weekly_plans_store)
@@ -567,40 +610,55 @@ def swap_meal(req: SwapMealRequest):
 
 @app.get("/api/shopping-list", response_model=ShoppingList)
 @app.get("/api/shopping-list/", response_model=ShoppingList, include_in_schema=False)
-def get_shopping_list(week_offset: int = Query(0, description="Week offset from current week")):
+def get_shopping_list(
+    week_offset: int = Query(0, description="Week offset from current week"),
+    days: Optional[str] = Query(None, description="Comma-separated day names or abbreviations")
+):
     settings = get_app_settings()
     plan = get_or_create_weekly_plan(week_offset)
+    day_list = [d.strip() for d in days.split(",")] if days else None
     return generate_shopping_list_from_plan(
         plan,
         get_custom_shopping_items(),
         active_retailers=settings.active_retailers,
         primary_retailer=settings.primary_retailer,
+        days=day_list,
     )
 
 
 @app.get("/api/shopping-list/export-whatsapp")
-def export_whatsapp(week_offset: int = Query(0, description="Week offset from current week")):
+def export_whatsapp(
+    week_offset: int = Query(0, description="Week offset from current week"),
+    days: Optional[str] = Query(None, description="Comma-separated day names or abbreviations")
+):
     settings = get_app_settings()
     plan = get_or_create_weekly_plan(week_offset)
+    day_list = [d.strip() for d in days.split(",")] if days else None
     shopping_list = generate_shopping_list_from_plan(
         plan,
         get_custom_shopping_items(),
         active_retailers=settings.active_retailers,
         primary_retailer=settings.primary_retailer,
+        days=day_list,
     )
     text = format_whatsapp_export(shopping_list)
     return {"text": text}
 
 
 @app.get("/api/shopping-list/export-pdf")
-def export_shopping_list_pdf(week_offset: int = Query(0, description="Week offset from current week")):
+def export_shopping_list_pdf(
+    week_offset: int = Query(0, description="Week offset from current week"),
+    days: Optional[str] = Query(None, description="Comma-separated day names or abbreviations")
+):
     settings = get_app_settings()
     plan = get_or_create_weekly_plan(week_offset)
+    day_list = [d.strip() for d in days.split(",")] if days else None
     shopping_list = generate_shopping_list_from_plan(
         plan,
         get_custom_shopping_items(),
         active_retailers=settings.active_retailers,
         primary_retailer=settings.primary_retailer,
+        days=day_list,
     )
     pdf_bytes = generate_shopping_list_pdf(shopping_list)
     iso_clean = plan.iso_week.replace(" ", "_") if plan.iso_week else f"KW_{week_offset}"

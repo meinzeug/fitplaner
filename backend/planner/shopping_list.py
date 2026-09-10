@@ -139,6 +139,7 @@ def generate_shopping_list_from_plan(
     custom_items: Optional[List[CustomShoppingItem]] = None,
     active_retailers: Optional[List[str]] = None,
     primary_retailer: Optional[str] = None,
+    days: Optional[List[str]] = None,
 ) -> ShoppingList:
     """
     Sums up all required ingredients for all family members across the whole week.
@@ -171,6 +172,18 @@ def generate_shopping_list_from_plan(
     aggregated: Dict[Tuple[str, str], Dict[str, Any]] = {}
 
     for day in plan.days:
+        if not getattr(day, "is_planned", True):
+            continue
+        if days:
+            match_found = False
+            for req_d in days:
+                r_clean = req_d.strip().lower()
+                d_clean = day.day_name.lower()
+                if r_clean == d_clean or r_clean == d_clean[:2] or d_clean.startswith(r_clean):
+                    match_found = True
+                    break
+            if not match_found:
+                continue
         for member_id, meal_portions in day.portions.items():
             for meal_key in ["breakfast", "lunch", "dinner"]:
                 portion = meal_portions.get(meal_key)
@@ -431,6 +444,7 @@ def generate_shopping_list_from_plan(
         budget=budget,
         budget_status=budget_status,  # type: ignore
         budget_difference=budget_diff,
+        selected_days=days if days is not None else [d.day_name for d in plan.days if getattr(d, "is_planned", True)],
     )
 
 
@@ -444,6 +458,9 @@ def format_whatsapp_export(shopping_list: ShoppingList) -> str:
         f"💵 Wöchentliches Budget: {shopping_list.budget:.2f} € (Rest: {shopping_list.budget_difference:+.2f} €)",
         f"🏷️ Ersparnis durch Discounter-Aktionen: ~{shopping_list.total_savings:.2f} €",
     ]
+
+    if shopping_list.selected_days and len(shopping_list.selected_days) < 7:
+        lines.append(f"📅 Geplante Einkaufstage: {', '.join(shopping_list.selected_days)}")
 
     if shopping_list.covered_by_stock_savings > 0:
         lines.append(f"📦 Durch Vorratslager gespart: ~{shopping_list.covered_by_stock_savings:.2f} €")

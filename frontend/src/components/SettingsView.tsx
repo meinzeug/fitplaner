@@ -3,7 +3,7 @@ import { AppSettings } from '../types';
 import {
   Settings, Store, Check, Wallet, Heart, Radio,
   Smartphone, Sparkles, CheckCircle2, RotateCcw,
-  Sliders, ShieldCheck, HelpCircle
+  Sliders, ShieldCheck, HelpCircle, Calendar, UtensilsCrossed
 } from 'lucide-react';
 
 interface Props {
@@ -102,9 +102,76 @@ export const SettingsView: React.FC<Props> = ({
   onSaveSettings,
   onClose,
 }) => {
-  const [formData, setFormData] = useState<AppSettings>({ ...settings });
+  const defaultDays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+  const defaultMealSharing = {
+    breakfast: 'individual' as const,
+    lunch: 'individual' as const,
+    dinner: 'shared' as const,
+  };
+
+  const [formData, setFormData] = useState<AppSettings>({
+    ...settings,
+    planned_days: settings.planned_days && settings.planned_days.length > 0 ? settings.planned_days : defaultDays,
+    meal_sharing: settings.meal_sharing || defaultMealSharing,
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const ALL_DAYS = [
+    { id: 'Montag', short: 'Mo' },
+    { id: 'Dienstag', short: 'Di' },
+    { id: 'Mittwoch', short: 'Mi' },
+    { id: 'Donnerstag', short: 'Do' },
+    { id: 'Freitag', short: 'Fr' },
+    { id: 'Samstag', short: 'Sa' },
+    { id: 'Sonntag', short: 'So' },
+  ];
+
+  const toggleDay = (dayId: string) => {
+    setFormData((prev) => {
+      const current = prev.planned_days || defaultDays;
+      const exists = current.includes(dayId);
+      let next: string[];
+      if (exists) {
+        if (current.length <= 1) return prev;
+        next = current.filter((d) => d !== dayId);
+      } else {
+        next = ALL_DAYS.filter((d) => current.includes(d.id) || d.id === dayId).map((d) => d.id);
+      }
+      return { ...prev, planned_days: next };
+    });
+  };
+
+  const handleSelectAllDays = () => {
+    setFormData((prev) => ({
+      ...prev,
+      planned_days: ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'],
+    }));
+  };
+
+  const handleSelectWorkdays = () => {
+    setFormData((prev) => ({
+      ...prev,
+      planned_days: ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'],
+    }));
+  };
+
+  const handleSelectWeekend = () => {
+    setFormData((prev) => ({
+      ...prev,
+      planned_days: ['Samstag', 'Sonntag'],
+    }));
+  };
+
+  const setMealSharingMode = (meal: 'breakfast' | 'lunch' | 'dinner', mode: 'shared' | 'individual') => {
+    setFormData((prev) => ({
+      ...prev,
+      meal_sharing: {
+        ...(prev.meal_sharing || defaultMealSharing),
+        [meal]: mode,
+      },
+    }));
+  };
 
   const toggleRetailer = (retailerId: string) => {
     setFormData((prev) => {
@@ -334,7 +401,239 @@ export const SettingsView: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* SECTION 2: Haushalts-Budget & Gesundheit */}
+        {/* SEKTION 1: 📅 Wöchentliche Planungstage */}
+        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-emerald-600" />
+                📅 Wöchentliche Planungstage
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Bestimme, an welchen Wochentagen für deine Familie gekocht und geplant werden soll.
+                Nicht ausgewählte Tage werden als planungsfreie Tage markiert.
+              </p>
+            </div>
+
+            {/* Presets */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleSelectAllDays}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition cursor-pointer"
+              >
+                Ganze Woche (Mo–So)
+              </button>
+              <button
+                type="button"
+                onClick={handleSelectWorkdays}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition cursor-pointer"
+              >
+                Werktage (Mo–Fr)
+              </button>
+              <button
+                type="button"
+                onClick={handleSelectWeekend}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition cursor-pointer"
+              >
+                Wochenende (Sa–So)
+              </button>
+            </div>
+          </div>
+
+          {/* 7 Day Buttons */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+            {ALL_DAYS.map((d) => {
+              const isSelected = (formData.planned_days || defaultDays).includes(d.id);
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => toggleDay(d.id)}
+                  className={`p-3.5 rounded-2xl border-2 font-bold transition flex flex-col items-center justify-center gap-1 text-center cursor-pointer select-none ${
+                    isSelected
+                      ? 'bg-emerald-50/80 border-emerald-500 text-emerald-950 shadow-xs'
+                      : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                  }`}
+                >
+                  <span className="text-sm font-black">{d.short}</span>
+                  <span className="text-[11px] font-semibold">{d.id}</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold mt-1 ${
+                    isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {isSelected ? '✓ Aktiv' : 'Frei'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 text-xs text-slate-600 flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            <p>
+              Aktuell ausgewählt: <strong>{(formData.planned_days || defaultDays).length} von 7 Tagen</strong>.
+              Tage ohne Planung werden im Wochenplan als entspannte Kachel <em>🏖️ Planungsfreier Tag</em> angezeigt und in der Einkaufsliste ausgespart.
+            </p>
+          </div>
+        </div>
+
+        {/* SEKTION 2: 🥘 Mahlzeiten-Teilung im Haushalt */}
+        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-6">
+          <div className="pb-4 border-b border-slate-100">
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <UtensilsCrossed className="w-5 h-5 text-emerald-600" />
+              🥘 Mahlzeiten-Teilung im Haushalt
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Lege für jede Mahlzeit fest, ob alle Familienmitglieder dasselbe Rezept essen oder jeder individuelle Brotdosen/Gerichte erhält.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Frühstück */}
+            <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3 flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🥣</span>
+                  <div>
+                    <h4 className="font-black text-sm text-slate-900">Frühstück</h4>
+                    <span className="text-[10px] text-slate-400 block font-semibold uppercase">Morgens & Brotdose 1</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setMealSharingMode('breakfast', 'shared')}
+                    className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-between cursor-pointer ${
+                      (formData.meal_sharing?.breakfast || defaultMealSharing.breakfast) === 'shared'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>🥣 Gemeinsam (1 Gericht)</span>
+                    {(formData.meal_sharing?.breakfast || defaultMealSharing.breakfast) === 'shared' && <span>✓</span>}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setMealSharingMode('breakfast', 'individual')}
+                    className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-between cursor-pointer ${
+                      (formData.meal_sharing?.breakfast || defaultMealSharing.breakfast) === 'individual'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>🍱 Individuell (Eigene Boxen)</span>
+                    {(formData.meal_sharing?.breakfast || defaultMealSharing.breakfast) === 'individual' && <span>✓</span>}
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-slate-500 leading-relaxed pt-2 border-t border-slate-200/60">
+                {(formData.meal_sharing?.breakfast || defaultMealSharing.breakfast) === 'shared'
+                  ? 'Alle bekommen morgens das gleiche Frühstück (z. B. gemeinsames Rührei oder Porridge).'
+                  : 'Jeder erhält ein auf seine Kalorien- & Diätziele abgestimmtes eigenes Frühstück.'}
+              </p>
+            </div>
+
+            {/* Mittagessen */}
+            <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3 flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🥗</span>
+                  <div>
+                    <h4 className="font-black text-sm text-slate-900">Mittagessen</h4>
+                    <span className="text-[10px] text-slate-400 block font-semibold uppercase">Mittag & Lunchbox to-go</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setMealSharingMode('lunch', 'shared')}
+                    className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-between cursor-pointer ${
+                      (formData.meal_sharing?.lunch || defaultMealSharing.lunch) === 'shared'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>🥣 Gemeinsam (1 Gericht)</span>
+                    {(formData.meal_sharing?.lunch || defaultMealSharing.lunch) === 'shared' && <span>✓</span>}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setMealSharingMode('lunch', 'individual')}
+                    className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-between cursor-pointer ${
+                      (formData.meal_sharing?.lunch || defaultMealSharing.lunch) === 'individual'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>🍱 Individuell (Eigene Boxen)</span>
+                    {(formData.meal_sharing?.lunch || defaultMealSharing.lunch) === 'individual' && <span>✓</span>}
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-slate-500 leading-relaxed pt-2 border-t border-slate-200/60">
+                {(formData.meal_sharing?.lunch || defaultMealSharing.lunch) === 'shared'
+                  ? 'Ein einheitliches Lunchbox-Rezept für Schule & Arbeit für die ganze Familie.'
+                  : 'Getrennte Brotdosen nach persönlichen Vorlieben (z. B. High Protein für Sportler, Gemüsesticks für Kids).'}
+              </p>
+            </div>
+
+            {/* Abendessen */}
+            <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3 flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🍲</span>
+                  <div>
+                    <h4 className="font-black text-sm text-slate-900">Abendessen</h4>
+                    <span className="text-[10px] text-slate-400 block font-semibold uppercase">Abends frisch warm</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setMealSharingMode('dinner', 'shared')}
+                    className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-between cursor-pointer ${
+                      (formData.meal_sharing?.dinner || defaultMealSharing.dinner) === 'shared'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>🥣 Gemeinsam (1 Gericht)</span>
+                    {(formData.meal_sharing?.dinner || defaultMealSharing.dinner) === 'shared' && <span>✓</span>}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setMealSharingMode('dinner', 'individual')}
+                    className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-between cursor-pointer ${
+                      (formData.meal_sharing?.dinner || defaultMealSharing.dinner) === 'individual'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>🍱 Individuell (Getrennte Teller)</span>
+                    {(formData.meal_sharing?.dinner || defaultMealSharing.dinner) === 'individual' && <span>✓</span>}
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-slate-500 leading-relaxed pt-2 border-t border-slate-200/60">
+                {(formData.meal_sharing?.dinner || defaultMealSharing.dinner) === 'shared'
+                  ? 'Klassischer Familientisch: 1 großer Topf frisch gekocht, Portionsmengen automatisch skaliert.'
+                  : 'Individuelle Zubereitung oder getrennte Gerichte für unterschiedliche Ernährungsgewohnheiten.'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION: Haushalts-Budget & Gesundheit */}
         <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-6">
           <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 pb-4 border-b border-slate-100">
             <Wallet className="w-5 h-5 text-emerald-600" />

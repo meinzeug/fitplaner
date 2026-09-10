@@ -14,5 +14,19 @@
   "prefer_healthy_offers": true,
   "microbiome_plant_target": 30,
   "sync_auto_discovery": true,
-  "device_role": "host"
+  "device_role": "host",
+  "planned_days": [
+    "Montag",
+    "Dienstag",
+    "Mittwoch",
+    "Donnerstag",
+    "Freitag",
+    "Samstag",
+    "Sonntag"
+  ],
+  "meal_sharing": {
+    "breakfast": "individual",
+    "lunch": "individual",
+    "dinner": "shared"
+  }
 }

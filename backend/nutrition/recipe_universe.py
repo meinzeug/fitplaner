@@ -197,3 +197,73 @@ def get_universe_stats() -> Dict[str, Any]:
         "is_ai_free": True,
         "local_storage_mode": "offline_json",
     }
+
+
+def persist_universe_to_file() -> None:
+    """Atomically persists in-memory recipe universe to recipes_universe.json."""
+    if _RECIPES_CACHE is None:
+        return
+    json_path = _get_universe_file_path()
+    raw_list = [r.model_dump() if hasattr(r, "model_dump") else r.dict() for r in _RECIPES_CACHE]
+    temp_path = json_path + ".tmp"
+    with open(temp_path, "w", encoding="utf-8") as f:
+        json.dump(raw_list, f, ensure_ascii=False, indent=2)
+    os.replace(temp_path, json_path)
+
+
+def add_universe_recipe(recipe: Recipe) -> Recipe:
+    """Adds a new recipe to in-memory store and persists to disk."""
+    _load_universe_if_needed()
+    _RECIPES_BY_ID[recipe.id] = recipe
+    if _RECIPES_CACHE is not None:
+        _RECIPES_CACHE.insert(0, recipe)
+    if recipe.meal_type in _RECIPES_BY_MEAL:
+        _RECIPES_BY_MEAL[recipe.meal_type].insert(0, recipe)
+    try:
+        persist_universe_to_file()
+    except Exception:
+        pass
+    return recipe
+
+
+def update_universe_recipe(recipe_id: str, updated: Recipe) -> Optional[Recipe]:
+    """Updates an existing recipe by ID and persists to disk."""
+    global _RECIPES_CACHE
+    _load_universe_if_needed()
+    if recipe_id not in _RECIPES_BY_ID:
+        return None
+    old = _RECIPES_BY_ID[recipe_id]
+    _RECIPES_BY_ID[recipe_id] = updated
+    if _RECIPES_CACHE is not None:
+        for idx, r in enumerate(_RECIPES_CACHE):
+            if r.id == recipe_id:
+                _RECIPES_CACHE[idx] = updated
+                break
+    if old.meal_type in _RECIPES_BY_MEAL:
+        _RECIPES_BY_MEAL[old.meal_type] = [r for r in _RECIPES_BY_MEAL[old.meal_type] if r.id != recipe_id]
+    if updated.meal_type in _RECIPES_BY_MEAL:
+        _RECIPES_BY_MEAL[updated.meal_type].insert(0, updated)
+    try:
+        persist_universe_to_file()
+    except Exception:
+        pass
+    return updated
+
+
+def delete_universe_recipe(recipe_id: str) -> bool:
+    """Removes a recipe from in-memory store and persists to disk."""
+    global _RECIPES_CACHE
+    _load_universe_if_needed()
+    if recipe_id not in _RECIPES_BY_ID:
+        return False
+    old = _RECIPES_BY_ID.pop(recipe_id)
+    if _RECIPES_CACHE is not None:
+        _RECIPES_CACHE = [r for r in _RECIPES_CACHE if r.id != recipe_id]
+    if old.meal_type in _RECIPES_BY_MEAL:
+        _RECIPES_BY_MEAL[old.meal_type] = [r for r in _RECIPES_BY_MEAL[old.meal_type] if r.id != recipe_id]
+    try:
+        persist_universe_to_file()
+    except Exception:
+        pass
+    return True
+

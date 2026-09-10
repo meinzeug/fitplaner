@@ -138,6 +138,7 @@ class DayPlan(BaseModel):
     is_breakfast_cooked: bool = False
     is_lunch_cooked: bool = False
     is_dinner_cooked: bool = False
+    is_planned: bool = True
     # Key is member_id
     portions: Dict[str, Dict[str, PersonMealPortion]]  # member_id -> {"breakfast": ..., "lunch": ..., "dinner": ...}
     daily_nutrition_by_member: Dict[str, Dict[str, int]]  # member_id -> {"calories": ..., "protein": ..., "carbs": ..., "fat": ...}
@@ -257,6 +258,7 @@ class ShoppingList(BaseModel):
     budget: float = 120.0
     budget_status: Literal["ok", "warning", "exceeded"] = "ok"
     budget_difference: float = 0.0
+    selected_days: List[str] = Field(default_factory=list)
 
 
 class DailyHubResponse(BaseModel):
@@ -559,4 +561,10 @@ class AppSettings(BaseModel):
     microbiome_plant_target: int = 30
     sync_auto_discovery: bool = True
     device_role: str = "host"  # "host" or "client"
+    planned_days: List[str] = Field(
+        default_factory=lambda: ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
+    )
+    meal_sharing: Dict[str, str] = Field(
+        default_factory=lambda: {"breakfast": "individual", "lunch": "individual", "dinner": "shared"}
+    )
 

@@ -16,6 +16,7 @@ import { FamilyVitalityView } from './components/FamilyVitalityView';
 import { FamilyChoresView } from './components/FamilyChoresView';
 import { LocalMeshSyncModal } from './components/LocalMeshSyncModal';
 import { SettingsView } from './components/SettingsView';
+import { RecipeManagerView } from './components/RecipeManagerView';
 import {
   Users, Calendar, ShoppingBag, Tag, Archive, BookOpen,
   HeartPulse, Sparkles, X, Compass, ChevronRight, CheckCircle2, Smartphone, Download,
@@ -24,7 +25,7 @@ import {
 
 export function App() {
   // Main Navigation Tabs (Super App Architecture)
-  const [activeTab, setActiveTab] = useState<'heute' | 'woche' | 'einkauf' | 'vitalitaet' | 'aemtli'>('heute');
+  const [activeTab, setActiveTab] = useState<'heute' | 'woche' | 'rezepte' | 'einkauf' | 'vitalitaet' | 'aemtli'>('heute');
 
   // Slide-over / Modal view for secondary tasks (Profiles, Leaflets, Offers, Installer, Settings)
   const [activeModalView, setActiveModalView] = useState<'profiles' | 'leaflets' | 'offers' | 'installer' | 'settings' | null>(null);
@@ -492,6 +493,18 @@ export function App() {
               </button>
 
               <button
+                onClick={() => setActiveTab('rezepte')}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition ${
+                  activeTab === 'rezepte'
+                    ? 'bg-slate-900 text-white shadow-md'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
+                <span>📖 Rezepte</span>
+              </button>
+
+              <button
                 onClick={() => setActiveTab('einkauf')}
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition ${
                   activeTab === 'einkauf'
@@ -622,6 +635,13 @@ export function App() {
             onSwapMeal={handleSwapMeal}
             onCookMeal={handleCookMeal}
             isGenerating={isGeneratingPlan}
+          />
+        )}
+
+        {activeTab === 'rezepte' && (
+          <RecipeManagerView
+            recipes={allRecipes}
+            onRefreshRecipes={fetchRecipes}
           />
         )}
 
@@ -822,6 +842,16 @@ export function App() {
         >
           <Calendar className="w-4 h-4" />
           Woche
+        </button>
+
+        <button
+          onClick={() => setActiveTab('rezepte')}
+          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl text-[10px] font-black ${
+            activeTab === 'rezepte' ? 'text-emerald-700 bg-emerald-50' : 'text-slate-500'
+          }`}
+        >
+          <BookOpen className="w-4 h-4" />
+          Rezepte
         </button>
 
         <button
