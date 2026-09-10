@@ -66,6 +66,17 @@ export function getRetailerBadgeClass(retailer?: string): string {
   return 'bg-slate-100 text-slate-700 border border-slate-300 font-bold';
 }
 
+export function resolveDisplayRetailer(retailer?: string, activeRetailers?: string[]): string {
+  if (!retailer) return '';
+  if (retailer === 'Vorratskammer') return 'Vorratskammer';
+  if (activeRetailers && activeRetailers.length > 0) {
+    if (!activeRetailers.includes(retailer)) {
+      return activeRetailers[0];
+    }
+  }
+  return retailer;
+}
+
 /**
  * Calculates aggregated portions and ingredients summed across all family members
  */
@@ -73,7 +84,8 @@ export function getAggregatedMealPortion(
   day: DayPlan,
   mealType: 'breakfast' | 'lunch' | 'dinner',
   members: FamilyMember[],
-  recipe: Recipe
+  recipe: Recipe,
+  activeRetailers?: string[]
 ): PersonMealPortion {
   const portions = members
     .map((m) => day.portions?.[m.id]?.[mealType])
@@ -96,7 +108,7 @@ export function getAggregatedMealPortion(
         name: ing.name,
         amount: Math.round(ing.base_amount * memberCount * 10) / 10,
         unit: ing.unit,
-        matched_retailer: ing.matched_offer_retailer,
+        matched_retailer: resolveDisplayRetailer(ing.matched_offer_retailer, activeRetailers),
       })),
     };
   }
@@ -114,17 +126,18 @@ export function getAggregatedMealPortion(
     for (const ing of p.scaled_ingredients || []) {
       const key = `${ing.name.trim().toLowerCase()}__${(ing.unit || '').trim().toLowerCase()}`;
       const existing = ingredientMap.get(key);
+      const safeRetailer = resolveDisplayRetailer(ing.matched_retailer, activeRetailers);
       if (existing) {
         existing.amount = Math.round((existing.amount + ing.amount) * 10) / 10;
-        if (!existing.matched_retailer && ing.matched_retailer) {
-          existing.matched_retailer = ing.matched_retailer;
+        if (!existing.matched_retailer && safeRetailer) {
+          existing.matched_retailer = safeRetailer;
         }
       } else {
         ingredientMap.set(key, {
           name: ing.name,
           amount: Math.round(ing.amount * 10) / 10,
           unit: ing.unit,
-          matched_retailer: ing.matched_retailer,
+          matched_retailer: safeRetailer,
         });
       }
     }
@@ -622,13 +635,13 @@ export const WeeklyPlanView: React.FC<Props> = ({
         {plan.days.map((day, dayIndex) => {
           const memberPortions = day.portions?.[currentMember.id];
           const bfPortion = isAllSelected
-            ? getAggregatedMealPortion(day, 'breakfast', members, day.breakfast)
+            ? getAggregatedMealPortion(day, 'breakfast', members, day.breakfast, plan.active_retailers)
             : memberPortions?.breakfast;
           const luPortion = isAllSelected
-            ? getAggregatedMealPortion(day, 'lunch', members, day.lunch)
+            ? getAggregatedMealPortion(day, 'lunch', members, day.lunch, plan.active_retailers)
             : memberPortions?.lunch;
           const diPortion = isAllSelected
-            ? getAggregatedMealPortion(day, 'dinner', members, day.dinner)
+            ? getAggregatedMealPortion(day, 'dinner', members, day.dinner, plan.active_retailers)
             : memberPortions?.dinner;
 
           const currentBfRecipe = isAllSelected ? day.breakfast : resolveRecipe(bfPortion, day.breakfast);
@@ -804,8 +817,8 @@ export const WeeklyPlanView: React.FC<Props> = ({
                           <span className="font-mono font-semibold text-slate-800 flex items-center">
                             {ing.amount} {ing.unit}
                             {ing.matched_retailer && (
-                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold shadow-xs ${getRetailerBadgeClass(ing.matched_retailer)}`}>
-                                {ing.matched_retailer}
+                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold shadow-xs ${getRetailerBadgeClass(resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers))}`}>
+                                {resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers)}
                               </span>
                             )}
                           </span>
@@ -904,8 +917,8 @@ export const WeeklyPlanView: React.FC<Props> = ({
                           <span className="font-mono font-semibold text-slate-800 flex items-center">
                             {ing.amount} {ing.unit}
                             {ing.matched_retailer && (
-                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold shadow-xs ${getRetailerBadgeClass(ing.matched_retailer)}`}>
-                                {ing.matched_retailer}
+                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold shadow-xs ${getRetailerBadgeClass(resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers))}`}>
+                                {resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers)}
                               </span>
                             )}
                           </span>
@@ -980,8 +993,8 @@ export const WeeklyPlanView: React.FC<Props> = ({
                           <span className="font-mono font-semibold text-slate-800 flex items-center">
                             {ing.amount} {ing.unit}
                             {ing.matched_retailer && (
-                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold shadow-xs ${getRetailerBadgeClass(ing.matched_retailer)}`}>
-                                {ing.matched_retailer}
+                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold shadow-xs ${getRetailerBadgeClass(resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers))}`}>
+                                {resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers)}
                               </span>
                             )}
                           </span>
@@ -1027,7 +1040,8 @@ export const WeeklyPlanView: React.FC<Props> = ({
                   plan.days[selectedRecipeModal.dayIndex],
                   selectedRecipeModal.mealType,
                   members,
-                  selectedRecipeModal.recipe
+                  selectedRecipeModal.recipe,
+                  plan.active_retailers
                 )
               : plan.days[selectedRecipeModal.dayIndex]?.portions?.[(selectedRecipeModal.targetMember || currentMember).id]?.[selectedRecipeModal.mealType]
           }
@@ -1035,6 +1049,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
           isCooked={selectedRecipeModal.isCooked}
           isAllMembers={isAllSelected && !selectedRecipeModal.targetMember}
           membersCount={members.length}
+          activeRetailers={plan.active_retailers}
           onCookMeal={onCookMeal}
           onClose={() => setSelectedRecipeModal(null)}
         />

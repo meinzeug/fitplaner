@@ -329,7 +329,66 @@ const DAYS_OF_WEEK = [
   'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'
 ];
 
-function scaleRecipeForPerson(recipe: Recipe, member: FamilyMember, mealType: string): PersonMealPortion {
+function areRetailerSetsEqual(a?: string[], b?: string[]): boolean {
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  const setA = new Set(a);
+  return b.every((item) => setA.has(item));
+}
+
+export function sanitizeRecipe(
+  recipe: Recipe,
+  activeRetailers: string[],
+  primaryRetailer: string
+): Recipe {
+  const activeSet = new Set(activeRetailers);
+  const cleanPrimary = (activeRetailers.includes(primaryRetailer) ? primaryRetailer : activeRetailers[0]) || 'Netto';
+  const cleanRecipe: Recipe = JSON.parse(JSON.stringify(recipe));
+  if (cleanRecipe.ingredients) {
+    for (const ing of cleanRecipe.ingredients) {
+      if (ing.matched_offer_retailer && ing.matched_offer_retailer !== 'Vorratskammer') {
+        if (!activeSet.has(ing.matched_offer_retailer)) {
+          ing.matched_offer_retailer = cleanPrimary;
+        }
+      } else if (!ing.matched_offer_retailer) {
+        ing.matched_offer_retailer = cleanPrimary;
+      }
+    }
+  }
+  return cleanRecipe;
+}
+
+export function prioritizeRecipes(
+  recipes: Recipe[],
+  activeRetailers: string[]
+): Recipe[] {
+  const activeSet = new Set(activeRetailers);
+  const p0: Recipe[] = [];
+  const p1: Recipe[] = [];
+  const p2: Recipe[] = [];
+
+  for (const r of recipes) {
+    const nonPantry = (r.ingredients || []).filter((ing) => ing.matched_offer_retailer !== 'Vorratskammer');
+    if (!nonPantry.length) {
+      p0.push(r);
+    } else if (nonPantry.every((ing) => activeSet.has(ing.matched_offer_retailer || ''))) {
+      p0.push(r);
+    } else if (nonPantry.some((ing) => activeSet.has(ing.matched_offer_retailer || ''))) {
+      p1.push(r);
+    } else {
+      p2.push(r);
+    }
+  }
+  return [...p0, ...p1, ...p2];
+}
+
+export function scaleRecipeForPerson(
+  recipe: Recipe,
+  member: FamilyMember,
+  mealType: string,
+  activeRetailers: string[] = ['Netto', 'NP'],
+  primaryRetailer: string = 'Netto'
+): PersonMealPortion {
   const mealRatios: Record<string, number> = {
     breakfast_lunchbox: 0.28,
     lunch_lunchbox: 0.36,
@@ -340,12 +399,26 @@ function scaleRecipeForPerson(recipe: Recipe, member: FamilyMember, mealType: st
   const baseCals = recipe.base_calories || 500;
   const scale = Math.max(0.4, Math.min(2.5, Math.round((targetMealCalories / baseCals) * 100) / 100));
 
-  const scaledIngredients: ScaledIngredient[] = (recipe.ingredients || []).map((ing) => ({
-    name: ing.name,
-    amount: Math.round(ing.base_amount * scale * 10) / 10,
-    unit: ing.unit,
-    matched_retailer: ing.matched_offer_retailer || 'Netto',
-  }));
+  const activeSet = new Set(activeRetailers);
+  const cleanPrimary = (activeRetailers.includes(primaryRetailer) ? primaryRetailer : activeRetailers[0]) || 'Netto';
+
+  const scaledIngredients: ScaledIngredient[] = (recipe.ingredients || []).map((ing) => {
+    let ret = ing.matched_offer_retailer;
+    if (ret && ret !== 'Vorratskammer') {
+      if (!activeSet.has(ret)) {
+        ret = cleanPrimary;
+      }
+    } else if (!ret) {
+      ret = cleanPrimary;
+    }
+
+    return {
+      name: ing.name,
+      amount: Math.round(ing.base_amount * scale * 10) / 10,
+      unit: ing.unit,
+      matched_retailer: ret,
+    };
+  });
 
   return {
     member_id: member.id,
@@ -366,8 +439,11 @@ export function buildWeeklyPlan(
   weekOffset: number,
   profiles: FamilyMember[],
   recipes: Recipe[],
-  activeRetailers: string[] = ['Netto', 'Lidl', 'Aldi Nord', 'Rewe']
+  activeRetailers: string[] = ['Netto', 'NP'],
+  primaryRetailer: string = 'Netto'
 ): WeeklyPlan {
+  const cleanPrimary = (activeRetailers.includes(primaryRetailer) ? primaryRetailer : activeRetailers[0]) || 'Netto';
+
   const today = new Date();
   const currentDayOfWeek = (today.getDay() + 6) % 7; // Monday = 0
   const monday = new Date(today);
@@ -378,9 +454,10 @@ export function buildWeeklyPlan(
   sunday.setDate(monday.getDate() + 6);
   const endDateStr = sunday.toLocaleDateString('de-DE');
 
-  const breakfasts = recipes.filter((r) => r.meal_type === 'breakfast_lunchbox');
-  const lunches = recipes.filter((r) => r.meal_type === 'lunch_lunchbox');
-  const dinners = recipes.filter((r) => r.meal_type === 'dinner_home');
+  const prioritized = prioritizeRecipes(recipes, activeRetailers);
+  const breakfasts = prioritized.filter((r) => r.meal_type === 'breakfast_lunchbox');
+  const lunches = prioritized.filter((r) => r.meal_type === 'lunch_lunchbox');
+  const dinners = prioritized.filter((r) => r.meal_type === 'dinner_home');
 
   const days: DayPlan[] = [];
 
@@ -391,17 +468,21 @@ export function buildWeeklyPlan(
       dayDate.getMonth() + 1
     ).padStart(2, '0')}.${dayDate.getFullYear()}`;
 
-    const bf = breakfasts[i % breakfasts.length] || STARTER_RECIPES[0];
-    const lu = lunches[i % lunches.length] || STARTER_RECIPES[2];
-    const di = dinners[i % dinners.length] || STARTER_RECIPES[4];
+    const rawBf = breakfasts[i % breakfasts.length] || STARTER_RECIPES[0];
+    const rawLu = lunches[i % lunches.length] || STARTER_RECIPES[2];
+    const rawDi = dinners[i % dinners.length] || STARTER_RECIPES[4];
+
+    const bf = sanitizeRecipe(rawBf, activeRetailers, cleanPrimary);
+    const lu = sanitizeRecipe(rawLu, activeRetailers, cleanPrimary);
+    const di = sanitizeRecipe(rawDi, activeRetailers, cleanPrimary);
 
     const portions: Record<string, { breakfast: PersonMealPortion; lunch: PersonMealPortion; dinner: PersonMealPortion }> = {};
     const dailyNutrition: Record<string, { calories: number; protein: number; carbs: number; fat: number }> = {};
 
     profiles.forEach((m) => {
-      const bfp = scaleRecipeForPerson(bf, m, 'breakfast_lunchbox');
-      const lup = scaleRecipeForPerson(lu, m, 'lunch_lunchbox');
-      const dip = scaleRecipeForPerson(di, m, 'dinner_home');
+      const bfp = scaleRecipeForPerson(bf, m, 'breakfast_lunchbox', activeRetailers, cleanPrimary);
+      const lup = scaleRecipeForPerson(lu, m, 'lunch_lunchbox', activeRetailers, cleanPrimary);
+      const dip = scaleRecipeForPerson(di, m, 'dinner_home', activeRetailers, cleanPrimary);
 
       portions[m.id] = {
         breakfast: bfp,
@@ -609,8 +690,8 @@ class EmbeddedBackend {
    * Initializes local database with seed data if running for the first time.
    */
   async ensureInitialized(): Promise<void> {
-    const settings = await localDbGet<AppSettings>(STORES.SETTINGS, 'current');
-    if (!settings) {
+    const existingSettings = await localDbGet<AppSettings>(STORES.SETTINGS, 'current');
+    if (!existingSettings) {
       await localDbSet(STORES.SETTINGS, 'current', DEFAULT_SETTINGS);
     }
 
@@ -643,11 +724,14 @@ class EmbeddedBackend {
       }
     }
 
+    const currentSettings: AppSettings = (await localDbGet<AppSettings>(STORES.SETTINGS, 'current')) || DEFAULT_SETTINGS;
     const plan = await localDbGet<WeeklyPlan>(STORES.PLANS, 'week_0');
-    if (!plan) {
+    if (!plan || !areRetailerSetsEqual(plan.active_retailers, currentSettings.active_retailers)) {
       const allMembers = await localDbGetAll<FamilyMember>(STORES.PROFILES);
       const allRecipes = await localDbGetAll<Recipe>(STORES.RECIPES);
-      const initialPlan = buildWeeklyPlan(0, allMembers, allRecipes);
+      const effMembers = allMembers.length > 0 ? allMembers : DEFAULT_MEMBERS_RAW.map((m) => enrichFamilyMember(m));
+      const effRecipes = allRecipes.length > 0 ? allRecipes : STARTER_RECIPES;
+      const initialPlan = buildWeeklyPlan(0, effMembers, effRecipes, currentSettings.active_retailers, currentSettings.primary_retailer);
       await localDbSet(STORES.PLANS, 'week_0', initialPlan);
     }
   }
@@ -683,6 +767,19 @@ class EmbeddedBackend {
           const current = (await localDbGet<AppSettings>(STORES.SETTINGS, 'current')) || DEFAULT_SETTINGS;
           const updated = { ...current, ...bodyData };
           await localDbSet(STORES.SETTINGS, 'current', updated);
+
+          const retailersChanged =
+            !areRetailerSetsEqual(current.active_retailers, updated.active_retailers) ||
+            current.primary_retailer !== updated.primary_retailer;
+          if (retailersChanged) {
+            const allMembers = await localDbGetAll<FamilyMember>(STORES.PROFILES);
+            const allRecipes = await localDbGetAll<Recipe>(STORES.RECIPES);
+            const effMembers = allMembers.length > 0 ? allMembers : DEFAULT_MEMBERS_RAW.map((m) => enrichFamilyMember(m));
+            const effRecipes = allRecipes.length > 0 ? allRecipes : STARTER_RECIPES;
+            const updatedPlan = buildWeeklyPlan(0, effMembers, effRecipes, updated.active_retailers, updated.primary_retailer);
+            await localDbSet(STORES.PLANS, 'week_0', updatedPlan);
+          }
+
           return this.json(updated);
         }
       }
@@ -807,39 +904,51 @@ class EmbeddedBackend {
       // 6. WEEKLY PLAN
       if (pathname === '/api/plan/current') {
         const weekOffset = parseInt(searchParams.get('week_offset') || '0', 10);
+        const settings = (await localDbGet<AppSettings>(STORES.SETTINGS, 'current')) || DEFAULT_SETTINGS;
         let plan = await localDbGet<WeeklyPlan>(STORES.PLANS, `week_${weekOffset}`);
-        if (!plan) {
+        if (!plan || !areRetailerSetsEqual(plan.active_retailers, settings.active_retailers)) {
           const members = await localDbGetAll<FamilyMember>(STORES.PROFILES);
           const recipes = await localDbGetAll<Recipe>(STORES.RECIPES);
-          plan = buildWeeklyPlan(weekOffset, members, recipes);
+          const effMembers = members.length > 0 ? members : DEFAULT_MEMBERS_RAW.map((m) => enrichFamilyMember(m));
+          const effRecipes = recipes.length > 0 ? recipes : STARTER_RECIPES;
+          plan = buildWeeklyPlan(weekOffset, effMembers, effRecipes, settings.active_retailers, settings.primary_retailer);
           await localDbSet(STORES.PLANS, `week_${weekOffset}`, plan);
         }
         return this.json(plan);
       }
       if (pathname === '/api/plan/generate') {
         const weekOffset = parseInt(searchParams.get('week_offset') || '0', 10);
+        const settings = (await localDbGet<AppSettings>(STORES.SETTINGS, 'current')) || DEFAULT_SETTINGS;
         const members = await localDbGetAll<FamilyMember>(STORES.PROFILES);
         const recipes = await localDbGetAll<Recipe>(STORES.RECIPES);
-        const newPlan = buildWeeklyPlan(weekOffset, members, recipes);
+        const effMembers = members.length > 0 ? members : DEFAULT_MEMBERS_RAW.map((m) => enrichFamilyMember(m));
+        const effRecipes = recipes.length > 0 ? recipes : STARTER_RECIPES;
+        const newPlan = buildWeeklyPlan(weekOffset, effMembers, effRecipes, settings.active_retailers, settings.primary_retailer);
         await localDbSet(STORES.PLANS, `week_${weekOffset}`, newPlan);
         return this.json(newPlan);
       }
       if (pathname === '/api/plan/swap' && method === 'POST') {
         const { day_index, meal_type, week_offset = 0 } = bodyData || {};
+        const settings = (await localDbGet<AppSettings>(STORES.SETTINGS, 'current')) || DEFAULT_SETTINGS;
+        const cleanPrimary = (settings.active_retailers.includes(settings.primary_retailer) ? settings.primary_retailer : settings.active_retailers[0]) || 'Netto';
         let plan = await localDbGet<WeeklyPlan>(STORES.PLANS, `week_${week_offset}`);
         if (plan && plan.days[day_index]) {
           const recipes = await localDbGetAll<Recipe>(STORES.RECIPES);
-          const candidates = recipes.filter((r) => r.meal_type === meal_type);
-          const randomRec = candidates[Math.floor(Math.random() * candidates.length)] || recipes[0];
+          const effRecipes = recipes.length > 0 ? recipes : STARTER_RECIPES;
+          const candidates = effRecipes.filter((r) => r.meal_type === meal_type);
+          const prioritizedCandidates = prioritizeRecipes(candidates, settings.active_retailers);
+          const randomRec = prioritizedCandidates[Math.floor(Math.random() * prioritizedCandidates.length)] || effRecipes[0];
+          const sanitizedRec = sanitizeRecipe(randomRec, settings.active_retailers, cleanPrimary);
 
-          if (meal_type === 'breakfast_lunchbox') plan.days[day_index].breakfast = randomRec;
-          else if (meal_type === 'lunch_lunchbox') plan.days[day_index].lunch = randomRec;
-          else plan.days[day_index].dinner = randomRec;
+          if (meal_type === 'breakfast_lunchbox') plan.days[day_index].breakfast = sanitizedRec;
+          else if (meal_type === 'lunch_lunchbox') plan.days[day_index].lunch = sanitizedRec;
+          else plan.days[day_index].dinner = sanitizedRec;
 
           const members = await localDbGetAll<FamilyMember>(STORES.PROFILES);
-          members.forEach((m) => {
+          const effMembers = members.length > 0 ? members : DEFAULT_MEMBERS_RAW.map((m) => enrichFamilyMember(m));
+          effMembers.forEach((m) => {
             if (plan && plan.days[day_index].portions[m.id]) {
-              const scaled = scaleRecipeForPerson(randomRec, m, meal_type);
+              const scaled = scaleRecipeForPerson(sanitizedRec, m, meal_type, settings.active_retailers, cleanPrimary);
               if (meal_type === 'breakfast_lunchbox') plan.days[day_index].portions[m.id].breakfast = scaled;
               else if (meal_type === 'lunch_lunchbox') plan.days[day_index].portions[m.id].lunch = scaled;
               else plan.days[day_index].portions[m.id].dinner = scaled;
@@ -856,17 +965,20 @@ class EmbeddedBackend {
         const weekOffset = parseInt(searchParams.get('week_offset') || '0', 10);
         const daysParam = searchParams.get('days');
         const filterDays = daysParam ? daysParam.split(',') : undefined;
+        const settings = (await localDbGet<AppSettings>(STORES.SETTINGS, 'current')) || DEFAULT_SETTINGS;
 
         let plan = await localDbGet<WeeklyPlan>(STORES.PLANS, `week_${weekOffset}`);
-        if (!plan) {
+        if (!plan || !areRetailerSetsEqual(plan.active_retailers, settings.active_retailers)) {
           const members = await localDbGetAll<FamilyMember>(STORES.PROFILES);
           const recipes = await localDbGetAll<Recipe>(STORES.RECIPES);
-          plan = buildWeeklyPlan(weekOffset, members, recipes);
+          const effMembers = members.length > 0 ? members : DEFAULT_MEMBERS_RAW.map((m) => enrichFamilyMember(m));
+          const effRecipes = recipes.length > 0 ? recipes : STARTER_RECIPES;
+          plan = buildWeeklyPlan(weekOffset, effMembers, effRecipes, settings.active_retailers, settings.primary_retailer);
+          await localDbSet(STORES.PLANS, `week_${weekOffset}`, plan);
         }
 
         const customItems = await localDbGetAll<CustomShoppingItem>(STORES.CUSTOM_ITEMS);
         const pantryItems = await localDbGetAll<PantryItem>(STORES.PANTRY);
-        const settings = (await localDbGet<AppSettings>(STORES.SETTINGS, 'current')) || DEFAULT_SETTINGS;
 
         const shoppingList = buildShoppingList(
           plan,
@@ -934,11 +1046,15 @@ class EmbeddedBackend {
         else if (hour >= 16 && hour < 22) timeSlot = 'evening';
         else if (hour >= 22 || hour < 5) timeSlot = 'night';
 
+        const settings = (await localDbGet<AppSettings>(STORES.SETTINGS, 'current')) || DEFAULT_SETTINGS;
         let plan = await localDbGet<WeeklyPlan>(STORES.PLANS, 'week_0');
-        if (!plan) {
+        if (!plan || !areRetailerSetsEqual(plan.active_retailers, settings.active_retailers)) {
           const members = await localDbGetAll<FamilyMember>(STORES.PROFILES);
           const recipes = await localDbGetAll<Recipe>(STORES.RECIPES);
-          plan = buildWeeklyPlan(0, members, recipes);
+          const effMembers = members.length > 0 ? members : DEFAULT_MEMBERS_RAW.map((m) => enrichFamilyMember(m));
+          const effRecipes = recipes.length > 0 ? recipes : STARTER_RECIPES;
+          plan = buildWeeklyPlan(0, effMembers, effRecipes, settings.active_retailers, settings.primary_retailer);
+          await localDbSet(STORES.PLANS, 'week_0', plan);
         }
 
         const dayPlan = plan.days[weekday] || plan.days[0];

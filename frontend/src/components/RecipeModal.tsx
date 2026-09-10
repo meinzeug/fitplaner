@@ -5,6 +5,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { getRetailerBadgeClass } from '../utils/retailerBadges';
+import { resolveDisplayRetailer } from './WeeklyPlanView';
 
 interface Props {
   recipe: Recipe | null;
@@ -16,6 +17,8 @@ interface Props {
   isCooked?: boolean;
   isAllMembers?: boolean;
   membersCount?: number;
+  activeRetailers?: string[];
+  primaryRetailer?: string;
   onCookMeal: (dayIndex: number, mealType: string) => Promise<void>;
   onClose: () => void;
 }
@@ -30,6 +33,8 @@ export const RecipeModal: React.FC<Props> = ({
   isCooked = false,
   isAllMembers = false,
   membersCount,
+  activeRetailers,
+  primaryRetailer,
   onCookMeal,
   onClose,
 }) => {
@@ -145,8 +150,9 @@ export const RecipeModal: React.FC<Props> = ({
             </div>
 
             <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 divide-y divide-slate-200/60">
-              {(portion?.scaled_ingredients || recipe.ingredients.map(i => ({ name: i.name, amount: i.base_amount, unit: i.unit, matched_retailer: i.matched_offer_retailer }))).map((ing, idx) => {
+              {(portion?.scaled_ingredients || recipe.ingredients.map(i => ({ name: i.name, amount: i.base_amount, unit: i.unit, matched_retailer: resolveDisplayRetailer(i.matched_offer_retailer, activeRetailers) }))).map((ing, idx) => {
                 const stock = isPantryStockAvailable(ing.name, ing.amount);
+                const displayRetailer = resolveDisplayRetailer(ing.matched_retailer, activeRetailers);
 
                 return (
                   <div key={idx} className="py-2.5 flex items-center justify-between first:pt-0 last:pb-0 text-xs">
@@ -165,9 +171,9 @@ export const RecipeModal: React.FC<Props> = ({
 
                     <div className="text-right flex items-center justify-end">
                       <span className="font-mono font-bold text-slate-900">{ing.amount} {ing.unit}</span>
-                      {ing.matched_retailer && (
-                        <span className={`ml-1.5 text-[10px] px-2 py-0.5 rounded-md font-bold shadow-xs ${getRetailerBadgeClass(ing.matched_retailer)}`}>
-                          {ing.matched_retailer}
+                      {displayRetailer && (
+                        <span className={`ml-1.5 text-[10px] px-2 py-0.5 rounded-md font-bold shadow-xs ${getRetailerBadgeClass(displayRetailer)}`}>
+                          {displayRetailer}
                         </span>
                       )}
                     </div>
