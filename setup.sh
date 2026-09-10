@@ -75,7 +75,7 @@ echo "Installiere & aktualisiere Python-Abhängigkeiten (FastAPI, Uvicorn, Pydan
 if [ -f "requirements.txt" ]; then
     .venv/bin/pip install --quiet -r requirements.txt
 else
-    .venv/bin/pip install --quiet fastapi "uvicorn[standard]" pydantic httpx beautifulsoup4 lxml reportlab
+    .venv/bin/pip install --quiet fastapi "uvicorn[standard]" pydantic httpx beautifulsoup4 lxml reportlab qrcode
 fi
 echo -e "${COLOR_GREEN}✓ Python-Umgebung & Abhängigkeiten erfolgreich installiert.${COLOR_RESET}"
 
@@ -84,6 +84,7 @@ echo -e "\n${COLOR_BLUE}[3/6] Richte Web-Frontend ein...${COLOR_RESET}"
 if [ "$HAS_NODE" = true ]; then
     echo "Baue Frontend-Produktions-Bundle..."
     npm --prefix frontend install --quiet
+    node frontend/scripts/ensure-binding.cjs 2>/dev/null || true
     npm --prefix frontend run build
     echo -e "${COLOR_GREEN}✓ Frontend erfolgreich mit Vite kompiliert (frontend/dist).${COLOR_RESET}"
 else

@@ -104,6 +104,7 @@ export const ShoppingListView: React.FC<Props> = ({
   const [customQty, setCustomQty] = useState(1);
   const [customUnit, setCustomUnit] = useState('Stück');
   const [customRetailer, setCustomRetailer] = useState<string>('Netto');
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   if (!shoppingList) {
     return (
@@ -139,8 +140,6 @@ export const ShoppingListView: React.FC<Props> = ({
       alert('Einkaufsliste in die Zwischenablage kopiert!');
     }
   };
-
-  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   const handleDownloadPdf = () => {
     setIsDownloadingPdf(true);
