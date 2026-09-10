@@ -375,6 +375,11 @@ export function App() {
     }
   };
 
+  const handlePlanOptimized = (optimizedPlan: WeeklyPlan) => {
+    setWeeklyPlan(optimizedPlan);
+    fetchShoppingList(selectedWeekOffset);
+  };
+
   // Pantry Handlers
   const handleSavePantryItem = async (item: PantryItem) => {
     try {
@@ -727,6 +732,8 @@ export function App() {
             onSwapMeal={handleSwapMeal}
             onCookMeal={handleCookMeal}
             isGenerating={isGeneratingPlan}
+            activeRetailers={settings?.active_retailers}
+            onPlanOptimized={handlePlanOptimized}
           />
         )}
 

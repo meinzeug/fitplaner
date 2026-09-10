@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { WeeklyPlan, FamilyMember, Recipe, PantryItem, PersonMealPortion, ScaledIngredient, DayPlan } from '../types';
 import { RecipeModal } from './RecipeModal';
+import { SavingsVitalityCockpit } from './SavingsVitalityCockpit';
+import { getRecipeGlycemicBadge } from '../utils/plantDiversityTracker';
 import { apiFetch } from '../api/client';
 import {
   Calendar, RefreshCw, Box, UtensilsCrossed, Clock, Flame, Sparkles,
@@ -170,6 +172,8 @@ interface Props {
   onSwapMeal: (dayIndex: number, mealType: string, newRecipeId: string) => Promise<void>;
   onCookMeal: (dayIndex: number, mealType: string) => Promise<void>;
   isGenerating: boolean;
+  activeRetailers?: string[];
+  onPlanOptimized?: (optimizedPlan: WeeklyPlan) => void;
 }
 
 export const WeeklyPlanView: React.FC<Props> = ({
@@ -184,6 +188,8 @@ export const WeeklyPlanView: React.FC<Props> = ({
   onSwapMeal,
   onCookMeal,
   isGenerating,
+  activeRetailers,
+  onPlanOptimized,
 }) => {
   const [selectedMemberId, setSelectedMemberId] = useState<string>(members[0]?.id || 'all');
   const [activeSwap, setActiveSwap] = useState<{ dayIndex: number; mealType: 'breakfast' | 'lunch' | 'dinner' } | null>(null);
@@ -353,7 +359,15 @@ export const WeeklyPlanView: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* 2. WÖCHENTLICHE BUDGETPLANUNG CARD */}
+      {/* 2. SUPER-APP SPAR- & VITALITÄTS-COCKPIT */}
+      <SavingsVitalityCockpit
+        plan={plan}
+        activeRetailers={activeRetailers || plan.active_retailers || ['Netto', 'NP']}
+        pantryItems={pantryItems}
+        onPlanOptimized={onPlanOptimized}
+      />
+
+      {/* 3. WÖCHENTLICHE BUDGETPLANUNG CARD */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-3xl p-6 shadow-lg border border-slate-700">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div>
@@ -793,7 +807,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
                       </div>
                     )}
 
-                    <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
+                    <div className="flex items-center gap-3 text-xs text-slate-500 mb-2">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3 text-slate-400" /> {currentBfRecipe.prep_time_minutes} Min
                       </span>
@@ -803,6 +817,20 @@ export const WeeklyPlanView: React.FC<Props> = ({
                       <span className="font-semibold text-blue-700">
                         {bfPortion?.scaled_protein_g || currentBfRecipe.base_protein_g}g Protein
                       </span>
+                    </div>
+
+                    <div className="mb-3">
+                      {(() => {
+                        const gl = getRecipeGlycemicBadge(currentBfRecipe);
+                        return (
+                          <span
+                            className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200"
+                            title={gl.explanation}
+                          >
+                            <span>{gl.label}</span>
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     {/* Scaled / Aggregated Ingredients */}
@@ -893,7 +921,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
                       </div>
                     )}
 
-                    <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
+                    <div className="flex items-center gap-3 text-xs text-slate-500 mb-2">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3 text-slate-400" /> {currentLuRecipe.prep_time_minutes} Min
                       </span>
@@ -903,6 +931,20 @@ export const WeeklyPlanView: React.FC<Props> = ({
                       <span className="font-semibold text-blue-700">
                         {luPortion?.scaled_protein_g || currentLuRecipe.base_protein_g}g Protein
                       </span>
+                    </div>
+
+                    <div className="mb-3">
+                      {(() => {
+                        const gl = getRecipeGlycemicBadge(currentLuRecipe);
+                        return (
+                          <span
+                            className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200"
+                            title={gl.explanation}
+                          >
+                            <span>{gl.label}</span>
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     {/* Scaled / Aggregated Ingredients */}
@@ -992,7 +1034,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
                       );
                     })()}
 
-                    <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
+                    <div className="flex items-center gap-3 text-xs text-slate-500 mb-2">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3 text-slate-400" /> {currentDiRecipe.prep_time_minutes + currentDiRecipe.cook_time_minutes} Min
                       </span>
@@ -1002,6 +1044,20 @@ export const WeeklyPlanView: React.FC<Props> = ({
                       <span className="font-semibold text-blue-700">
                         {diPortion?.scaled_protein_g || currentDiRecipe.base_protein_g}g Protein
                       </span>
+                    </div>
+
+                    <div className="mb-3">
+                      {(() => {
+                        const gl = getRecipeGlycemicBadge(currentDiRecipe);
+                        return (
+                          <span
+                            className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200"
+                            title={gl.explanation}
+                          >
+                            <span>{gl.label}</span>
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     {/* Scaled / Aggregated Ingredients */}

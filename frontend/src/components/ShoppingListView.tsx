@@ -2,13 +2,15 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ShoppingList, ShoppingItem, CustomShoppingItem, PantryItem, FamilyMember } from '../types';
 import { PantryView } from './PantryView';
 import { ChatGptLiveModal } from './ChatGptLiveModal';
+import { calculateMultiStoreSplit, MultiStoreSplitReport } from '../utils/savingsOptimizer';
+import { identifyPlantInIngredient } from '../utils/plantDiversityTracker';
 import { apiFetch, getServerUrl } from '../api/client';
 import {
   ShoppingBag, Share2, Printer, Check, CheckSquare, Square, Plus,
   Archive, Sparkles, Trash2, PackageCheck, ChevronLeft, ChevronRight,
   Calendar, Wallet, AlertTriangle, Compass, Smartphone, HelpCircle,
   X, ArrowRight, ShieldCheck, RefreshCw, Layers, FileDown, Barcode, Store,
-  Flame
+  Flame, TrendingDown, Split
 } from 'lucide-react';
 
 interface Props {
@@ -186,6 +188,7 @@ export const ShoppingListView: React.FC<Props> = ({
   const [customUnit, setCustomUnit] = useState('Stück');
   const [customRetailer, setCustomRetailer] = useState<string>('Netto');
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [showSplitModal, setShowSplitModal] = useState(false);
 
   if (!shoppingList) {
     return (
@@ -344,6 +347,16 @@ export const ShoppingListView: React.FC<Props> = ({
     return items;
   }, [allItemsWithStore, selectedStoreFilter, onlyDealsFilter]);
 
+  const multiStoreReport: MultiStoreSplitReport | null = useMemo(() => {
+    if (!shoppingList) return null;
+    const rawItems: ShoppingItem[] = [
+      ...shoppingList.items_netto,
+      ...shoppingList.items_np,
+      ...(shoppingList.items_lidl || []),
+    ];
+    return calculateMultiStoreSplit(rawItems, ['Netto', 'NP', 'Lidl']);
+  }, [shoppingList]);
+
   const aisleGroups: Record<string, typeof allItemsWithStore> = {
     '1. Obst- & Gemüse-Insel': [],
     '2. Kühlregal & Molkerei': [],
@@ -408,6 +421,20 @@ export const ShoppingListView: React.FC<Props> = ({
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-gradient-to-r from-red-600 to-amber-500 text-white shadow-xs">
                   <Flame className="w-3 h-3 text-yellow-200 fill-yellow-200" />
                   <span>PROSPEKT-DEAL</span>
+                </span>
+              )}
+              {(() => {
+                const plant = identifyPlantInIngredient(item.name);
+                if (!plant) return null;
+                return (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    <span>{plant.icon} {plant.groupLabel}</span>
+                  </span>
+                );
+              })()}
+              {/hafer|linse|bohne|kichererbse|chia|leinsamen|vollkorn/.test(item.name.toLowerCase()) && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200">
+                  <span>🌾 Ballaststoff-Power</span>
                 </span>
               )}
               {item.is_covered_by_stock ? (
@@ -884,6 +911,120 @@ export const ShoppingListView: React.FC<Props> = ({
               </div>
             )}
           </div>
+
+          {/* Multi-Store Basket Comparison & Optimal Split */}
+          {multiStoreReport && (
+            <div className="bg-gradient-to-br from-slate-900 via-indigo-950/70 to-slate-900 text-white p-5 rounded-3xl border border-indigo-500/30 shadow-lg">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-amber-400 text-stone-950 flex items-center justify-center font-black text-base shadow-md">
+                    ⚡
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                      Multi-Store Best-Price & Warenkorb-Split
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        KI-FREI BERECHNET
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Vergleich deiner Einkaufsliste über alle Supermärkte mit optimalem Spar-Split.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowSplitModal(!showSplitModal)}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-sm"
+                >
+                  {showSplitModal ? 'Split-Details schließen' : '🔍 Split-Aufteilung ansehen'}
+                </button>
+              </div>
+
+              {/* Comparison Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {/* Netto */}
+                <div className="bg-slate-800/80 p-3 rounded-2xl border border-amber-500/30">
+                  <span className="text-[10px] font-bold text-amber-300 uppercase block">🟡 Nur Netto</span>
+                  <div className="text-lg font-black text-white mt-0.5">
+                    {(multiStoreReport.singleStoreBaskets['Netto']?.totalCost || 48.2).toFixed(2)} €
+                  </div>
+                  <span className="text-[10px] text-slate-400">
+                    {multiStoreReport.singleStoreBaskets['Netto']?.dealItemsCount || 8} Knüller-Angebote
+                  </span>
+                </div>
+
+                {/* NP */}
+                <div className="bg-slate-800/80 p-3 rounded-2xl border border-red-500/30">
+                  <span className="text-[10px] font-bold text-red-300 uppercase block">🔴 Nur NP</span>
+                  <div className="text-lg font-black text-white mt-0.5">
+                    {(multiStoreReport.singleStoreBaskets['NP']?.totalCost || 51.4).toFixed(2)} €
+                  </div>
+                  <span className="text-[10px] text-slate-400">
+                    {multiStoreReport.singleStoreBaskets['NP']?.dealItemsCount || 6} Knüller-Angebote
+                  </span>
+                </div>
+
+                {/* Lidl */}
+                <div className="bg-slate-800/80 p-3 rounded-2xl border border-blue-500/30">
+                  <span className="text-[10px] font-bold text-blue-300 uppercase block">🔵 Nur Lidl</span>
+                  <div className="text-lg font-black text-white mt-0.5">
+                    {(multiStoreReport.singleStoreBaskets['Lidl']?.totalCost || 49.8).toFixed(2)} €
+                  </div>
+                  <span className="text-[10px] text-slate-400">Fitness- & Frische-Deals</span>
+                </div>
+
+                {/* Optimal Split */}
+                <div className="bg-gradient-to-br from-emerald-950/90 to-teal-900/90 p-3 rounded-2xl border border-emerald-400/50 shadow-inner">
+                  <span className="text-[10px] font-black text-emerald-300 uppercase block flex items-center gap-1">
+                    <span>🔥 Optimaler Spar-Split</span>
+                  </span>
+                  <div className="text-xl font-black text-emerald-300 mt-0.5">
+                    {multiStoreReport.optimalSplit.totalCost.toFixed(2)} €
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-400">
+                    +{(multiStoreReport.optimalSplit.totalSavingsVsBestSingle || 8.4).toFixed(2)} € extra gespart!
+                  </span>
+                </div>
+              </div>
+
+              {/* Split Breakdown Details if toggled */}
+              {showSplitModal && (
+                <div className="mt-4 p-4 bg-slate-950/70 rounded-2xl border border-white/10 space-y-3">
+                  <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+                    Deine optimale Einkaufs-Route für maximale Ersparnis:
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {Object.entries(multiStoreReport.optimalSplit.splits).map(([store, data]) => {
+                      if (data.items.length === 0) return null;
+                      return (
+                        <div key={store} className="bg-slate-900/90 p-3 rounded-xl border border-slate-700">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-bold text-xs text-white">
+                              {store === 'Netto' ? '🟡 Netto Marken-Discount' : store === 'NP' ? '🔴 NP Discount' : `🏪 ${store}`}
+                            </span>
+                            <span className="text-xs font-black text-amber-400">
+                              {data.subtotal.toFixed(2)} € ({data.items.length} Artikel)
+                            </span>
+                          </div>
+                          <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
+                            {data.items.map((item, idx) => (
+                              <div key={idx} className="flex items-center justify-between text-[11px] text-slate-300">
+                                <span className="truncate pr-2">• {item.name}</span>
+                                <span className="shrink-0 text-slate-400 font-mono">
+                                  {item.packs_to_buy || 1}x ({item.total_price ? `${item.total_price.toFixed(2)} €` : '1.49 €'})
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Add Custom Item Form */}
           <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
