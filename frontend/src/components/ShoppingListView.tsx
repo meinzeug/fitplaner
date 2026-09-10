@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ShoppingList, ShoppingItem, CustomShoppingItem, PantryItem } from '../types';
 import { PantryView } from './PantryView';
 import { apiFetch, getServerUrl } from '../api/client';
@@ -6,7 +6,7 @@ import {
   ShoppingBag, Share2, Printer, Check, CheckSquare, Square, Plus,
   Archive, Sparkles, Trash2, PackageCheck, ChevronLeft, ChevronRight,
   Calendar, Wallet, AlertTriangle, Compass, Smartphone, HelpCircle,
-  X, ArrowRight, ShieldCheck, RefreshCw, Layers, FileDown, Barcode
+  X, ArrowRight, ShieldCheck, RefreshCw, Layers, FileDown, Barcode, Store
 } from 'lucide-react';
 
 interface Props {
@@ -32,6 +32,73 @@ const DAY_MAP: Record<string, string> = {
   Fr: 'Freitag',
   Sa: 'Samstag',
   So: 'Sonntag',
+};
+
+const STORE_META: Record<string, { label: string; icon: string; bg: string; text: string; activeBg: string; activeBorder: string }> = {
+  Netto: {
+    label: 'Netto',
+    icon: '🟡',
+    bg: 'bg-amber-50 text-amber-900 border-amber-200',
+    text: 'text-amber-900',
+    activeBg: 'bg-amber-400 text-stone-950 font-black shadow-sm',
+    activeBorder: 'border-amber-400',
+  },
+  NP: {
+    label: 'NP',
+    icon: '🔴',
+    bg: 'bg-red-50 text-red-700 border-red-200',
+    text: 'text-red-700',
+    activeBg: 'bg-red-600 text-white font-black shadow-sm',
+    activeBorder: 'border-red-600',
+  },
+  Lidl: {
+    label: 'Lidl',
+    icon: '🔵',
+    bg: 'bg-blue-50 text-blue-800 border-blue-200',
+    text: 'text-blue-800',
+    activeBg: 'bg-blue-600 text-white font-black shadow-sm',
+    activeBorder: 'border-blue-600',
+  },
+  Aldi: {
+    label: 'Aldi',
+    icon: '🔷',
+    bg: 'bg-sky-50 text-sky-900 border-sky-200',
+    text: 'text-sky-900',
+    activeBg: 'bg-sky-800 text-white font-black shadow-sm',
+    activeBorder: 'border-sky-800',
+  },
+  Rewe: {
+    label: 'Rewe',
+    icon: '🔴',
+    bg: 'bg-rose-50 text-rose-800 border-rose-200',
+    text: 'text-rose-800',
+    activeBg: 'bg-rose-700 text-white font-black shadow-sm',
+    activeBorder: 'border-rose-700',
+  },
+  Kaufland: {
+    label: 'Kaufland',
+    icon: '🔴',
+    bg: 'bg-red-50 text-red-900 border-red-200',
+    text: 'text-red-900',
+    activeBg: 'bg-red-800 text-white font-black shadow-sm',
+    activeBorder: 'border-red-800',
+  },
+  Edeka: {
+    label: 'Edeka',
+    icon: '🟡',
+    bg: 'bg-yellow-50 text-yellow-900 border-yellow-200',
+    text: 'text-yellow-900',
+    activeBg: 'bg-yellow-400 text-stone-950 font-black shadow-sm',
+    activeBorder: 'border-yellow-400',
+  },
+  Vorratskammer: {
+    label: 'Vorrat',
+    icon: '📦',
+    bg: 'bg-slate-50 text-slate-700 border-slate-200',
+    text: 'text-slate-700',
+    activeBg: 'bg-slate-800 text-white font-black shadow-sm',
+    activeBorder: 'border-slate-800',
+  },
 };
 
 export const ShoppingListView: React.FC<Props> = ({
@@ -88,6 +155,9 @@ export const ShoppingListView: React.FC<Props> = ({
 
   // View Mode: 'aisle' (Gang-Laufweg) or 'store' (Filial-Trennung)
   const [viewMode, setViewMode] = useState<'aisle' | 'store'>('aisle');
+
+  // Supermarkt / Filialen-Filter ('all' oder spezifischer Markt wie 'Netto', 'NP' etc.)
+  const [selectedStoreFilter, setSelectedStoreFilter] = useState<string>('all');
 
   // In-Store Thumb Mode (große Touch-Tasten)
   const [thumbMode, setThumbMode] = useState(false);
@@ -232,6 +302,34 @@ export const ShoppingListView: React.FC<Props> = ({
     ...shoppingList.items_pantry.map((i) => ({ ...i, storeTag: 'Vorratskammer' })),
   ];
 
+  // Dynamically compute available stores with item counts
+  const availableStores = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const item of allItemsWithStore) {
+      counts[item.storeTag] = (counts[item.storeTag] || 0) + 1;
+    }
+    return Object.keys(counts).map((storeKey) => ({
+      key: storeKey,
+      count: counts[storeKey],
+      meta: STORE_META[storeKey] || {
+        label: storeKey,
+        icon: '🏪',
+        bg: 'bg-slate-50 text-slate-700 border-slate-200',
+        text: 'text-slate-700',
+        activeBg: 'bg-emerald-600 text-white font-black shadow-sm',
+        activeBorder: 'border-emerald-600',
+      },
+    }));
+  }, [allItemsWithStore]);
+
+  // Filtered items for aisle view based on selected store
+  const itemsForAisle = useMemo(() => {
+    if (selectedStoreFilter === 'all') {
+      return allItemsWithStore;
+    }
+    return allItemsWithStore.filter((i) => i.storeTag === selectedStoreFilter);
+  }, [allItemsWithStore, selectedStoreFilter]);
+
   const aisleGroups: Record<string, typeof allItemsWithStore> = {
     '1. Obst- & Gemüse-Insel': [],
     '2. Kühlregal & Molkerei': [],
@@ -240,7 +338,7 @@ export const ShoppingListView: React.FC<Props> = ({
     '5. Basics & Gewürze': [],
   };
 
-  allItemsWithStore.forEach((item) => {
+  itemsForAisle.forEach((item) => {
     const aisleKey = item.aisle || '5. Basics & Gewürze';
     if (!aisleGroups[aisleKey]) {
       aisleGroups[aisleKey] = [];
@@ -531,6 +629,74 @@ export const ShoppingListView: React.FC<Props> = ({
             </div>
           </div>
 
+          {/* Filial-Filter Bar */}
+          <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex items-center justify-between w-full md:w-auto">
+              <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5 mr-1">
+                <Store className="w-3.5 h-3.5 text-emerald-600" />
+                Filiale filtern:
+              </span>
+              {selectedStoreFilter !== 'all' && (
+                <button
+                  onClick={() => setSelectedStoreFilter('all')}
+                  className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 active:scale-95 transition md:hidden"
+                >
+                  Alle anzeigen ↺
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none w-full md:w-auto">
+              <button
+                onClick={() => setSelectedStoreFilter('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1.5 active:scale-95 ${
+                  selectedStoreFilter === 'all'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <span>🛒 Alle Filialen</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                  selectedStoreFilter === 'all' ? 'bg-white/20 text-white' : 'bg-black/5 text-slate-700'
+                }`}>
+                  {allItemsWithStore.length}
+                </span>
+              </button>
+
+              {availableStores.map(({ key, count, meta }) => {
+                const isSelected = selectedStoreFilter === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedStoreFilter(key)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1.5 active:scale-95 border ${
+                      isSelected
+                        ? `${meta.activeBg} ${meta.activeBorder}`
+                        : `${meta.bg} hover:opacity-90`
+                    }`}
+                  >
+                    <span>{meta.icon}</span>
+                    <span>{meta.label}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                      isSelected ? 'bg-black/20 text-white' : 'bg-black/5 text-slate-700'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+
+              {selectedStoreFilter !== 'all' && (
+                <button
+                  onClick={() => setSelectedStoreFilter('all')}
+                  className="hidden md:inline-flex text-xs font-bold text-emerald-600 hover:text-emerald-700 px-2 py-1 active:scale-95 transition ml-1"
+                >
+                  Zurücksetzen ↺
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Header Banner & Savings */}
           <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6 rounded-3xl shadow-xl flex flex-col gap-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -704,36 +870,152 @@ export const ShoppingListView: React.FC<Props> = ({
           {viewMode === 'aisle' ? (
             /* Gang-Laufweg (Supermarkt-Route) */
             <div className="space-y-6">
-              {Object.entries(aisleGroups).map(([aisleName, items]) => {
-                if (items.length === 0) return null;
-                const doneCount = items.filter((i) => checkedMap[`${i.storeTag}-${i.name}`]).length;
+              {/* Quick Filter Bar for Aisle View */}
+              <div className="bg-white rounded-2xl p-3 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2">
+                  <Compass className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 flex-wrap">
+                    <span>Gang-Laufweg</span>
+                    {selectedStoreFilter !== 'all' ? (
+                      <span className="text-emerald-800 bg-emerald-100 font-black px-2 py-0.5 rounded-lg text-[11px] border border-emerald-300">
+                        {STORE_META[selectedStoreFilter]?.icon || '🏪'} {STORE_META[selectedStoreFilter]?.label || selectedStoreFilter} ({itemsForAisle.length} Artikel)
+                      </span>
+                    ) : (
+                      <span className="text-slate-600 bg-slate-100 font-bold px-2 py-0.5 rounded-lg text-[11px]">
+                        Alle Filialen ({allItemsWithStore.length} Artikel)
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-                return (
-                  <div key={aisleName} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-sm tracking-wide">{aisleName}</span>
-                        <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-white/20 font-semibold backdrop-blur-sm">
-                          {items.length} Artikel
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                  <button
+                    onClick={() => setSelectedStoreFilter('all')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition ${
+                      selectedStoreFilter === 'all'
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Alle ({allItemsWithStore.length})
+                  </button>
+                  {availableStores.map(({ key, count, meta }) => {
+                    const isSelected = selectedStoreFilter === key;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedStoreFilter(key)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition flex items-center gap-1 border ${
+                          isSelected
+                            ? `${meta.activeBg} ${meta.activeBorder}`
+                            : `${meta.bg} hover:opacity-90`
+                        }`}
+                      >
+                        <span>{meta.icon}</span>
+                        <span>{meta.label}</span>
+                        <span className="text-[10px] opacity-80">({count})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {itemsForAisle.length === 0 ? (
+                <div className="bg-white rounded-3xl p-8 text-center border border-slate-200 shadow-sm text-slate-500 text-sm">
+                  <Store className="w-10 h-10 text-slate-400 mx-auto mb-2" />
+                  <div className="font-bold text-slate-800">Keine Artikel für diesen Filter</div>
+                  <div className="text-xs text-slate-400 mt-1">
+                    Für {selectedStoreFilter} gibt es an den ausgewählten Tagen keine Positionen.
+                  </div>
+                  <button
+                    onClick={() => setSelectedStoreFilter('all')}
+                    className="mt-3 px-3.5 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-xs"
+                  >
+                    Alle Filialen anzeigen
+                  </button>
+                </div>
+              ) : (
+                Object.entries(aisleGroups).map(([aisleName, items]) => {
+                  if (items.length === 0) return null;
+                  const doneCount = items.filter((i) => checkedMap[`${i.storeTag}-${i.name}`]).length;
+
+                  return (
+                    <div key={aisleName} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                      <div className="px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-sm tracking-wide">{aisleName}</span>
+                          <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-white/20 font-semibold backdrop-blur-sm">
+                            {items.length} Artikel
+                          </span>
+                        </div>
+                        <span className="text-xs font-bold text-emerald-400">
+                          {doneCount} / {items.length} erledigt
                         </span>
                       </div>
-                      <span className="text-xs font-bold text-emerald-400">
-                        {doneCount} / {items.length} erledigt
-                      </span>
-                    </div>
 
-                    <div className="p-3 divide-y divide-slate-100">
-                      {items.map((it, idx) => renderItemRow(it, `${it.storeTag}-${it.name}`))}
+                      <div className="p-3 divide-y divide-slate-100">
+                        {items.map((it, idx) => renderItemRow(it, `${it.storeTag}-${it.name}`))}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           ) : (
             /* Nach Filiale getrennt (Netto, NP, Vorrat) */
             <div className="space-y-6">
+              {/* Quick Filter Bar for Store View */}
+              <div className="bg-white rounded-2xl p-3 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-slate-600 shrink-0" />
+                  <div className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 flex-wrap">
+                    <span>Nach Filiale</span>
+                    {selectedStoreFilter !== 'all' ? (
+                      <span className="text-emerald-800 bg-emerald-100 font-black px-2 py-0.5 rounded-lg text-[11px] border border-emerald-300">
+                        {STORE_META[selectedStoreFilter]?.icon || '🏪'} {STORE_META[selectedStoreFilter]?.label || selectedStoreFilter}
+                      </span>
+                    ) : (
+                      <span className="text-slate-600 bg-slate-100 font-bold px-2 py-0.5 rounded-lg text-[11px]">
+                        Alle Filialen ({allItemsWithStore.length} Artikel)
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                  <button
+                    onClick={() => setSelectedStoreFilter('all')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition ${
+                      selectedStoreFilter === 'all'
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Alle
+                  </button>
+                  {availableStores.map(({ key, count, meta }) => {
+                    const isSelected = selectedStoreFilter === key;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedStoreFilter(key)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition flex items-center gap-1 border ${
+                          isSelected
+                            ? `${meta.activeBg} ${meta.activeBorder}`
+                            : `${meta.bg} hover:opacity-90`
+                        }`}
+                      >
+                        <span>{meta.icon}</span>
+                        <span>{meta.label}</span>
+                        <span className="text-[10px] opacity-80">({count})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Netto */}
-              {shoppingList.items_netto.length > 0 && (
+              {(selectedStoreFilter === 'all' || selectedStoreFilter === 'Netto') && shoppingList.items_netto.length > 0 && (
                 <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 bg-amber-400 text-stone-900 flex items-center justify-between font-black">
                     <div className="flex items-center gap-2">
@@ -743,17 +1025,17 @@ export const ShoppingListView: React.FC<Props> = ({
                       </span>
                     </div>
                     <span className="text-xs font-bold">
-                      {shoppingList.items_netto.filter((i) => checkedMap[`netto-${i.name}`]).length} / {shoppingList.items_netto.length} erledigt
+                      {shoppingList.items_netto.filter((i) => checkedMap[`Netto-${i.name}`]).length} / {shoppingList.items_netto.length} erledigt
                     </span>
                   </div>
                   <div className="p-3 divide-y divide-slate-100">
-                    {shoppingList.items_netto.map((it) => renderItemRow(it, `netto-${it.name}`))}
+                    {shoppingList.items_netto.map((it) => renderItemRow({ ...it, storeTag: 'Netto' }, `Netto-${it.name}`))}
                   </div>
                 </div>
               )}
 
               {/* NP */}
-              {shoppingList.items_np.length > 0 && (
+              {(selectedStoreFilter === 'all' || selectedStoreFilter === 'NP') && shoppingList.items_np.length > 0 && (
                 <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 bg-red-600 text-white flex items-center justify-between font-black">
                     <div className="flex items-center gap-2">
@@ -763,17 +1045,17 @@ export const ShoppingListView: React.FC<Props> = ({
                       </span>
                     </div>
                     <span className="text-xs font-bold">
-                      {shoppingList.items_np.filter((i) => checkedMap[`np-${i.name}`]).length} / {shoppingList.items_np.length} erledigt
+                      {shoppingList.items_np.filter((i) => checkedMap[`NP-${i.name}`]).length} / {shoppingList.items_np.length} erledigt
                     </span>
                   </div>
                   <div className="p-3 divide-y divide-slate-100">
-                    {shoppingList.items_np.map((it) => renderItemRow(it, `np-${it.name}`))}
+                    {shoppingList.items_np.map((it) => renderItemRow({ ...it, storeTag: 'NP' }, `NP-${it.name}`))}
                   </div>
                 </div>
               )}
 
               {/* Lidl */}
-              {shoppingList.items_lidl && shoppingList.items_lidl.length > 0 && (
+              {(selectedStoreFilter === 'all' || selectedStoreFilter === 'Lidl') && shoppingList.items_lidl && shoppingList.items_lidl.length > 0 && (
                 <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 bg-blue-600 text-white flex items-center justify-between font-black">
                     <div className="flex items-center gap-2">
@@ -783,17 +1065,17 @@ export const ShoppingListView: React.FC<Props> = ({
                       </span>
                     </div>
                     <span className="text-xs font-bold">
-                      {shoppingList.items_lidl.filter((i) => checkedMap[`lidl-${i.name}`]).length} / {shoppingList.items_lidl.length} erledigt
+                      {shoppingList.items_lidl.filter((i) => checkedMap[`Lidl-${i.name}`]).length} / {shoppingList.items_lidl.length} erledigt
                     </span>
                   </div>
                   <div className="p-3 divide-y divide-slate-100">
-                    {shoppingList.items_lidl.map((it) => renderItemRow(it, `lidl-${it.name}`))}
+                    {shoppingList.items_lidl.map((it) => renderItemRow({ ...it, storeTag: 'Lidl' }, `Lidl-${it.name}`))}
                   </div>
                 </div>
               )}
 
               {/* Aldi */}
-              {shoppingList.items_aldi && shoppingList.items_aldi.length > 0 && (
+              {(selectedStoreFilter === 'all' || selectedStoreFilter === 'Aldi') && shoppingList.items_aldi && shoppingList.items_aldi.length > 0 && (
                 <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 bg-sky-800 text-white flex items-center justify-between font-black">
                     <div className="flex items-center gap-2">
@@ -803,17 +1085,17 @@ export const ShoppingListView: React.FC<Props> = ({
                       </span>
                     </div>
                     <span className="text-xs font-bold">
-                      {shoppingList.items_aldi.filter((i) => checkedMap[`aldi-${i.name}`]).length} / {shoppingList.items_aldi.length} erledigt
+                      {shoppingList.items_aldi.filter((i) => checkedMap[`Aldi-${i.name}`]).length} / {shoppingList.items_aldi.length} erledigt
                     </span>
                   </div>
                   <div className="p-3 divide-y divide-slate-100">
-                    {shoppingList.items_aldi.map((it) => renderItemRow(it, `aldi-${it.name}`))}
+                    {shoppingList.items_aldi.map((it) => renderItemRow({ ...it, storeTag: 'Aldi' }, `Aldi-${it.name}`))}
                   </div>
                 </div>
               )}
 
               {/* Rewe */}
-              {shoppingList.items_rewe && shoppingList.items_rewe.length > 0 && (
+              {(selectedStoreFilter === 'all' || selectedStoreFilter === 'Rewe') && shoppingList.items_rewe && shoppingList.items_rewe.length > 0 && (
                 <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 bg-red-700 text-white flex items-center justify-between font-black">
                     <div className="flex items-center gap-2">
@@ -823,17 +1105,17 @@ export const ShoppingListView: React.FC<Props> = ({
                       </span>
                     </div>
                     <span className="text-xs font-bold">
-                      {shoppingList.items_rewe.filter((i) => checkedMap[`rewe-${i.name}`]).length} / {shoppingList.items_rewe.length} erledigt
+                      {shoppingList.items_rewe.filter((i) => checkedMap[`Rewe-${i.name}`]).length} / {shoppingList.items_rewe.length} erledigt
                     </span>
                   </div>
                   <div className="p-3 divide-y divide-slate-100">
-                    {shoppingList.items_rewe.map((it) => renderItemRow(it, `rewe-${it.name}`))}
+                    {shoppingList.items_rewe.map((it) => renderItemRow({ ...it, storeTag: 'Rewe' }, `Rewe-${it.name}`))}
                   </div>
                 </div>
               )}
 
               {/* Kaufland */}
-              {shoppingList.items_kaufland && shoppingList.items_kaufland.length > 0 && (
+              {(selectedStoreFilter === 'all' || selectedStoreFilter === 'Kaufland') && shoppingList.items_kaufland && shoppingList.items_kaufland.length > 0 && (
                 <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 bg-red-800 text-white flex items-center justify-between font-black">
                     <div className="flex items-center gap-2">
@@ -843,17 +1125,17 @@ export const ShoppingListView: React.FC<Props> = ({
                       </span>
                     </div>
                     <span className="text-xs font-bold">
-                      {shoppingList.items_kaufland.filter((i) => checkedMap[`kaufland-${i.name}`]).length} / {shoppingList.items_kaufland.length} erledigt
+                      {shoppingList.items_kaufland.filter((i) => checkedMap[`Kaufland-${i.name}`]).length} / {shoppingList.items_kaufland.length} erledigt
                     </span>
                   </div>
                   <div className="p-3 divide-y divide-slate-100">
-                    {shoppingList.items_kaufland.map((it) => renderItemRow(it, `kaufland-${it.name}`))}
+                    {shoppingList.items_kaufland.map((it) => renderItemRow({ ...it, storeTag: 'Kaufland' }, `Kaufland-${it.name}`))}
                   </div>
                 </div>
               )}
 
               {/* Edeka */}
-              {shoppingList.items_edeka && shoppingList.items_edeka.length > 0 && (
+              {(selectedStoreFilter === 'all' || selectedStoreFilter === 'Edeka') && shoppingList.items_edeka && shoppingList.items_edeka.length > 0 && (
                 <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 bg-yellow-400 text-blue-950 flex items-center justify-between font-black">
                     <div className="flex items-center gap-2">
@@ -863,17 +1145,17 @@ export const ShoppingListView: React.FC<Props> = ({
                       </span>
                     </div>
                     <span className="text-xs font-bold">
-                      {shoppingList.items_edeka.filter((i) => checkedMap[`edeka-${i.name}`]).length} / {shoppingList.items_edeka.length} erledigt
+                      {shoppingList.items_edeka.filter((i) => checkedMap[`Edeka-${i.name}`]).length} / {shoppingList.items_edeka.length} erledigt
                     </span>
                   </div>
                   <div className="p-3 divide-y divide-slate-100">
-                    {shoppingList.items_edeka.map((it) => renderItemRow(it, `edeka-${it.name}`))}
+                    {shoppingList.items_edeka.map((it) => renderItemRow({ ...it, storeTag: 'Edeka' }, `Edeka-${it.name}`))}
                   </div>
                 </div>
               )}
 
               {/* Vorratskammer */}
-              {shoppingList.items_pantry.length > 0 && (
+              {(selectedStoreFilter === 'all' || selectedStoreFilter === 'Vorratskammer') && shoppingList.items_pantry.length > 0 && (
                 <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="px-6 py-3.5 bg-slate-100 text-slate-800 flex items-center justify-between font-bold">
                     <div className="flex items-center gap-2">
@@ -883,11 +1165,11 @@ export const ShoppingListView: React.FC<Props> = ({
                       </span>
                     </div>
                     <span className="text-xs font-bold">
-                      {shoppingList.items_pantry.filter((i) => checkedMap[`pantry-${i.name}`]).length} / {shoppingList.items_pantry.length}
+                      {shoppingList.items_pantry.filter((i) => checkedMap[`Vorratskammer-${i.name}`]).length} / {shoppingList.items_pantry.length}
                     </span>
                   </div>
                   <div className="p-3 divide-y divide-slate-100">
-                    {shoppingList.items_pantry.map((it) => renderItemRow(it, `pantry-${it.name}`))}
+                    {shoppingList.items_pantry.map((it) => renderItemRow({ ...it, storeTag: 'Vorratskammer' }, `Vorratskammer-${it.name}`))}
                   </div>
                 </div>
               )}
