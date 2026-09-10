@@ -1,6 +1,10 @@
 import React from 'react';
 import { Recipe, PersonMealPortion, PantryItem, FamilyMember } from '../types';
-import { Clock, Flame, ShieldAlert, CheckCircle2, Box, Utensils, ChefHat, X, Sparkles, AlertCircle } from 'lucide-react';
+import {
+  Clock, Flame, CheckCircle2, Box, Utensils, ChefHat, X, Sparkles,
+  AlertCircle
+} from 'lucide-react';
+import { getRetailerBadgeClass } from '../utils/retailerBadges';
 
 interface Props {
   recipe: Recipe | null;
@@ -10,6 +14,8 @@ interface Props {
   portion?: PersonMealPortion;
   pantryItems: PantryItem[];
   isCooked?: boolean;
+  isAllMembers?: boolean;
+  membersCount?: number;
   onCookMeal: (dayIndex: number, mealType: string) => Promise<void>;
   onClose: () => void;
 }
@@ -22,10 +28,15 @@ export const RecipeModal: React.FC<Props> = ({
   portion,
   pantryItems,
   isCooked = false,
+  isAllMembers = false,
+  membersCount,
   onCookMeal,
   onClose,
 }) => {
   if (!recipe) return null;
+
+  const isAll = isAllMembers || activeMember.id === 'all' || activeMember.name.toLowerCase().includes('familie');
+  const countDisplay = membersCount || (activeMember.id === 'all' ? (activeMember.name.match(/\d+/)?.[0] || 'alle') : undefined);
 
   const isPantryStockAvailable = (ingredientName: string, requiredAmount: number) => {
     const match = pantryItems.find((p) =>
@@ -63,6 +74,13 @@ export const RecipeModal: React.FC<Props> = ({
 
           {/* Title on Banner */}
           <div className="absolute bottom-4 left-6 right-6">
+            {isAll && (
+              <div className="mb-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-400 text-emerald-950 shadow-md">
+                  👨‍👩‍👧‍👦 {countDisplay ? `Gesamtmenge für alle ${countDisplay} Familienmitglieder` : 'Gesamtmenge für die Familie'} ({portion?.scaled_calories || recipe.base_calories} kcal gesamt)
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
               <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-500 text-white">
                 {mealType === 'breakfast' ? '🥪 Frühstück to-go' : mealType === 'lunch' ? '🥗 Mittag to-go' : '🍲 Abendessen frisch'}
@@ -97,25 +115,31 @@ export const RecipeModal: React.FC<Props> = ({
               </span>
             </div>
             <div>
-              <span className="text-[10px] text-slate-400 font-semibold block uppercase">Portion {activeMember.name}</span>
+              <span className="text-[10px] text-slate-400 font-semibold block uppercase">
+                {isAll ? (countDisplay ? `Familie (${countDisplay} P.)` : 'Familien-Portion') : `Portion ${activeMember.name}`}
+              </span>
               <span className="text-sm font-black text-orange-600 flex items-center justify-center gap-1">
                 <Flame className="w-3.5 h-3.5" /> {portion?.scaled_calories || recipe.base_calories} kcal
               </span>
             </div>
             <div>
-              <span className="text-[10px] text-slate-400 font-semibold block uppercase">Protein</span>
+              <span className="text-[10px] text-slate-400 font-semibold block uppercase">
+                {isAll ? 'Gesamt-Protein' : 'Protein'}
+              </span>
               <span className="text-sm font-black text-blue-700">
                 {portion?.scaled_protein_g || recipe.base_protein_g}g
               </span>
             </div>
           </div>
 
-          {/* Personalized Ingredients List */}
+          {/* Personalized / Aggregated Ingredients List */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                 <Utensils className="w-4 h-4 text-emerald-600" />
-                Zutaten (Exakt abgemessen für {activeMember.name})
+                {isAll
+                  ? `Zutaten (Gesamtmenge für alle ${countDisplay || ''} Familienmitglieder)`
+                  : `Zutaten (Exakt abgemessen für ${activeMember.name})`}
               </h3>
               <span className="text-xs text-slate-400 font-medium">Lagerbestand wird geprüft</span>
             </div>
@@ -139,12 +163,10 @@ export const RecipeModal: React.FC<Props> = ({
                       <span className="font-semibold text-slate-700">{ing.name}</span>
                     </div>
 
-                    <div className="text-right">
+                    <div className="text-right flex items-center justify-end">
                       <span className="font-mono font-bold text-slate-900">{ing.amount} {ing.unit}</span>
                       {ing.matched_retailer && (
-                        <span className={`ml-1 text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                          ing.matched_retailer === 'Netto' ? 'bg-amber-200 text-stone-900' : 'bg-red-200 text-red-900'
-                        }`}>
+                        <span className={`ml-1.5 text-[10px] px-2 py-0.5 rounded-md font-bold shadow-xs ${getRetailerBadgeClass(ing.matched_retailer)}`}>
                           {ing.matched_retailer} Deal
                         </span>
                       )}
@@ -156,72 +178,110 @@ export const RecipeModal: React.FC<Props> = ({
           </div>
 
           {/* Detailed Instructions Steps */}
-          {recipe.detailed_instructions ? (
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <ChefHat className="w-4 h-4 text-emerald-600" />
-                Schritt-für-Schritt Zubereitung
-              </h3>
+          {recipe.detailed_instructions &&
+          ((recipe.detailed_instructions.prep_steps && recipe.detailed_instructions.prep_steps.length > 0) ||
+           (recipe.detailed_instructions.cooking_steps && recipe.detailed_instructions.cooking_steps.length > 0) ||
+           (recipe.detailed_instructions.lunchbox_tips && recipe.detailed_instructions.lunchbox_tips.length > 0)) ? (
+            <div className="space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <ChefHat className="w-4 h-4 text-emerald-600" />
+                  Schritt-für-Schritt Kochanleitung
+                </h3>
+                <span className="text-[11px] font-semibold text-slate-400">
+                  Frisch & Geling-Garantie
+                </span>
+              </div>
 
-              {/* Prep Steps */}
-              {recipe.detailed_instructions.prep_steps.length > 0 && (
-                <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
-                  <span className="text-xs font-bold text-emerald-900 block mb-2 uppercase tracking-wide">
-                    1. Vorbereitung & Schnippeln
-                  </span>
-                  <ul className="space-y-2 text-xs text-slate-700">
-                    {recipe.detailed_instructions.prep_steps.map((s, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <span className="w-4 h-4 rounded-full bg-emerald-200 text-emerald-900 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">{idx + 1}</span>
-                        <span>{s}</span>
-                      </li>
+              {/* 1. Prep Steps */}
+              {recipe.detailed_instructions.prep_steps && recipe.detailed_instructions.prep_steps.length > 0 && (
+                <div className="bg-emerald-50/60 rounded-2xl p-4 border border-emerald-100 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-emerald-900 flex items-center gap-1.5 uppercase tracking-wide">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                      1. Vorbereitung & Schnippeln
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900">
+                      {recipe.detailed_instructions.prep_steps.length} {recipe.detailed_instructions.prep_steps.length === 1 ? 'Schritt' : 'Schritte'}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {recipe.detailed_instructions.prep_steps.map((step, idx) => (
+                      <div key={idx} className="flex items-start gap-3 bg-white/90 p-2.5 rounded-xl border border-emerald-100/60 text-xs">
+                        <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                          {idx + 1}
+                        </span>
+                        <span className="text-slate-800 font-medium leading-relaxed">{step}</span>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
 
-              {/* Cooking Steps */}
-              {recipe.detailed_instructions.cooking_steps.length > 0 && (
-                <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
-                  <span className="text-xs font-bold text-blue-900 block mb-2 uppercase tracking-wide">
-                    2. Kochen, Braten & Anrichten
-                  </span>
-                  <ul className="space-y-2 text-xs text-slate-700">
-                    {recipe.detailed_instructions.cooking_steps.map((s, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <span className="w-4 h-4 rounded-full bg-blue-200 text-blue-900 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">{idx + 1}</span>
-                        <span>{s}</span>
-                      </li>
+              {/* 2. Cooking Steps */}
+              {recipe.detailed_instructions.cooking_steps && recipe.detailed_instructions.cooking_steps.length > 0 && (
+                <div className="bg-amber-50/60 rounded-2xl p-4 border border-amber-100 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-amber-950 flex items-center gap-1.5 uppercase tracking-wide">
+                      <Flame className="w-3.5 h-3.5 text-amber-600" />
+                      2. Kochen, Braten & Anrichten
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900">
+                      {recipe.detailed_instructions.cooking_steps.length} {recipe.detailed_instructions.cooking_steps.length === 1 ? 'Schritt' : 'Schritte'}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {recipe.detailed_instructions.cooking_steps.map((step, idx) => (
+                      <div key={idx} className="flex items-start gap-3 bg-white/90 p-2.5 rounded-xl border border-amber-100/60 text-xs">
+                        <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                          {idx + 1}
+                        </span>
+                        <span className="text-slate-800 font-medium leading-relaxed">{step}</span>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
 
-              {/* Lunchbox Tips */}
-              {recipe.detailed_instructions.lunchbox_tips.length > 0 && (
-                <div className="bg-amber-50/50 p-4 rounded-2xl border border-amber-100">
-                  <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5 mb-2 uppercase tracking-wide">
-                    <Box className="w-3.5 h-3.5 text-amber-600" /> 3. Brotdosen- & Transporttipps
-                  </span>
-                  <ul className="space-y-1.5 text-xs text-slate-700">
+              {/* 3. Lunchbox Tips */}
+              {recipe.detailed_instructions.lunchbox_tips && recipe.detailed_instructions.lunchbox_tips.length > 0 && (
+                <div className="bg-blue-50/60 rounded-2xl p-4 border border-blue-100 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-blue-950 flex items-center gap-1.5 uppercase tracking-wide">
+                      <Box className="w-3.5 h-3.5 text-blue-600" />
+                      3. Brotdosen- & Frische-Tipps (Meal-Prep)
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-200/80 text-blue-900">
+                      {recipe.detailed_instructions.lunchbox_tips.length} {recipe.detailed_instructions.lunchbox_tips.length === 1 ? 'Tipp' : 'Tipps'}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
                     {recipe.detailed_instructions.lunchbox_tips.map((tip, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <span className="text-amber-500 font-bold">•</span>
-                        <span>{tip}</span>
-                      </li>
+                      <div key={idx} className="flex items-start gap-2.5 bg-white/90 p-2.5 rounded-xl border border-blue-100/60 text-xs">
+                        <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                        <span className="text-slate-800 font-medium leading-relaxed">{tip}</span>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
             </div>
           ) : (
-            <div>
-              <h3 className="text-sm font-bold text-slate-800 mb-2">Zubereitung</h3>
-              <ol className="space-y-2 text-xs text-slate-700 list-decimal pl-4">
-                {recipe.instructions.map((inst, idx) => (
-                  <li key={idx} className="leading-relaxed">{inst}</li>
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <ChefHat className="w-4 h-4 text-emerald-600" />
+                Zubereitung
+              </h3>
+              <div className="space-y-2">
+                {(recipe.instructions || []).map((inst, idx) => (
+                  <div key={idx} className="flex items-start gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+                    <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      {idx + 1}
+                    </span>
+                    <span className="text-slate-700 font-medium leading-relaxed">{inst}</span>
+                  </div>
                 ))}
-              </ol>
+              </div>
             </div>
           )}
         </div>

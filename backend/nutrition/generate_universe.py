@@ -1895,6 +1895,12 @@ def build_universe():
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(recipes, f, ensure_ascii=False, indent=2)
 
+    try:
+        from backend.nutrition.recipe_enrichment.enrich_universe import enrich_recipes_universe
+        enrich_recipes_universe()
+    except Exception as e:
+        print(f"Warning: Enrichment step failed: {e}")
+
     print(f"✅ Generated {len(recipes)} recipes successfully:")
     print(f"   - Breakfasts: {sum(1 for r in recipes if r['meal_type'] == 'breakfast_lunchbox')}")
     print(f"   - Lunches:    {sum(1 for r in recipes if r['meal_type'] == 'lunch_lunchbox')}")
@@ -1904,3 +1910,4 @@ def build_universe():
 
 if __name__ == "__main__":
     build_universe()
+

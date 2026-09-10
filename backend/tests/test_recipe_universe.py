@@ -5,11 +5,11 @@ multi-supermarket digital leaflets, and realistic leaflet validity horizons.
 
 import unittest
 from backend.models import FamilyMember
-from backend.nutrition.calculator import enrich_family_member
+from backend.nutrition.calculator import enrich_family_member, scale_recipe_for_person
 from backend.nutrition.recipe_universe import (
     get_all_universe_recipes, filter_universe_recipes, get_universe_stats, get_recipe_by_id
 )
-from backend.planner.generator import generate_weekly_plan
+from backend.planner.generator import generate_weekly_plan, swap_meal_in_plan
 from backend.scrapers.leaflets import get_all_leaflets, get_leaflet_by_retailer
 from backend.planner.shopping_list import generate_shopping_list_from_plan
 
@@ -113,6 +113,131 @@ class TestRecipeUniverseAndSupermarkets(unittest.TestCase):
         self.assertIsNotNone(shopping_list.items_by_retailer)
         self.assertGreater(shopping_list.total_price, 0)
         self.assertGreater(shopping_list.total_savings, 0)
+
+    def test_supermarket_filtering_netto_np_only(self):
+        """Verifies that when only ['Netto', 'NP'] are active, no unselected retailers appear in the plan."""
+        active = ["Netto", "NP"]
+        plan = generate_weekly_plan(
+            family_members=self.family,
+            week_offset=0,
+            active_retailers=active,
+            primary_retailer="Netto"
+        )
+        self.assertEqual(plan.active_retailers, active)
+        self.assertIn("Netto, NP", plan.leaflet_availability_note)
+        self.assertNotIn("Lidl", plan.leaflet_availability_note)
+        self.assertNotIn("Rewe", plan.leaflet_availability_note)
+
+        allowed_retailers = {"Netto", "NP", "Vorratskammer"}
+        for day in plan.days:
+            for meal in [day.breakfast, day.lunch, day.dinner]:
+                for ing in meal.ingredients:
+                    self.assertIn(
+                        ing.matched_offer_retailer,
+                        allowed_retailers,
+                        f"Found unselected retailer '{ing.matched_offer_retailer}' in recipe '{meal.title}'"
+                    )
+            for member_id, portions in day.portions.items():
+                for meal_key, portion in portions.items():
+                    for scaled_ing in portion.scaled_ingredients:
+                        self.assertIn(
+                            scaled_ing.matched_retailer,
+                            allowed_retailers,
+                            f"Found unselected retailer '{scaled_ing.matched_retailer}' in scaled ingredient '{scaled_ing.name}'"
+                        )
+
+    def test_plan_reshuffling_with_seed_and_shuffle(self):
+        """Verifies that shuffle=True with different seeds reshuffles meals and identical seeds produce the same plan."""
+        plan_seed_a1 = generate_weekly_plan(self.family, week_offset=0, shuffle=True, seed=42)
+        plan_seed_a2 = generate_weekly_plan(self.family, week_offset=0, shuffle=True, seed=42)
+        a1_meals = [(d.breakfast.title, d.lunch.title, d.dinner.title) for d in plan_seed_a1.days]
+        a2_meals = [(d.breakfast.title, d.lunch.title, d.dinner.title) for d in plan_seed_a2.days]
+        self.assertEqual(a1_meals, a2_meals, "Same seed must produce identical meal plans")
+
+        plan_seed_b = generate_weekly_plan(self.family, week_offset=0, shuffle=True, seed=99999)
+        b_meals = [(d.breakfast.title, d.lunch.title, d.dinner.title) for d in plan_seed_b.days]
+        self.assertNotEqual(a1_meals, b_meals, "Different seeds must produce different meal selections")
+
+    def test_swap_meal_remaps_to_active_retailers(self):
+        """Verifies that swap_meal_in_plan remaps ingredients of swapped recipe to active retailers."""
+        active = ["Netto", "NP"]
+        plan = generate_weekly_plan(self.family, week_offset=0, active_retailers=active, primary_retailer="Netto")
+        all_recipes = get_all_universe_recipes()
+        foreign_recipe = next(
+            r for r in all_recipes
+            if any(ing.matched_offer_retailer in ["Lidl", "Rewe", "Kaufland"] for ing in r.ingredients)
+        )
+        updated_plan = swap_meal_in_plan(
+            plan=plan,
+            day_index=0,
+            meal_type="dinner",
+            new_recipe_id=foreign_recipe.id,
+            family_members=self.family,
+            active_retailers=active,
+            primary_retailer="Netto"
+        )
+        allowed_retailers = {"Netto", "NP", "Vorratskammer"}
+        for ing in updated_plan.days[0].dinner.ingredients:
+            self.assertIn(ing.matched_offer_retailer, allowed_retailers)
+        for scaled_ing in updated_plan.days[0].portions[self.member.id]["dinner"].scaled_ingredients:
+            self.assertIn(scaled_ing.matched_retailer, allowed_retailers)
+
+    def test_scale_recipe_respects_active_and_primary_retailer(self):
+        """Verifies that scale_recipe_for_person remaps unselected retailers to primary_retailer."""
+        all_recipes = get_all_universe_recipes()
+        rewe_recipe = next(
+            r for r in all_recipes
+            if any(ing.matched_offer_retailer == "Rewe" for ing in r.ingredients)
+        )
+        portion = scale_recipe_for_person(
+            recipe=rewe_recipe,
+            member=self.member,
+            meal_type="dinner_home",
+            active_retailers=["Netto", "NP"],
+            primary_retailer="Netto"
+        )
+        for ing in portion.scaled_ingredients:
+            self.assertIn(ing.matched_retailer, ["Netto", "NP", "Vorratskammer"])
+
+    def test_api_plan_generate_reshuffles(self):
+        """Verifies that POST /api/plan/generate produces reshuffled meal selections."""
+        from fastapi.testclient import TestClient
+        from backend.main import app
+        client = TestClient(app)
+        res1 = client.post("/api/plan/generate?week_offset=0")
+        self.assertEqual(res1.status_code, 200)
+        meals1 = [(d["breakfast"]["title"], d["lunch"]["title"], d["dinner"]["title"]) for d in res1.json()["days"]]
+
+        different_found = False
+        for _ in range(5):
+            res2 = client.post("/api/plan/generate?week_offset=0")
+            self.assertEqual(res2.status_code, 200)
+            meals2 = [(d["breakfast"]["title"], d["lunch"]["title"], d["dinner"]["title"]) for d in res2.json()["days"]]
+            if meals1 != meals2:
+                different_found = True
+                break
+        self.assertTrue(different_found, "Calling POST /api/plan/generate should reshuffle meals")
+
+    def test_get_or_create_weekly_plan_cache_invalidation_on_retailer_change(self):
+        """Verifies that get_or_create_weekly_plan invalidates cache when settings.active_retailers change."""
+        from backend.main import get_or_create_weekly_plan, weekly_plans_store
+        from backend.settings_storage import get_app_settings, save_app_settings
+        settings = get_app_settings()
+        orig_retailers = list(settings.active_retailers)
+        try:
+            settings.active_retailers = ["Netto", "NP"]
+            save_app_settings(settings)
+            plan1 = get_or_create_weekly_plan(0)
+            self.assertEqual(plan1.active_retailers, ["Netto", "NP"])
+
+            settings.active_retailers = ["Lidl", "Rewe"]
+            save_app_settings(settings)
+            plan2 = get_or_create_weekly_plan(0)
+            self.assertEqual(plan2.active_retailers, ["Lidl", "Rewe"])
+        finally:
+            settings.active_retailers = orig_retailers
+            save_app_settings(settings)
+            weekly_plans_store.clear()
 
 
 if __name__ == "__main__":

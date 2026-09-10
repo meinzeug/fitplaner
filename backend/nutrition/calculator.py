@@ -2,7 +2,7 @@
 Nutrition and Energy Expenditure Calculator using Mifflin-St Jeor equation.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from backend.models import FamilyMember, Recipe, PersonMealPortion, ScaledIngredient
 
 
@@ -148,11 +148,34 @@ def enrich_family_member(member_data: Dict[str, Any]) -> FamilyMember:
 def scale_recipe_for_person(
     recipe: Recipe,
     member: FamilyMember,
-    meal_type: str
+    meal_type: str,
+    active_retailers: Optional[List[str]] = None,
+    primary_retailer: Optional[str] = None
 ) -> PersonMealPortion:
     """
     Scales recipe quantities and macros to meet the person's specific meal calorie target.
+    Ensures ScaledIngredient.matched_retailer respects active_retailers and falls back to primary_retailer.
     """
+    if active_retailers is None:
+        try:
+            from backend.settings_storage import get_app_settings
+            settings = get_app_settings()
+            active_retailers = settings.active_retailers
+            if not primary_retailer:
+                primary_retailer = settings.primary_retailer
+        except Exception:
+            active_retailers = None
+
+    if not primary_retailer:
+        try:
+            from backend.settings_storage import get_app_settings
+            primary_retailer = get_app_settings().primary_retailer
+        except Exception:
+            primary_retailer = "Netto"
+
+    if active_retailers and primary_retailer not in active_retailers:
+        primary_retailer = active_retailers[0]
+
     ratio = MEAL_RATIOS.get(meal_type, 0.33)
     target_meal_calories = member.target_calories * ratio
 
@@ -163,6 +186,7 @@ def scale_recipe_for_person(
     else:
         scale_factor = 1.0
 
+    active_set = set(active_retailers) if active_retailers is not None else None
     scaled_ingredients: List[ScaledIngredient] = []
     for ing in recipe.ingredients:
         raw_amt = ing.base_amount * scale_factor
@@ -172,12 +196,19 @@ def scale_recipe_for_person(
         else:
             final_amt = round(raw_amt, 1)
 
+        retailer = ing.matched_offer_retailer
+        if retailer and retailer != "Vorratskammer":
+            if active_set is not None and retailer not in active_set:
+                retailer = primary_retailer
+        elif not retailer:
+            retailer = primary_retailer
+
         scaled_ingredients.append(
             ScaledIngredient(
                 name=ing.name,
                 amount=final_amt,
                 unit=ing.unit,
-                matched_retailer=ing.matched_offer_retailer,
+                matched_retailer=retailer,
             )
         )
 

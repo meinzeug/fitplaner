@@ -1,12 +1,92 @@
 import React, { useState, useEffect } from 'react';
-import { WeeklyPlan, FamilyMember, Recipe, PantryItem } from '../types';
+import { WeeklyPlan, FamilyMember, Recipe, PantryItem, PersonMealPortion, ScaledIngredient, DayPlan } from '../types';
 import { RecipeModal } from './RecipeModal';
+import { getRetailerBadgeClass } from '../utils/retailerBadges';
 import {
   Calendar, RefreshCw, Box, UtensilsCrossed, Clock, Flame, Sparkles,
-  ArrowRightLeft, ChefHat, CheckCircle2, Sun, Moon, Coffee,
-  ChevronLeft, ChevronRight, Wallet, AlertTriangle, Check, PiggyBank,
-  TrendingDown, TrendingUp, Lightbulb, Users, BookOpen
+  ArrowRightLeft, ChefHat, Sun, Moon, Coffee,
+  ChevronLeft, ChevronRight, Wallet, AlertTriangle, Users, BookOpen
 } from 'lucide-react';
+
+export { getRetailerBadgeClass };
+
+/**
+ * Calculates aggregated portions and ingredients summed across all family members
+ */
+export function getAggregatedMealPortion(
+  day: DayPlan,
+  mealType: 'breakfast' | 'lunch' | 'dinner',
+  members: FamilyMember[],
+  recipe: Recipe
+): PersonMealPortion {
+  const portions = members
+    .map((m) => day.portions?.[m.id]?.[mealType])
+    .filter((p): p is PersonMealPortion => Boolean(p));
+
+  const memberCount = members.length || 1;
+
+  if (portions.length === 0) {
+    return {
+      member_id: 'all',
+      member_name: `Gesamte Familie (${memberCount} Personen)`,
+      meal_type: recipe.meal_type,
+      recipe_title: recipe.title,
+      scale_factor: memberCount,
+      scaled_calories: recipe.base_calories * memberCount,
+      scaled_protein_g: recipe.base_protein_g * memberCount,
+      scaled_carbs_g: recipe.base_carbs_g * memberCount,
+      scaled_fat_g: recipe.base_fat_g * memberCount,
+      scaled_ingredients: recipe.ingredients.map((ing) => ({
+        name: ing.name,
+        amount: Math.round(ing.base_amount * memberCount * 10) / 10,
+        unit: ing.unit,
+        matched_retailer: ing.matched_offer_retailer,
+      })),
+    };
+  }
+
+  const totalCalories = Math.round(portions.reduce((sum, p) => sum + (p.scaled_calories || 0), 0));
+  const totalProtein = Math.round(portions.reduce((sum, p) => sum + (p.scaled_protein_g || 0), 0));
+  const totalCarbs = Math.round(portions.reduce((sum, p) => sum + (p.scaled_carbs_g || 0), 0));
+  const totalFat = Math.round(portions.reduce((sum, p) => sum + (p.scaled_fat_g || 0), 0));
+  const avgScale = portions.reduce((sum, p) => sum + (p.scale_factor || 1), 0);
+
+  // Aggregate ingredients by name and unit
+  const ingredientMap = new Map<string, ScaledIngredient>();
+
+  for (const p of portions) {
+    for (const ing of p.scaled_ingredients || []) {
+      const key = `${ing.name.trim().toLowerCase()}__${(ing.unit || '').trim().toLowerCase()}`;
+      const existing = ingredientMap.get(key);
+      if (existing) {
+        existing.amount = Math.round((existing.amount + ing.amount) * 10) / 10;
+        if (!existing.matched_retailer && ing.matched_retailer) {
+          existing.matched_retailer = ing.matched_retailer;
+        }
+      } else {
+        ingredientMap.set(key, {
+          name: ing.name,
+          amount: Math.round(ing.amount * 10) / 10,
+          unit: ing.unit,
+          matched_retailer: ing.matched_retailer,
+        });
+      }
+    }
+  }
+
+  return {
+    member_id: 'all',
+    member_name: `Gesamte Familie (${memberCount} Personen)`,
+    meal_type: portions[0]?.meal_type || recipe.meal_type,
+    recipe_title: recipe.title,
+    scale_factor: avgScale,
+    scaled_calories: totalCalories,
+    scaled_protein_g: totalProtein,
+    scaled_carbs_g: totalCarbs,
+    scaled_fat_g: totalFat,
+    scaled_ingredients: Array.from(ingredientMap.values()),
+  };
+}
 
 interface Props {
   plan: WeeklyPlan | null;
@@ -35,7 +115,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
   onCookMeal,
   isGenerating,
 }) => {
-  const [selectedMemberId, setSelectedMemberId] = useState<string>(members[0]?.id || '');
+  const [selectedMemberId, setSelectedMemberId] = useState<string>(members[0]?.id || 'all');
   const [activeSwap, setActiveSwap] = useState<{ dayIndex: number; mealType: 'breakfast' | 'lunch' | 'dinner' } | null>(null);
   const [selectedRecipeModal, setSelectedRecipeModal] = useState<{
     recipe: Recipe;
@@ -50,7 +130,31 @@ export const WeeklyPlanView: React.FC<Props> = ({
     plan?.budget ? String(plan.budget) : '120'
   );
 
-  const currentMember = members.find((m) => m.id === selectedMemberId) || members[0];
+  const isAllSelected = selectedMemberId === 'all';
+
+  const familyMemberObject: FamilyMember = {
+    id: 'all',
+    name: `Gesamte Familie (${members.length} Personen)`,
+    gender: 'female',
+    age: 35,
+    height_cm: 170,
+    weight_kg: 70,
+    activity_level: 'moderate',
+    goal: 'maintain',
+    dietary_preference: 'all',
+    allergies: Array.from(new Set(members.flatMap((m) => m.allergies || []))),
+    disliked_foods: Array.from(new Set(members.flatMap((m) => m.disliked_foods || []))),
+    bmr: members.reduce((sum, m) => sum + (m.bmr || 0), 0),
+    tdee: members.reduce((sum, m) => sum + (m.tdee || 0), 0),
+    target_calories: members.reduce((sum, m) => sum + (m.target_calories || 2000), 0),
+    target_protein_g: members.reduce((sum, m) => sum + (m.target_protein_g || 0), 0),
+    target_carbs_g: members.reduce((sum, m) => sum + (m.target_carbs_g || 0), 0),
+    target_fat_g: members.reduce((sum, m) => sum + (m.target_fat_g || 0), 0),
+  };
+
+  const currentMember = isAllSelected
+    ? familyMemberObject
+    : members.find((m) => m.id === selectedMemberId) || members[0] || familyMemberObject;
 
   useEffect(() => {
     fetchTimeOfDay();
@@ -342,20 +446,18 @@ export const WeeklyPlanView: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Active Retailer Badges */}
+        {/* Dynamic Supermarket Badges */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[10px] font-bold text-slate-400 uppercase mr-1">Supermärkte:</span>
-          {[
-            { name: 'Netto', bg: 'bg-amber-400 text-stone-950' },
-            { name: 'NP', bg: 'bg-red-600 text-white' },
-            { name: 'Lidl', bg: 'bg-blue-600 text-white' },
-            { name: 'Aldi', bg: 'bg-sky-800 text-white' },
-            { name: 'Rewe', bg: 'bg-red-700 text-white' },
-            { name: 'Kaufland', bg: 'bg-rose-900 text-white' },
-            { name: 'Edeka', bg: 'bg-yellow-400 text-blue-950' },
-          ].map((r) => (
-            <span key={r.name} className={`px-2 py-0.5 rounded-lg text-[10px] font-black ${r.bg}`}>
-              {r.name}
+          {(plan.active_retailers && plan.active_retailers.length > 0
+            ? plan.active_retailers
+            : ['Netto', 'NP']
+          ).map((retailerName) => (
+            <span
+              key={retailerName}
+              className={`px-2 py-0.5 rounded-lg text-[10px] font-black shadow-xs ${getRetailerBadgeClass(retailerName)}`}
+            >
+              {retailerName}
             </span>
           ))}
         </div>
@@ -406,20 +508,30 @@ export const WeeklyPlanView: React.FC<Props> = ({
             <h2 className="text-xl font-bold text-slate-800">Familien-Portionen & Mahlzeiten</h2>
           </div>
           <p className="text-xs text-slate-500">
-            Wähle ein Familienmitglied, um die personalisierten Grammzahlen zu sehen, oder klicke auf ein Gericht für das Rezept.
+            Wähle ein Familienmitglied oder die Gesamt-Familie, um die exakten Mengenangaben zu sehen, oder klicke auf ein Gericht für das Rezept.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Member Picker */}
-          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl">
+          {/* Member Picker with 'all' option */}
+          <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-2xl">
             <span className="text-xs font-bold text-slate-500 pl-2">Portionen:</span>
+            <button
+              onClick={() => setSelectedMemberId('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                selectedMemberId === 'all'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              👨‍👩‍👧‍👦 Alle (Gesamt-Familie)
+            </button>
             {members.map((m) => (
               <button
                 key={m.id}
                 onClick={() => setSelectedMemberId(m.id)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                  m.id === currentMember?.id
+                  selectedMemberId === m.id
                     ? 'bg-emerald-600 text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
@@ -434,15 +546,24 @@ export const WeeklyPlanView: React.FC<Props> = ({
       {/* 7 Days Grid */}
       <div className="space-y-6">
         {plan.days.map((day, dayIndex) => {
-          const memberPortions = day.portions[currentMember?.id || ''];
-          const bfPortion = memberPortions?.breakfast;
-          const luPortion = memberPortions?.lunch;
-          const diPortion = memberPortions?.dinner;
+          const memberPortions = day.portions?.[currentMember.id];
+          const bfPortion = isAllSelected
+            ? getAggregatedMealPortion(day, 'breakfast', members, day.breakfast)
+            : memberPortions?.breakfast;
+          const luPortion = isAllSelected
+            ? getAggregatedMealPortion(day, 'lunch', members, day.lunch)
+            : memberPortions?.lunch;
+          const diPortion = isAllSelected
+            ? getAggregatedMealPortion(day, 'dinner', members, day.dinner)
+            : memberPortions?.dinner;
 
-          const memberTotals = day.daily_nutrition_by_member[currentMember?.id || ''];
-          const plannedCals = memberTotals?.calories || 0;
-          const targetCals = currentMember?.target_calories || 2000;
-          const calPercent = Math.min(100, Math.round((plannedCals / targetCals) * 100));
+          const plannedCals = isAllSelected
+            ? members.reduce((sum, m) => sum + (day.daily_nutrition_by_member?.[m.id]?.calories || 0), 0)
+            : (day.daily_nutrition_by_member?.[currentMember.id]?.calories || 0);
+          const targetCals = isAllSelected
+            ? members.reduce((sum, m) => sum + (m.target_calories || 2000), 0)
+            : (currentMember.target_calories || 2000);
+          const calPercent = Math.min(100, Math.round((plannedCals / Math.max(1, targetCals)) * 100));
 
           return (
             <div
@@ -459,22 +580,24 @@ export const WeeklyPlanView: React.FC<Props> = ({
                 </div>
 
                 {/* Target Progress Bar */}
-                {currentMember && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-slate-300">
-                      Tages-Ziel <span className="font-bold text-white">{currentMember.name}</span>:
-                    </span>
-                    <span className="text-xs font-bold text-emerald-300">
-                      {plannedCals} / {targetCals} kcal
-                    </span>
-                    <div className="w-24 bg-slate-700 h-2 rounded-full overflow-hidden">
-                      <div
-                        className="bg-emerald-400 h-full rounded-full transition-all"
-                        style={{ width: `${calPercent}%` }}
-                      />
-                    </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-slate-300">
+                    {isAllSelected ? (
+                      <>Tages-Ziel <span className="font-bold text-white">Gesamt-Familie ({members.length} Personen)</span>:</>
+                    ) : (
+                      <>Tages-Ziel <span className="font-bold text-white">{currentMember.name}</span>:</>
+                    )}
+                  </span>
+                  <span className="text-xs font-bold text-emerald-300">
+                    {plannedCals} / {targetCals} kcal
+                  </span>
+                  <div className="w-24 bg-slate-700 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-emerald-400 h-full rounded-full transition-all"
+                      style={{ width: `${calPercent}%` }}
+                    />
                   </div>
-                )}
+                </div>
               </div>
 
               {/* 3 Meals Columns */}
@@ -522,20 +645,20 @@ export const WeeklyPlanView: React.FC<Props> = ({
                       </span>
                     </div>
 
-                    {/* Scaled Ingredients for Current Member */}
+                    {/* Scaled / Aggregated Ingredients */}
                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-1 text-xs">
                       <span className="font-bold text-slate-700 block mb-1">
-                        Portion für {currentMember?.name}:
+                        {isAllSelected
+                          ? `Gesamtmenge für alle ${members.length} Familienmitglieder:`
+                          : `Portion für ${currentMember.name}:`}
                       </span>
                       {bfPortion?.scaled_ingredients.map((ing, idx) => (
                         <div key={idx} className="flex items-center justify-between text-slate-600">
                           <span>• {ing.name}</span>
-                          <span className="font-mono font-semibold text-slate-800">
+                          <span className="font-mono font-semibold text-slate-800 flex items-center">
                             {ing.amount} {ing.unit}
                             {ing.matched_retailer && (
-                              <span className={`ml-1 text-[10px] px-1 py-0.2 rounded font-bold ${
-                                ing.matched_retailer === 'Netto' ? 'bg-amber-200 text-stone-900' : 'bg-red-200 text-red-900'
-                              }`}>
+                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold shadow-xs ${getRetailerBadgeClass(ing.matched_retailer)}`}>
                                 {ing.matched_retailer}
                               </span>
                             )}
@@ -598,20 +721,20 @@ export const WeeklyPlanView: React.FC<Props> = ({
                       </span>
                     </div>
 
-                    {/* Scaled Ingredients */}
+                    {/* Scaled / Aggregated Ingredients */}
                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-1 text-xs">
                       <span className="font-bold text-slate-700 block mb-1">
-                        Portion für {currentMember?.name}:
+                        {isAllSelected
+                          ? `Gesamtmenge für alle ${members.length} Familienmitglieder:`
+                          : `Portion für ${currentMember.name}:`}
                       </span>
                       {luPortion?.scaled_ingredients.map((ing, idx) => (
                         <div key={idx} className="flex items-center justify-between text-slate-600">
                           <span>• {ing.name}</span>
-                          <span className="font-mono font-semibold text-slate-800">
+                          <span className="font-mono font-semibold text-slate-800 flex items-center">
                             {ing.amount} {ing.unit}
                             {ing.matched_retailer && (
-                              <span className={`ml-1 text-[10px] px-1 py-0.2 rounded font-bold ${
-                                ing.matched_retailer === 'Netto' ? 'bg-amber-200 text-stone-900' : 'bg-red-200 text-red-900'
-                              }`}>
+                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold shadow-xs ${getRetailerBadgeClass(ing.matched_retailer)}`}>
                                 {ing.matched_retailer}
                               </span>
                             )}
@@ -674,20 +797,20 @@ export const WeeklyPlanView: React.FC<Props> = ({
                       </span>
                     </div>
 
-                    {/* Scaled Ingredients */}
+                    {/* Scaled / Aggregated Ingredients */}
                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-1 text-xs">
                       <span className="font-bold text-slate-700 block mb-1">
-                        Teller-Portion für {currentMember?.name}:
+                        {isAllSelected
+                          ? `Gesamtmenge für alle ${members.length} Familienmitglieder:`
+                          : `Teller-Portion für ${currentMember.name}:`}
                       </span>
                       {diPortion?.scaled_ingredients.map((ing, idx) => (
                         <div key={idx} className="flex items-center justify-between text-slate-600">
                           <span>• {ing.name}</span>
-                          <span className="font-mono font-semibold text-slate-800">
+                          <span className="font-mono font-semibold text-slate-800 flex items-center">
                             {ing.amount} {ing.unit}
                             {ing.matched_retailer && (
-                              <span className={`ml-1 text-[10px] px-1 py-0.2 rounded font-bold ${
-                                ing.matched_retailer === 'Netto' ? 'bg-amber-200 text-stone-900' : 'bg-red-200 text-red-900'
-                              }`}>
+                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold shadow-xs ${getRetailerBadgeClass(ing.matched_retailer)}`}>
                                 {ing.matched_retailer}
                               </span>
                             )}
@@ -720,10 +843,19 @@ export const WeeklyPlanView: React.FC<Props> = ({
           mealType={selectedRecipeModal.mealType}
           activeMember={currentMember}
           portion={
-            plan.days[selectedRecipeModal.dayIndex]?.portions[currentMember.id]?.[selectedRecipeModal.mealType]
+            isAllSelected
+              ? getAggregatedMealPortion(
+                  plan.days[selectedRecipeModal.dayIndex],
+                  selectedRecipeModal.mealType,
+                  members,
+                  selectedRecipeModal.recipe
+                )
+              : plan.days[selectedRecipeModal.dayIndex]?.portions?.[currentMember.id]?.[selectedRecipeModal.mealType]
           }
           pantryItems={pantryItems}
           isCooked={selectedRecipeModal.isCooked}
+          isAllMembers={isAllSelected}
+          membersCount={members.length}
           onCookMeal={onCookMeal}
           onClose={() => setSelectedRecipeModal(null)}
         />

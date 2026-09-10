@@ -4,6 +4,7 @@ Includes Pantry Management, MHD, Barcode, Receipt Scanner, Time-of-day Assistant
 """
 
 import os
+import random
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, HTTPException, Query
@@ -164,12 +165,21 @@ def get_or_create_weekly_plan(week_offset: int = 0) -> WeeklyPlan:
     if week_offset not in weekly_budgets_store:
         weekly_budgets_store[week_offset] = settings.default_weekly_budget
     budget = weekly_budgets_store[week_offset]
-    if week_offset not in weekly_plans_store:
+
+    cached_plan = weekly_plans_store.get(week_offset)
+    if cached_plan is not None:
+        cached_retailers = getattr(cached_plan, "active_retailers", None)
+        if cached_retailers != settings.active_retailers:
+            cached_plan = None
+            weekly_plans_store.pop(week_offset, None)
+
+    if cached_plan is None:
         weekly_plans_store[week_offset] = generate_weekly_plan(
             family_members=family_profiles,
             week_offset=week_offset,
             budget=budget,
-            active_retailers=settings.active_retailers
+            active_retailers=settings.active_retailers,
+            primary_retailer=settings.primary_retailer,
         )
     return weekly_plans_store[week_offset]
 
@@ -494,11 +504,15 @@ def create_weekly_plan(week_offset: int = Query(0, description="Week offset from
         raise HTTPException(status_code=400, detail="Mindestens ein Familienmitglied muss angelegt sein.")
     settings = get_app_settings()
     budget = weekly_budgets_store.get(week_offset, settings.default_weekly_budget)
+    seed = random.randint(1, 1_000_000)
     plan = generate_weekly_plan(
         family_members=family_profiles,
         week_offset=week_offset,
         budget=budget,
-        active_retailers=settings.active_retailers
+        active_retailers=settings.active_retailers,
+        primary_retailer=settings.primary_retailer,
+        shuffle=True,
+        seed=seed,
     )
     weekly_plans_store[week_offset] = plan
     return plan
@@ -519,6 +533,7 @@ class SwapMealRequest(BaseModel):
 
 @app.post("/api/plan/swap", response_model=WeeklyPlan)
 def swap_meal(req: SwapMealRequest):
+    settings = get_app_settings()
     plan = get_or_create_weekly_plan(req.week_offset)
     updated = swap_meal_in_plan(
         plan=plan,
@@ -526,6 +541,8 @@ def swap_meal(req: SwapMealRequest):
         meal_type=req.meal_type,
         new_recipe_id=req.new_recipe_id,
         family_members=family_profiles,
+        active_retailers=settings.active_retailers,
+        primary_retailer=settings.primary_retailer,
     )
     weekly_plans_store[req.week_offset] = updated
     return updated
