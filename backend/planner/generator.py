@@ -277,8 +277,8 @@ def generate_weekly_plan(
         )
 
     num_people = max(1, len(family_members))
-    estimated_cost = round(num_people * 48.50, 2)
-    estimated_savings = round(num_people * 16.80, 2)
+    estimated_cost = round(num_people * 52.50, 2)
+    estimated_savings = round(num_people * 18.20, 2)
 
     diff = round(budget - estimated_cost, 2)
     if estimated_cost > budget:
