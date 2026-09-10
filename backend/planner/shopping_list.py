@@ -129,13 +129,38 @@ def get_substitutes_for_item(name: str) -> List[str]:
 
 def generate_shopping_list_from_plan(
     plan: WeeklyPlan,
-    custom_items: Optional[List[CustomShoppingItem]] = None
+    custom_items: Optional[List[CustomShoppingItem]] = None,
+    active_retailers: Optional[List[str]] = None,
+    primary_retailer: Optional[str] = None,
 ) -> ShoppingList:
     """
     Sums up all required ingredients for all family members across the whole week.
-    Separates items into Netto, NP, Lidl, Aldi, Rewe, Kaufland, Edeka, and Pantry.
+    Separates items into the user's selected active supermarkets (e.g. Netto, Lidl) and Pantry.
     Uses realistic German supermarket prices, pack-size logic, and pantry stock deduction.
     """
+    if active_retailers is None:
+        active_retailers = getattr(plan, "active_retailers", None)
+        if not active_retailers:
+            try:
+                from backend.settings_storage import get_app_settings
+                settings = get_app_settings()
+                active_retailers = settings.active_retailers
+                if primary_retailer is None:
+                    primary_retailer = settings.primary_retailer
+            except Exception:
+                active_retailers = ["Netto", "NP", "Lidl", "Aldi Nord", "Aldi Süd", "Rewe", "Kaufland", "Edeka"]
+
+    if primary_retailer is None:
+        try:
+            from backend.settings_storage import get_app_settings
+            primary_retailer = get_app_settings().primary_retailer
+        except Exception:
+            primary_retailer = "Netto"
+
+    # Normalize primary_retailer
+    if primary_retailer not in active_retailers:
+        primary_retailer = active_retailers[0] if active_retailers else "Netto"
+
     aggregated: Dict[Tuple[str, str], Dict[str, Any]] = {}
 
     for day in plan.days:
@@ -202,11 +227,11 @@ def generate_shopping_list_from_plan(
         qty = entry["qty"]
         cat = entry["cat"]
 
-        non_pantry_stores = {s: a for s, a in entry["stores"].items() if s != "Vorratskammer"}
-        if non_pantry_stores:
-            store = max(non_pantry_stores.items(), key=lambda x: x[1])[0]
+        valid_stores = {s: a for s, a in entry["stores"].items() if s != "Vorratskammer" and s in active_retailers}
+        if valid_stores:
+            store = max(valid_stores.items(), key=lambda x: x[1])[0]
         else:
-            store = "Vorratskammer"
+            store = primary_retailer
 
         if unit in ["g", "ml"]:
             needed_qty = round(qty / 5) * 5
@@ -239,8 +264,8 @@ def generate_shopping_list_from_plan(
             unit_price = base_pack_price
         else:
             is_covered = False
-            if store == "Vorratskammer":
-                store = "Netto"
+            if store == "Vorratskammer" or store not in active_retailers:
+                store = primary_retailer
             net_need = max(0.0, needed_qty - in_stock_qty)
             packs_to_buy = max(1, math.ceil(net_need / max(1.0, pack_size)))
             leftover = round((packs_to_buy * pack_size) - net_need, 1)
@@ -321,16 +346,30 @@ def generate_shopping_list_from_plan(
     for lst in [items_netto, items_np, items_lidl, items_aldi, items_rewe, items_kaufland, items_edeka, items_pantry]:
         lst.sort(key=lambda x: (x.is_covered_by_stock, x.aisle, x.name))
 
-    items_by_ret: Dict[str, List[ShoppingItem]] = {
+    raw_store_map: Dict[str, List[ShoppingItem]] = {
         "Netto": items_netto,
         "NP": items_np,
         "Lidl": items_lidl,
         "Aldi": items_aldi,
+        "Aldi Nord": items_aldi,
+        "Aldi Süd": items_aldi,
         "Rewe": items_rewe,
         "Kaufland": items_kaufland,
         "Edeka": items_edeka,
-        "Vorratskammer": items_pantry,
     }
+
+    items_by_ret: Dict[str, List[ShoppingItem]] = {}
+    for r in active_retailers:
+        mapped = "Aldi" if "Aldi" in r else r
+        if mapped in raw_store_map and mapped not in items_by_ret:
+            items_by_ret[mapped] = raw_store_map[mapped]
+
+    # Ensure primary_retailer is represented if it has items
+    primary_mapped = "Aldi" if "Aldi" in primary_retailer else primary_retailer
+    if primary_mapped not in items_by_ret and primary_mapped in raw_store_map:
+        items_by_ret[primary_mapped] = raw_store_map[primary_mapped]
+
+    items_by_ret["Vorratskammer"] = items_pantry
 
     custom = custom_items if custom_items is not None else _custom_shopping_items
     for c in custom:

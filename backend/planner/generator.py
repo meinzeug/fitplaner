@@ -77,12 +77,20 @@ def generate_weekly_plan(
     family_members: List[FamilyMember],
     preferred_recipes: Optional[List[Recipe]] = None,
     week_offset: int = 0,
-    budget: float = 120.0
+    budget: float = 120.0,
+    active_retailers: Optional[List[str]] = None
 ) -> WeeklyPlan:
     """
     Generates a 7-day meal plan tailored to all family members for a specific week offset (0 = current week, +1 = next week, etc.),
-    respecting allergies, dislikes, budget targets, and supermarket leaflet validity horizon.
+    respecting allergies, dislikes, budget targets, supermarket leaflet validity horizon, and active retailers.
     """
+    if active_retailers is None:
+        try:
+            from backend.settings_storage import get_app_settings
+            active_retailers = get_app_settings().active_retailers
+        except Exception:
+            active_retailers = ["Netto", "NP", "Lidl", "Aldi Nord", "Aldi Süd", "Rewe", "Kaufland", "Edeka"]
+
     db = preferred_recipes if preferred_recipes is not None else get_all_universe_recipes()
 
     # Filter available recipes per meal type taking family compatibility into account
@@ -199,7 +207,7 @@ def generate_weekly_plan(
         budget_difference=diff,
         leaflet_availability_status=leaflet_status,  # type: ignore
         leaflet_availability_note=leaflet_note,
-        active_retailers=["Netto", "NP", "Lidl", "Aldi Nord", "Aldi Süd", "Rewe", "Kaufland", "Edeka"],
+        active_retailers=active_retailers,
     )
 
 

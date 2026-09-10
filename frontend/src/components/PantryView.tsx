@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PantryItem } from '../types';
-import { Archive, Plus, Barcode, FileText, Trash2, AlertTriangle, CheckCircle, Clock, Calendar, Sparkles, Search, ChevronRight } from 'lucide-react';
+import { Archive, Plus, Barcode, FileText, Trash2, AlertTriangle, CheckCircle, Clock, Calendar, Sparkles, Search, ChevronRight, Pencil } from 'lucide-react';
 
 interface Props {
   pantryItems: PantryItem[];
@@ -22,6 +22,7 @@ export const PantryView: React.FC<Props> = ({
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
   // New/Edit Item Form State
   const [formData, setFormData] = useState<Partial<PantryItem>>({
@@ -33,6 +34,42 @@ export const PantryView: React.FC<Props> = ({
     standard_pack_size: 500,
     source: 'Manuell',
   });
+
+  const toDateInputValue = (val?: string) => {
+    if (!val) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+    const parts = val.split('.');
+    if (parts.length === 3) {
+      const day = parts[0].padStart(2, '0');
+      const month = parts[1].padStart(2, '0');
+      const year = parts[2];
+      return `${year}-${month}-${day}`;
+    }
+    return '';
+  };
+
+  const handleOpenNew = () => {
+    setEditingItemId(null);
+    setFormData({
+      name: '',
+      current_quantity: 500,
+      unit: 'g',
+      category: 'Vorratskammer',
+      mhd_date: '',
+      standard_pack_size: 500,
+      source: 'Manuell',
+    });
+    setIsItemModalOpen(true);
+  };
+
+  const handleOpenEdit = (item: PantryItem) => {
+    setEditingItemId(item.id);
+    setFormData({
+      ...item,
+      mhd_date: toDateInputValue(item.mhd_date),
+    });
+    setIsItemModalOpen(true);
+  };
 
   // Barcode State
   const [barcodeInput, setBarcodeInput] = useState('');
@@ -164,18 +201,7 @@ export const PantryView: React.FC<Props> = ({
             <FileText className="w-4 h-4" /> Kassenbon einlesen
           </button>
           <button
-            onClick={() => {
-              setFormData({
-                name: '',
-                current_quantity: 500,
-                unit: 'g',
-                category: 'Vorratskammer',
-                mhd_date: '',
-                standard_pack_size: 500,
-                source: 'Manuell',
-              });
-              setIsItemModalOpen(true);
-            }}
+            onClick={handleOpenNew}
             className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-semibold transition"
           >
             <Plus className="w-4 h-4" /> Manuell
@@ -295,13 +321,22 @@ export const PantryView: React.FC<Props> = ({
 
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
                 <span>Quelle: {item.source}</span>
-                <button
-                  onClick={() => onDeleteItem(item.id)}
-                  className="text-slate-400 hover:text-red-600 transition"
-                  title="Aus Lager entfernen"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleOpenEdit(item)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition"
+                    title="Artikel & MHD bearbeiten"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => onDeleteItem(item.id)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
+                    title="Aus Lager entfernen"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           );
@@ -430,17 +465,34 @@ export const PantryView: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Add Manual Item Modal */}
+      {/* Add / Edit Item Modal */}
       {isItemModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Artikel im Lager anlegen</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-4">
+              {editingItemId ? 'Artikel & MHD bearbeiten' : 'Artikel im Lager anlegen'}
+            </h3>
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (!formData.name) return;
-                await onSaveItem(formData as PantryItem);
+                const itemToSave: PantryItem = {
+                  id: editingItemId || `pan-${Date.now()}`,
+                  name: formData.name,
+                  current_quantity: Number(formData.current_quantity) || 0,
+                  unit: formData.unit || 'g',
+                  category: formData.category || 'Vorratskammer',
+                  mhd_date: formData.mhd_date || '',
+                  standard_pack_size: formData.standard_pack_size,
+                  source: formData.source || 'Manuell',
+                  shelf_life_status: formData.shelf_life_status || 'fresh',
+                  days_left: formData.days_left,
+                  added_date: formData.added_date || new Date().toLocaleDateString('de-DE'),
+                  ean_barcode: formData.ean_barcode,
+                };
+                await onSaveItem(itemToSave);
                 setIsItemModalOpen(false);
+                setEditingItemId(null);
               }}
               className="space-y-3"
             >
@@ -462,7 +514,7 @@ export const PantryView: React.FC<Props> = ({
                   <input
                     type="number"
                     step="0.1"
-                    value={formData.current_quantity || 500}
+                    value={formData.current_quantity ?? 500}
                     onChange={(e) => setFormData({ ...formData, current_quantity: parseFloat(e.target.value) || 0 })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   />
@@ -509,7 +561,10 @@ export const PantryView: React.FC<Props> = ({
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsItemModalOpen(false)}
+                  onClick={() => {
+                    setIsItemModalOpen(false);
+                    setEditingItemId(null);
+                  }}
                   className="flex-1 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50"
                 >
                   Abbrechen

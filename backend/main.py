@@ -21,8 +21,9 @@ from backend.models import (
     ScheduleTimeSettings, TimelineTask, DailyTimelineResponse,
     UpdateScheduleSettingsRequest, ToggleTaskRequest, PrepTomorrowSummary,
     FamilyChore, FamilyVitalityScore, MemberVitalityDetail,
-    MeshSyncPacket, MeshStatusResponse
+    MeshSyncPacket, MeshStatusResponse, AppSettings
 )
+from backend.settings_storage import get_app_settings, save_app_settings
 from backend.nutrition.calculator import enrich_family_member
 from backend.health.vitality_engine import (
     calculate_family_vitality, calculate_water_target, evaluate_member_vitality
@@ -159,14 +160,16 @@ def get_or_create_weekly_plan(week_offset: int = 0) -> WeeklyPlan:
     if not family_profiles:
         for m in DEFAULT_MEMBERS_DATA:
             family_profiles.append(enrich_family_member(m))
+    settings = get_app_settings()
     if week_offset not in weekly_budgets_store:
-        weekly_budgets_store[week_offset] = 120.0
+        weekly_budgets_store[week_offset] = settings.default_weekly_budget
     budget = weekly_budgets_store[week_offset]
     if week_offset not in weekly_plans_store:
         weekly_plans_store[week_offset] = generate_weekly_plan(
             family_members=family_profiles,
             week_offset=week_offset,
-            budget=budget
+            budget=budget,
+            active_retailers=settings.active_retailers
         )
     return weekly_plans_store[week_offset]
 
@@ -236,6 +239,12 @@ def save_pantry_item(item: PantryItem):
     if not item.id:
         import uuid
         item.id = f"pan-{uuid.uuid4().hex[:6]}"
+    return add_or_update_pantry_item(item)
+
+
+@app.put("/api/pantry/{item_id}", response_model=PantryItem)
+def update_pantry_item(item_id: str, item: PantryItem):
+    item.id = item_id
     return add_or_update_pantry_item(item)
 
 
@@ -464,12 +473,33 @@ def get_recipe_statistics():
     return get_universe_stats()
 
 
+@app.get("/api/settings", response_model=AppSettings)
+@app.get("/api/settings/", response_model=AppSettings, include_in_schema=False)
+def get_settings():
+    return get_app_settings()
+
+
+@app.post("/api/settings", response_model=AppSettings)
+@app.post("/api/settings/", response_model=AppSettings, include_in_schema=False)
+def update_settings(settings: AppSettings):
+    saved = save_app_settings(settings)
+    # Clear weekly plans cache so retailer & budget changes take immediate effect
+    weekly_plans_store.clear()
+    return saved
+
+
 @app.post("/api/plan/generate", response_model=WeeklyPlan)
 def create_weekly_plan(week_offset: int = Query(0, description="Week offset from current week")):
     if not family_profiles:
         raise HTTPException(status_code=400, detail="Mindestens ein Familienmitglied muss angelegt sein.")
-    budget = weekly_budgets_store.get(week_offset, 120.0)
-    plan = generate_weekly_plan(family_members=family_profiles, week_offset=week_offset, budget=budget)
+    settings = get_app_settings()
+    budget = weekly_budgets_store.get(week_offset, settings.default_weekly_budget)
+    plan = generate_weekly_plan(
+        family_members=family_profiles,
+        week_offset=week_offset,
+        budget=budget,
+        active_retailers=settings.active_retailers
+    )
     weekly_plans_store[week_offset] = plan
     return plan
 
@@ -504,22 +534,40 @@ def swap_meal(req: SwapMealRequest):
 @app.get("/api/shopping-list", response_model=ShoppingList)
 @app.get("/api/shopping-list/", response_model=ShoppingList, include_in_schema=False)
 def get_shopping_list(week_offset: int = Query(0, description="Week offset from current week")):
+    settings = get_app_settings()
     plan = get_or_create_weekly_plan(week_offset)
-    return generate_shopping_list_from_plan(plan, get_custom_shopping_items())
+    return generate_shopping_list_from_plan(
+        plan,
+        get_custom_shopping_items(),
+        active_retailers=settings.active_retailers,
+        primary_retailer=settings.primary_retailer,
+    )
 
 
 @app.get("/api/shopping-list/export-whatsapp")
 def export_whatsapp(week_offset: int = Query(0, description="Week offset from current week")):
+    settings = get_app_settings()
     plan = get_or_create_weekly_plan(week_offset)
-    shopping_list = generate_shopping_list_from_plan(plan, get_custom_shopping_items())
+    shopping_list = generate_shopping_list_from_plan(
+        plan,
+        get_custom_shopping_items(),
+        active_retailers=settings.active_retailers,
+        primary_retailer=settings.primary_retailer,
+    )
     text = format_whatsapp_export(shopping_list)
     return {"text": text}
 
 
 @app.get("/api/shopping-list/export-pdf")
 def export_shopping_list_pdf(week_offset: int = Query(0, description="Week offset from current week")):
+    settings = get_app_settings()
     plan = get_or_create_weekly_plan(week_offset)
-    shopping_list = generate_shopping_list_from_plan(plan, get_custom_shopping_items())
+    shopping_list = generate_shopping_list_from_plan(
+        plan,
+        get_custom_shopping_items(),
+        active_retailers=settings.active_retailers,
+        primary_retailer=settings.primary_retailer,
+    )
     pdf_bytes = generate_shopping_list_pdf(shopping_list)
     iso_clean = plan.iso_week.replace(" ", "_") if plan.iso_week else f"KW_{week_offset}"
     filename = f"Einkaufsliste_{iso_clean}.pdf"
@@ -777,6 +825,8 @@ def get_daily_hub_data():
         cook_time_badge=f"⏱️ {day_plan.dinner.cook_time_minutes if day_plan and day_plan.dinner else 15} Min.",
         prep_tomorrow_summary=prep_tomorrow_summary,
     )
+
+get_daily_hub = get_daily_hub_data
 
 
 @app.post("/api/daily-hub/action", response_model=DailyHubResponse)

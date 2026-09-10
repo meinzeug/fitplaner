@@ -516,4 +516,15 @@ export interface InstallerInfoResponse {
   paired_devices: PairedDevice[];
 }
 
+export interface AppSettings {
+  active_retailers: string[];
+  primary_retailer: string;
+  default_weekly_budget: number;
+  prefer_healthy_offers: boolean;
+  microbiome_plant_target: number;
+  sync_auto_discovery: boolean;
+  device_role: 'host' | 'client';
+}
+
+
 

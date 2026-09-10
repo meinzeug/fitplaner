@@ -1,0 +1,18 @@
+{
+  "active_retailers": [
+    "Netto",
+    "NP",
+    "Lidl",
+    "Aldi Nord",
+    "Aldi Süd",
+    "Rewe",
+    "Kaufland",
+    "Edeka"
+  ],
+  "primary_retailer": "Netto",
+  "default_weekly_budget": 150.0,
+  "prefer_healthy_offers": true,
+  "microbiome_plant_target": 30,
+  "sync_auto_discovery": true,
+  "device_role": "host"
+}

@@ -541,3 +541,20 @@ class AuthoritativeSyncBundle(BaseModel):
     daily_hub_state: Dict[str, Any] = Field(default_factory=dict)
     checked_shopping_items: List[str] = Field(default_factory=list)
     sync_status: str = "success"
+
+
+# -------------------------------------------------------------
+# HAUSHALTS- & APP-EINSTELLUNGEN
+# -------------------------------------------------------------
+
+class AppSettings(BaseModel):
+    active_retailers: List[str] = Field(
+        default_factory=lambda: ["Netto", "NP", "Lidl", "Aldi Nord", "Aldi Süd", "Rewe", "Kaufland", "Edeka"]
+    )
+    primary_retailer: str = "Netto"
+    default_weekly_budget: float = 150.0
+    prefer_healthy_offers: bool = True
+    microbiome_plant_target: int = 30
+    sync_auto_discovery: bool = True
+    device_role: str = "host"  # "host" or "client"
+

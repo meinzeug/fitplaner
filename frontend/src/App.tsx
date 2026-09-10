@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   FamilyMember, ProductOffer, WeeklyPlan, ShoppingList, Recipe,
-  PantryItem, LeafletBrochure, CustomShoppingItem, DailyHubResponse
+  PantryItem, LeafletBrochure, CustomShoppingItem, DailyHubResponse,
+  AppSettings
 } from './types';
 import { DailyMissionView } from './components/DailyMissionView';
 import { WeeklyPlanView } from './components/WeeklyPlanView';
@@ -14,18 +15,19 @@ import { DeviceInstallerModal } from './components/DeviceInstallerModal';
 import { FamilyVitalityView } from './components/FamilyVitalityView';
 import { FamilyChoresView } from './components/FamilyChoresView';
 import { LocalMeshSyncModal } from './components/LocalMeshSyncModal';
+import { SettingsView } from './components/SettingsView';
 import {
   Users, Calendar, ShoppingBag, Tag, Archive, BookOpen,
   HeartPulse, Sparkles, X, Compass, ChevronRight, CheckCircle2, Smartphone, Download,
-  Heart, Star, Radio
+  Heart, Star, Radio, Settings
 } from 'lucide-react';
 
 export function App() {
   // Main Navigation Tabs (Super App Architecture)
   const [activeTab, setActiveTab] = useState<'heute' | 'woche' | 'einkauf' | 'vitalitaet' | 'aemtli'>('heute');
 
-  // Slide-over / Modal view for secondary tasks (Profiles, Leaflets, Offers, Installer)
-  const [activeModalView, setActiveModalView] = useState<'profiles' | 'leaflets' | 'offers' | 'installer' | null>(null);
+  // Slide-over / Modal view for secondary tasks (Profiles, Leaflets, Offers, Installer, Settings)
+  const [activeModalView, setActiveModalView] = useState<'profiles' | 'leaflets' | 'offers' | 'installer' | 'settings' | null>(null);
   const [isMeshSyncModalOpen, setIsMeshSyncModalOpen] = useState(false);
 
   // Recipe Modal state
@@ -44,6 +46,7 @@ export function App() {
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [pantryItems, setPantryItems] = useState<PantryItem[]>([]);
   const [leaflets, setLeaflets] = useState<LeafletBrochure[]>([]);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
 
   const [zipCode, setZipCode] = useState('30159');
   const [onlyHealthy, setOnlyHealthy] = useState(true);
@@ -52,6 +55,7 @@ export function App() {
   const [selectedWeekOffset, setSelectedWeekOffset] = useState<number>(0);
 
   useEffect(() => {
+    fetchSettings();
     fetchDailyHub();
     fetchProfiles();
     fetchOffers(zipCode, onlyHealthy);
@@ -61,6 +65,41 @@ export function App() {
     fetchPantry();
     fetchLeaflets();
   }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data);
+        if (data.prefer_healthy_offers !== undefined) {
+          setOnlyHealthy(data.prefer_healthy_offers);
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching settings:', e);
+    }
+  };
+
+  const handleSaveSettings = async (newSettings: AppSettings) => {
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSettings),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data);
+        setOnlyHealthy(data.prefer_healthy_offers);
+        await fetchPlan(selectedWeekOffset);
+        await fetchShoppingList(selectedWeekOffset);
+        await fetchDailyHub();
+      }
+    } catch (e) {
+      console.error('Error saving settings:', e);
+    }
+  };
 
   const fetchDailyHub = async () => {
     try {
@@ -288,8 +327,11 @@ export function App() {
   // Pantry Handlers
   const handleSavePantryItem = async (item: PantryItem) => {
     try {
-      const res = await fetch('/api/pantry', {
-        method: 'POST',
+      const isExisting = pantryItems.some((i) => i.id === item.id);
+      const url = isExisting ? `/api/pantry/${item.id}` : '/api/pantry';
+      const method = isExisting ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item),
       });
@@ -542,6 +584,15 @@ export function App() {
                 <Users className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Familie ({members.length})</span>
               </button>
+
+              <button
+                onClick={() => setActiveModalView('settings')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
+                title="Supermarkt-Auswahl, Budget & Einstellungen"
+              >
+                <Settings className="w-3.5 h-3.5 text-slate-600" />
+                <span className="hidden sm:inline">Einstellungen</span>
+              </button>
             </div>
           </div>
         </div>
@@ -623,6 +674,15 @@ export function App() {
               <span>P2P-Mesh Status</span>
             </button>
 
+            <button
+              onClick={() => setActiveModalView('settings')}
+              className="inline-flex items-center space-x-1.5 text-slate-700 hover:text-slate-900 font-bold bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl border border-slate-200/70 transition"
+              title="Supermarkt-Auswahl & App-Einstellungen"
+            >
+              <Settings className="w-3.5 h-3.5 text-slate-600" />
+              <span>Einstellungen</span>
+            </button>
+
             <a
               href="/FitPlaner.apk"
               download="FitPlaner.apk"
@@ -647,6 +707,7 @@ export function App() {
                 {activeModalView === 'leaflets' && <span>📖 Supermarkt-Prospekte</span>}
                 {activeModalView === 'offers' && <span>🏷️ Aktuelle Angebote</span>}
                 {activeModalView === 'installer' && <span>📱 Smartphone WLAN-Kopplung</span>}
+                {activeModalView === 'settings' && <span>⚙️ App & Supermarkt-Einstellungen</span>}
               </h2>
               <button
                 onClick={() => setActiveModalView(null)}
@@ -696,6 +757,13 @@ export function App() {
                 />
               )}
               {activeModalView === 'installer' && <DeviceInstallerModal onClose={() => setActiveModalView(null)} />}
+              {activeModalView === 'settings' && settings && (
+                <SettingsView
+                  settings={settings}
+                  onSaveSettings={handleSaveSettings}
+                  onClose={() => setActiveModalView(null)}
+                />
+              )}
             </div>
           </div>
         </div>
