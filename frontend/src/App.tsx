@@ -4,7 +4,7 @@ import {
   PantryItem, LeafletBrochure, CustomShoppingItem, DailyHubResponse,
   AppSettings
 } from './types';
-import { apiFetch, isCapacitorNative, getServerUrl } from './api/client';
+import { apiFetch, isCapacitorNative, getServerUrl, getAppMode, AppMode } from './api/client';
 import { DailyMissionView } from './components/DailyMissionView';
 import { WeeklyPlanView } from './components/WeeklyPlanView';
 import { ShoppingListView } from './components/ShoppingListView';
@@ -19,6 +19,7 @@ import { LocalMeshSyncModal } from './components/LocalMeshSyncModal';
 import { SettingsView } from './components/SettingsView';
 import { RecipeManagerView } from './components/RecipeManagerView';
 import { ServerConnectionModal } from './components/ServerConnectionModal';
+import { OnboardingModal } from './components/OnboardingModal';
 import {
   Users, Calendar, ShoppingBag, Tag, Archive, BookOpen,
   HeartPulse, Sparkles, X, Compass, ChevronRight, CheckCircle2, Smartphone, Download,
@@ -58,6 +59,10 @@ export function App() {
   const [selectedWeekOffset, setSelectedWeekOffset] = useState<number>(0);
   const [isServerModalOpen, setIsServerModalOpen] = useState(false);
   const [isServerOnline, setIsServerOnline] = useState<boolean | null>(null);
+  const [appMode, setAppModeState] = useState<AppMode>(getAppMode());
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(() => {
+    return !localStorage.getItem('fitplaner_onboarded');
+  });
 
   const loadAllData = () => {
     fetchSettings();
@@ -78,13 +83,21 @@ export function App() {
       loadAllData();
       checkServerHealth();
     };
+    const handleModeChanged = (e: any) => {
+      setAppModeState(e.detail?.mode || getAppMode());
+      loadAllData();
+      checkServerHealth();
+    };
+
     window.addEventListener('fitplaner_server_changed', handleServerChanged);
+    window.addEventListener('fitplaner_mode_changed', handleModeChanged);
 
     checkServerHealth();
     const interval = setInterval(checkServerHealth, 20000);
 
     return () => {
       window.removeEventListener('fitplaner_server_changed', handleServerChanged);
+      window.removeEventListener('fitplaner_mode_changed', handleModeChanged);
       clearInterval(interval);
     };
   }, []);
@@ -579,29 +592,47 @@ export function App() {
 
             {/* Quick Actions (Responsive & Non-Overflowing) */}
             <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-              {/* Server Connection Status Pill */}
+              {/* Connection Status Pill (Server vs Standalone Mode) */}
               <button
                 onClick={() => setIsServerModalOpen(true)}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-black transition ${
-                  isServerOnline === true
+                  appMode === 'standalone'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 shadow-2xs'
+                    : isServerOnline === true
                     ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
                     : isServerOnline === false
                     ? 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 animate-pulse'
                     : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
                 }`}
-                title="Server-Verbindung (Klicken zum Konfigurieren)"
+                title="Betriebsmodus & Server-Verbindung (Klicken zum Umschalten/Konfigurieren)"
               >
                 <span className="relative flex h-2 w-2">
-                  {isServerOnline === true && (
+                  {(appMode === 'standalone' || isServerOnline === true) && (
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                   )}
-                  <span className={`relative inline-flex rounded-full h-2 w-2 ${
-                    isServerOnline === true ? 'bg-emerald-500' : isServerOnline === false ? 'bg-rose-500' : 'bg-amber-400'
-                  }`} />
+                  <span
+                    className={`relative inline-flex rounded-full h-2 w-2 ${
+                      appMode === 'standalone' || isServerOnline === true
+                        ? 'bg-emerald-500'
+                        : isServerOnline === false
+                        ? 'bg-rose-500'
+                        : 'bg-amber-400'
+                    }`}
+                  />
                 </span>
-                <Server className="w-3.5 h-3.5" />
+                {appMode === 'standalone' ? (
+                  <Smartphone className="w-3.5 h-3.5 text-emerald-700" />
+                ) : (
+                  <Server className="w-3.5 h-3.5" />
+                )}
                 <span className="hidden sm:inline">
-                  {isServerOnline === true ? 'Server OK' : isServerOnline === false ? 'Offline' : 'Server'}
+                  {appMode === 'standalone'
+                    ? 'Autark'
+                    : isServerOnline === true
+                    ? 'Server OK'
+                    : isServerOnline === false
+                    ? 'Offline'
+                    : 'Server'}
                 </span>
               </button>
 
@@ -888,6 +919,16 @@ export function App() {
         isOpen={isServerModalOpen}
         onClose={() => setIsServerModalOpen(false)}
         onConnected={loadAllData}
+      />
+
+      {/* Onboarding Wizard (First-Run Setup: Mode Selection & Quick Config) */}
+      <OnboardingModal
+        isOpen={isOnboardingOpen}
+        onComplete={() => {
+          setIsOnboardingOpen(false);
+          setAppModeState(getAppMode());
+          loadAllData();
+        }}
       />
 
       {/* Recipe Modal */}
