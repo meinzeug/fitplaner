@@ -74,43 +74,81 @@ def prioritize_recipes(
     return p0 + p1 + p2
 
 
-def is_recipe_compatible_with_member(recipe: Recipe, member: FamilyMember) -> bool:
+def is_recipe_compatible_with_member(
+    recipe: Recipe,
+    member: FamilyMember,
+    strict_macro: bool = False
+) -> bool:
     """
     Checks if a recipe meets a family member's diet type, allergies, and disliked foods.
+    Hard dietary exclusions (vegetarian, vegan, pescetarian, no_pork) and allergies/dislikes
+    are always strictly enforced.
+    Soft macro preferences (high_protein, low_carb, etc.) are only enforced if strict_macro is True.
     """
-    # 1. Diet Type Check
     diet = member.dietary_preference
+
+    # 1. Hard Dietary Exclusions
     if diet == "vegetarian":
         if "vegetarian" not in recipe.diet_types and "vegan" not in recipe.diet_types:
             return False
+        # Extra safety check against meat, poultry, fish, seafood, bacon/salami
+        for ing in recipe.ingredients:
+            ing_l = ing.name.lower()
+            if any(w in ing_l for w in [
+                "hähnchen", "huhn", "hühn", "pute", "rind", "schwein", "hackfleisch",
+                "lachs", "thunfisch", "fisch", "garnele", "salami", "schinken", "speck"
+            ]):
+                return False
     elif diet == "vegan":
         if "vegan" not in recipe.diet_types:
             return False
+        for ing in recipe.ingredients:
+            ing_l = ing.name.lower()
+            if any(w in ing_l for w in [
+                "hähnchen", "huhn", "hühn", "pute", "rind", "schwein", "hackfleisch",
+                "lachs", "thunfisch", "fisch", "garnele", "salami", "schinken", "speck",
+                "quark", "milch", "käse", "feta", "joghurt", "ei", "eier", "butter", "mozzarella", "hüttenkäse"
+            ]):
+                return False
     elif diet == "pescetarian":
         if not any(d in recipe.diet_types for d in ["pescetarian", "vegetarian", "vegan"]):
             return False
+        for ing in recipe.ingredients:
+            ing_l = ing.name.lower()
+            if any(w in ing_l for w in ["hähnchen", "huhn", "hühn", "pute", "rind", "schwein", "hackfleisch", "salami", "schinken", "speck"]):
+                return False
     elif diet == "no_pork":
         if "no_pork" not in recipe.diet_types:
-            if any("schwein" in ing.name.lower() or "salami" in ing.name.lower() for ing in recipe.ingredients):
-                return False
-    elif diet in ["high_protein", "low_carb", "gluten_free", "lactose_free", "mediterranean", "clean_eating"]:
-        if diet not in recipe.diet_types:
-            return False
+            for ing in recipe.ingredients:
+                ing_l = ing.name.lower()
+                if any(w in ing_l for w in ["schwein", "salami", "schinken", "speck"]):
+                    return False
 
-    # 2. Allergies Check
+    # 2. Soft Macro Preferences (only when strict_macro is requested)
+    if strict_macro:
+        if diet in ["high_protein", "low_carb", "gluten_free", "lactose_free", "mediterranean", "clean_eating"]:
+            if diet not in recipe.diet_types:
+                return False
+
+    # 3. Allergies Check (Hard constraint)
     if member.allergies:
-        member_allergies = [a.lower().strip() for a in member.allergies]
+        member_allergies = [a.lower().strip() for a in member.allergies if a.strip()]
         for allergen in recipe.allergens:
             if allergen.lower().strip() in member_allergies:
                 return False
+        for ing in recipe.ingredients:
+            ing_l = ing.name.lower()
+            for al in member_allergies:
+                if al in ing_l:
+                    return False
 
-    # 3. Disliked Foods Check
+    # 4. Disliked Foods Check (Hard constraint)
     if member.disliked_foods:
         disliked = [d.lower().strip() for d in member.disliked_foods if d.strip()]
         for ing in recipe.ingredients:
-            ing_lower = ing.name.lower()
+            ing_l = ing.name.lower()
             for bad_food in disliked:
-                if bad_food in ing_lower:
+                if bad_food in ing_l:
                     return False
 
     return True
@@ -118,14 +156,31 @@ def is_recipe_compatible_with_member(recipe: Recipe, member: FamilyMember) -> bo
 
 def filter_recipes_for_family(recipes: List[Recipe], family: List[FamilyMember]) -> List[Recipe]:
     """
-    Finds recipes that work for all family members.
-    Falls back gracefully if restrictions are mutually exclusive.
+    Finds recipes that satisfy the hard dietary constraints (vegetarian, vegan, pescetarian,
+    no_pork, allergies, dislikes) of ALL family members simultaneously.
+    Guarantees that a shared family pot (Option A) never exposes any member to incompatible food.
     """
-    compatible = []
-    for r in recipes:
-        if all(is_recipe_compatible_with_member(r, m) for m in family):
-            compatible.append(r)
-    return compatible if compatible else recipes
+    if not family:
+        return recipes
+
+    compatible = [
+        r for r in recipes
+        if all(is_recipe_compatible_with_member(r, m, strict_macro=False) for m in family)
+    ]
+    if compatible:
+        return compatible
+
+    # If mutually exclusive edge cases exist, protect members with hard exclusions:
+    hard_restricted = [m for m in family if m.dietary_preference in ["vegetarian", "vegan", "pescetarian", "no_pork"]]
+    if hard_restricted:
+        sub_compat = [
+            r for r in recipes
+            if all(is_recipe_compatible_with_member(r, m, strict_macro=False) for m in hard_restricted)
+        ]
+        if sub_compat:
+            return sub_compat
+
+    return recipes
 
 
 def generate_weekly_plan(
@@ -171,17 +226,47 @@ def generate_weekly_plan(
     all_lunches = [r for r in db if r.meal_type == "lunch_lunchbox"]
     all_dinners = [r for r in db if r.meal_type == "dinner_home"]
 
-    filtered_breakfasts = filter_recipes_for_family(all_breakfasts, family_members)
-    filtered_lunches = filter_recipes_for_family(all_lunches, family_members)
-    filtered_dinners = filter_recipes_for_family(all_dinners, family_members)
-
-    # Partition and prioritize recipes based on active_retailers
     should_shuffle = shuffle or (seed is not None)
     rng = random.Random(seed) if should_shuffle else None
 
-    breakfasts = prioritize_recipes(filtered_breakfasts, active_retailers, shuffle=should_shuffle, rng=rng)
-    lunches = prioritize_recipes(filtered_lunches, active_retailers, shuffle=should_shuffle, rng=rng)
+    # OPTION A (Empfohlen - Familien-Standard):
+    # 1. Dinner (dinner_home): Cooked in 1 pot/pan for the entire family.
+    #    Must ALWAYS be 100% vegetarian-compliant if any family member is vegetarian/vegan,
+    #    so nobody has to cook twice. The omnivore's protein need is met by portion scaling
+    #    and rich plant/vegetarian proteins (lentils, tofu, beans, cheese, eggs).
+    filtered_dinners = filter_recipes_for_family(all_dinners, family_members)
     dinners = prioritize_recipes(filtered_dinners, active_retailers, shuffle=should_shuffle, rng=rng)
+
+    # 2. Breakfast & Lunch (breakfast_lunchbox, lunch_lunchbox):
+    #    Individualized for work/school/home!
+    #    Omnivores/High-Protein members can have high-protein meals; vegetarians strictly receive vegetarian meals.
+    member_breakfasts: Dict[str, List[Recipe]] = {}
+    member_lunches: Dict[str, List[Recipe]] = {}
+
+    for member in family_members:
+        # Try strict macro preferences (e.g. high_protein) first:
+        m_bf_strict = [r for r in all_breakfasts if is_recipe_compatible_with_member(r, member, strict_macro=True)]
+        if len(m_bf_strict) >= 7:
+            m_bf_pool = m_bf_strict
+        else:
+            m_bf_pool = [r for r in all_breakfasts if is_recipe_compatible_with_member(r, member, strict_macro=False)]
+        if not m_bf_pool:
+            m_bf_pool = all_breakfasts
+        member_breakfasts[member.id] = prioritize_recipes(m_bf_pool, active_retailers, shuffle=should_shuffle, rng=rng)
+
+        # Same for lunch:
+        m_lu_strict = [r for r in all_lunches if is_recipe_compatible_with_member(r, member, strict_macro=True)]
+        if len(m_lu_strict) >= 7:
+            m_lu_pool = m_lu_strict
+        else:
+            m_lu_pool = [r for r in all_lunches if is_recipe_compatible_with_member(r, member, strict_macro=False)]
+        if not m_lu_pool:
+            m_lu_pool = all_lunches
+        member_lunches[member.id] = prioritize_recipes(m_lu_pool, active_retailers, shuffle=should_shuffle, rng=rng)
+
+    primary_m_id = family_members[0].id if family_members else None
+    primary_bfs = member_breakfasts.get(primary_m_id, all_breakfasts) if primary_m_id else all_breakfasts
+    primary_lus = member_lunches.get(primary_m_id, all_lunches) if primary_m_id else all_lunches
 
     days: List[DayPlan] = []
     today = datetime.now()
@@ -217,39 +302,24 @@ def generate_weekly_plan(
     for i, day_name in enumerate(DAYS_OF_WEEK):
         day_date = monday + timedelta(days=i)
         date_str = day_date.strftime("%d.%m.%Y")
-        bf_recipe = sanitize_recipe(breakfasts[(base_offset + i) % len(breakfasts)], active_retailers, primary_retailer)
-        lu_recipe = sanitize_recipe(lunches[(base_offset + i) % len(lunches)], active_retailers, primary_retailer)
+
+        # Option A: Dinner is cooked in 1 shared family pot (strictly vegetarian-compliant for mixed families)
         di_recipe = sanitize_recipe(dinners[(base_offset + i) % len(dinners)], active_retailers, primary_retailer)
+
+        # Primary default recipe for day (used for overview or when all members have the same dish)
+        bf_recipe = sanitize_recipe(primary_bfs[(base_offset + i) % len(primary_bfs)], active_retailers, primary_retailer)
+        lu_recipe = sanitize_recipe(primary_lus[(base_offset + i) % len(primary_lus)], active_retailers, primary_retailer)
 
         portions_by_member: Dict[str, Dict[str, PersonMealPortion]] = {}
         daily_nutrition_by_member: Dict[str, Dict[str, int]] = {}
 
         for member in family_members:
-            # If default chosen recipe has an allergy conflict for this specific member,
-            # pick an individual alternative for them:
-            if is_recipe_compatible_with_member(bf_recipe, member):
-                mem_bf = bf_recipe
-            else:
-                alt = next((r for r in breakfasts if is_recipe_compatible_with_member(r, member)), None)
-                if not alt:
-                    alt = next((r for r in all_breakfasts if is_recipe_compatible_with_member(r, member)), bf_recipe)
-                mem_bf = sanitize_recipe(alt, active_retailers, primary_retailer)
+            m_bf_list = member_breakfasts.get(member.id, primary_bfs)
+            m_lu_list = member_lunches.get(member.id, primary_lus)
 
-            if is_recipe_compatible_with_member(lu_recipe, member):
-                mem_lu = lu_recipe
-            else:
-                alt = next((r for r in lunches if is_recipe_compatible_with_member(r, member)), None)
-                if not alt:
-                    alt = next((r for r in all_lunches if is_recipe_compatible_with_member(r, member)), lu_recipe)
-                mem_lu = sanitize_recipe(alt, active_retailers, primary_retailer)
-
-            if is_recipe_compatible_with_member(di_recipe, member):
-                mem_di = di_recipe
-            else:
-                alt = next((r for r in dinners if is_recipe_compatible_with_member(r, member)), None)
-                if not alt:
-                    alt = next((r for r in all_dinners if is_recipe_compatible_with_member(r, member)), di_recipe)
-                mem_di = sanitize_recipe(alt, active_retailers, primary_retailer)
+            mem_bf = sanitize_recipe(m_bf_list[(base_offset + i) % len(m_bf_list)], active_retailers, primary_retailer)
+            mem_lu = sanitize_recipe(m_lu_list[(base_offset + i) % len(m_lu_list)], active_retailers, primary_retailer)
+            mem_di = di_recipe  # 1-pot shared family dinner for everyone!
 
             bf_portion = scale_recipe_for_person(mem_bf, member, "breakfast_lunchbox", active_retailers=active_retailers, primary_retailer=primary_retailer)
             lu_portion = scale_recipe_for_person(mem_lu, member, "lunch_lunchbox", active_retailers=active_retailers, primary_retailer=primary_retailer)
@@ -370,9 +440,27 @@ def swap_meal_in_plan(
     day.dinner = sanitize_recipe(day.dinner, active_retailers, primary_retailer)
 
     for member in family_members:
-        bf_portion = scale_recipe_for_person(day.breakfast, member, "breakfast_lunchbox", active_retailers=active_retailers, primary_retailer=primary_retailer)
-        lu_portion = scale_recipe_for_person(day.lunch, member, "lunch_lunchbox", active_retailers=active_retailers, primary_retailer=primary_retailer)
-        di_portion = scale_recipe_for_person(day.dinner, member, "dinner_home", active_retailers=active_retailers, primary_retailer=primary_retailer)
+        if is_recipe_compatible_with_member(day.breakfast, member, strict_macro=False):
+            mem_bf = day.breakfast
+        else:
+            alt = next((r for r in all_recipes if r.meal_type == "breakfast_lunchbox" and is_recipe_compatible_with_member(r, member, strict_macro=False)), day.breakfast)
+            mem_bf = sanitize_recipe(alt, active_retailers, primary_retailer)
+
+        if is_recipe_compatible_with_member(day.lunch, member, strict_macro=False):
+            mem_lu = day.lunch
+        else:
+            alt = next((r for r in all_recipes if r.meal_type == "lunch_lunchbox" and is_recipe_compatible_with_member(r, member, strict_macro=False)), day.lunch)
+            mem_lu = sanitize_recipe(alt, active_retailers, primary_retailer)
+
+        if is_recipe_compatible_with_member(day.dinner, member, strict_macro=False):
+            mem_di = day.dinner
+        else:
+            alt = next((r for r in all_recipes if r.meal_type == "dinner_home" and is_recipe_compatible_with_member(r, member, strict_macro=False)), day.dinner)
+            mem_di = sanitize_recipe(alt, active_retailers, primary_retailer)
+
+        bf_portion = scale_recipe_for_person(mem_bf, member, "breakfast_lunchbox", active_retailers=active_retailers, primary_retailer=primary_retailer)
+        lu_portion = scale_recipe_for_person(mem_lu, member, "lunch_lunchbox", active_retailers=active_retailers, primary_retailer=primary_retailer)
+        di_portion = scale_recipe_for_person(mem_di, member, "dinner_home", active_retailers=active_retailers, primary_retailer=primary_retailer)
 
         day.portions[member.id] = {
             "breakfast": bf_portion,

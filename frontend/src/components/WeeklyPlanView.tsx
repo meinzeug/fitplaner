@@ -122,7 +122,22 @@ export const WeeklyPlanView: React.FC<Props> = ({
     dayIndex: number;
     mealType: 'breakfast' | 'lunch' | 'dinner';
     isCooked: boolean;
+    targetMember?: FamilyMember;
   } | null>(null);
+
+  const resolveRecipe = (portion?: PersonMealPortion, fallback?: Recipe): Recipe => {
+    if (portion?.recipe_id) {
+      const found = allRecipes.find((r) => r.id === portion.recipe_id);
+      if (found) return found;
+    }
+    if (portion?.recipe_title) {
+      const found = allRecipes.find(
+        (r) => r.title.toLowerCase() === portion.recipe_title.toLowerCase()
+      );
+      if (found) return found;
+    }
+    return fallback || allRecipes[0];
+  };
 
   const [timeOfDayData, setTimeOfDayData] = useState<any | null>(null);
   const [isEditingBudget, setIsEditingBudget] = useState(false);
@@ -557,6 +572,26 @@ export const WeeklyPlanView: React.FC<Props> = ({
             ? getAggregatedMealPortion(day, 'dinner', members, day.dinner)
             : memberPortions?.dinner;
 
+          const currentBfRecipe = isAllSelected ? day.breakfast : resolveRecipe(bfPortion, day.breakfast);
+          const currentLuRecipe = isAllSelected ? day.lunch : resolveRecipe(luPortion, day.lunch);
+          const currentDiRecipe = isAllSelected ? day.dinner : resolveRecipe(diPortion, day.dinner);
+
+          const distinctBfMembers = members.map((m) => ({
+            member: m,
+            portion: day.portions?.[m.id]?.breakfast,
+            recipe: resolveRecipe(day.portions?.[m.id]?.breakfast, day.breakfast),
+          }));
+          const distinctBfIds = Array.from(new Set(distinctBfMembers.map((item) => item.recipe.id)));
+          const hasMultipleBf = isAllSelected && distinctBfIds.length > 1;
+
+          const distinctLuMembers = members.map((m) => ({
+            member: m,
+            portion: day.portions?.[m.id]?.lunch,
+            recipe: resolveRecipe(day.portions?.[m.id]?.lunch, day.lunch),
+          }));
+          const distinctLuIds = Array.from(new Set(distinctLuMembers.map((item) => item.recipe.id)));
+          const hasMultipleLu = isAllSelected && distinctLuIds.length > 1;
+
           const plannedCals = isAllSelected
             ? members.reduce((sum, m) => sum + (day.daily_nutrition_by_member?.[m.id]?.calories || 0), 0)
             : (day.daily_nutrition_by_member?.[currentMember.id]?.calories || 0);
@@ -623,25 +658,49 @@ export const WeeklyPlanView: React.FC<Props> = ({
                     </div>
 
                     {/* Meal Title with Click to Open Recipe */}
-                    <div
-                      onClick={() => setSelectedRecipeModal({ recipe: day.breakfast, dayIndex, mealType: 'breakfast', isCooked: !!day.is_breakfast_cooked })}
-                      className="cursor-pointer group mb-2"
-                    >
-                      <h4 className="font-bold text-slate-800 text-base group-hover:text-emerald-700 transition flex items-center gap-1.5">
-                        {day.breakfast.title}
-                        <ChefHat className="w-4 h-4 text-slate-300 group-hover:text-emerald-600 transition" />
-                      </h4>
-                    </div>
+                    {hasMultipleBf ? (
+                      <div className="mb-2 space-y-1.5">
+                        <div className="text-[11px] font-bold text-amber-800 bg-amber-100/70 inline-flex items-center gap-1 px-2 py-0.5 rounded-md">
+                          🍱 Individuelle Brotdosen ({distinctBfIds.length} Rezepte)
+                        </div>
+                        <div className="space-y-1">
+                          {distinctBfMembers.map(({ member, recipe }) => (
+                            <div
+                              key={member.id}
+                              onClick={() => setSelectedRecipeModal({ recipe, dayIndex, mealType: 'breakfast', isCooked: !!day.is_breakfast_cooked, targetMember: member })}
+                              className="flex items-center justify-between text-xs p-1.5 bg-slate-50 hover:bg-emerald-50 rounded-xl cursor-pointer transition group border border-slate-100 hover:border-emerald-200"
+                            >
+                              <span className="text-slate-800">
+                                <span className="font-bold text-slate-900">{member.name}:</span> {recipe.title}
+                              </span>
+                              <span className="text-[11px] font-bold text-emerald-600 group-hover:underline flex items-center gap-0.5 shrink-0 ml-1">
+                                Rezept <ChefHat className="w-3 h-3" />
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => setSelectedRecipeModal({ recipe: currentBfRecipe, dayIndex, mealType: 'breakfast', isCooked: !!day.is_breakfast_cooked })}
+                        className="cursor-pointer group mb-2"
+                      >
+                        <h4 className="font-bold text-slate-800 text-base group-hover:text-emerald-700 transition flex items-center gap-1.5">
+                          {currentBfRecipe.title}
+                          <ChefHat className="w-4 h-4 text-slate-300 group-hover:text-emerald-600 transition" />
+                        </h4>
+                      </div>
+                    )}
 
                     <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
                       <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-400" /> {day.breakfast.prep_time_minutes} Min
+                        <Clock className="w-3 h-3 text-slate-400" /> {currentBfRecipe.prep_time_minutes} Min
                       </span>
                       <span className="flex items-center gap-1 font-semibold text-emerald-700">
-                        <Flame className="w-3 h-3 text-orange-500" /> {bfPortion?.scaled_calories || day.breakfast.base_calories} kcal
+                        <Flame className="w-3 h-3 text-orange-500" /> {bfPortion?.scaled_calories || currentBfRecipe.base_calories} kcal
                       </span>
                       <span className="font-semibold text-blue-700">
-                        {bfPortion?.scaled_protein_g || day.breakfast.base_protein_g}g Protein
+                        {bfPortion?.scaled_protein_g || currentBfRecipe.base_protein_g}g Protein
                       </span>
                     </div>
 
@@ -670,7 +729,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
 
                   <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
                     <button
-                      onClick={() => setSelectedRecipeModal({ recipe: day.breakfast, dayIndex, mealType: 'breakfast', isCooked: !!day.is_breakfast_cooked })}
+                      onClick={() => setSelectedRecipeModal({ recipe: currentBfRecipe, dayIndex, mealType: 'breakfast', isCooked: !!day.is_breakfast_cooked })}
                       className="text-xs font-bold text-emerald-700 hover:text-emerald-800"
                     >
                       Rezept & Anleitung ansehen →
@@ -699,25 +758,49 @@ export const WeeklyPlanView: React.FC<Props> = ({
                     </div>
 
                     {/* Meal Title */}
-                    <div
-                      onClick={() => setSelectedRecipeModal({ recipe: day.lunch, dayIndex, mealType: 'lunch', isCooked: !!day.is_lunch_cooked })}
-                      className="cursor-pointer group mb-2"
-                    >
-                      <h4 className="font-bold text-slate-800 text-base group-hover:text-emerald-700 transition flex items-center gap-1.5">
-                        {day.lunch.title}
-                        <ChefHat className="w-4 h-4 text-slate-300 group-hover:text-emerald-600 transition" />
-                      </h4>
-                    </div>
+                    {hasMultipleLu ? (
+                      <div className="mb-2 space-y-1.5">
+                        <div className="text-[11px] font-bold text-blue-800 bg-blue-100/70 inline-flex items-center gap-1 px-2 py-0.5 rounded-md">
+                          🍱 Individuelle Brotdosen ({distinctLuIds.length} Rezepte)
+                        </div>
+                        <div className="space-y-1">
+                          {distinctLuMembers.map(({ member, recipe }) => (
+                            <div
+                              key={member.id}
+                              onClick={() => setSelectedRecipeModal({ recipe, dayIndex, mealType: 'lunch', isCooked: !!day.is_lunch_cooked, targetMember: member })}
+                              className="flex items-center justify-between text-xs p-1.5 bg-slate-50 hover:bg-emerald-50 rounded-xl cursor-pointer transition group border border-slate-100 hover:border-emerald-200"
+                            >
+                              <span className="text-slate-800">
+                                <span className="font-bold text-slate-900">{member.name}:</span> {recipe.title}
+                              </span>
+                              <span className="text-[11px] font-bold text-emerald-600 group-hover:underline flex items-center gap-0.5 shrink-0 ml-1">
+                                Rezept <ChefHat className="w-3 h-3" />
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => setSelectedRecipeModal({ recipe: currentLuRecipe, dayIndex, mealType: 'lunch', isCooked: !!day.is_lunch_cooked })}
+                        className="cursor-pointer group mb-2"
+                      >
+                        <h4 className="font-bold text-slate-800 text-base group-hover:text-emerald-700 transition flex items-center gap-1.5">
+                          {currentLuRecipe.title}
+                          <ChefHat className="w-4 h-4 text-slate-300 group-hover:text-emerald-600 transition" />
+                        </h4>
+                      </div>
+                    )}
 
                     <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
                       <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-400" /> {day.lunch.prep_time_minutes} Min
+                        <Clock className="w-3 h-3 text-slate-400" /> {currentLuRecipe.prep_time_minutes} Min
                       </span>
                       <span className="flex items-center gap-1 font-semibold text-emerald-700">
-                        <Flame className="w-3 h-3 text-orange-500" /> {luPortion?.scaled_calories || day.lunch.base_calories} kcal
+                        <Flame className="w-3 h-3 text-orange-500" /> {luPortion?.scaled_calories || currentLuRecipe.base_calories} kcal
                       </span>
                       <span className="font-semibold text-blue-700">
-                        {luPortion?.scaled_protein_g || day.lunch.base_protein_g}g Protein
+                        {luPortion?.scaled_protein_g || currentLuRecipe.base_protein_g}g Protein
                       </span>
                     </div>
 
@@ -746,7 +829,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
 
                   <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
                     <button
-                      onClick={() => setSelectedRecipeModal({ recipe: day.lunch, dayIndex, mealType: 'lunch', isCooked: !!day.is_lunch_cooked })}
+                      onClick={() => setSelectedRecipeModal({ recipe: currentLuRecipe, dayIndex, mealType: 'lunch', isCooked: !!day.is_lunch_cooked })}
                       className="text-xs font-bold text-emerald-700 hover:text-emerald-800"
                     >
                       Rezept & Anleitung ansehen →
@@ -754,13 +837,13 @@ export const WeeklyPlanView: React.FC<Props> = ({
                   </div>
                 </div>
 
-                {/* 3. ABENDESSEN (FRISCH ZU HAUSE KOCHEN) */}
+                {/* 3. ABENDESSEN (FRISCH ZU HAUSE KOCHEN - 1 TOPF FÜR ALLE) */}
                 <div className="p-5 flex flex-col justify-between space-y-4 hover:bg-slate-50/50 transition">
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg">
                         <UtensilsCrossed className="w-3.5 h-3.5 text-rose-600" />
-                        Abendessen (Frisch kochen)
+                        Abendessen (1 Topf für alle)
                         {day.is_dinner_cooked && (
                           <span className="text-emerald-700 font-bold ml-1">✓ Gekocht</span>
                         )}
@@ -776,24 +859,24 @@ export const WeeklyPlanView: React.FC<Props> = ({
 
                     {/* Meal Title */}
                     <div
-                      onClick={() => setSelectedRecipeModal({ recipe: day.dinner, dayIndex, mealType: 'dinner', isCooked: !!day.is_dinner_cooked })}
+                      onClick={() => setSelectedRecipeModal({ recipe: currentDiRecipe, dayIndex, mealType: 'dinner', isCooked: !!day.is_dinner_cooked })}
                       className="cursor-pointer group mb-2"
                     >
                       <h4 className="font-bold text-slate-800 text-base group-hover:text-emerald-700 transition flex items-center gap-1.5">
-                        {day.dinner.title}
+                        {currentDiRecipe.title}
                         <ChefHat className="w-4 h-4 text-slate-300 group-hover:text-emerald-600 transition" />
                       </h4>
                     </div>
 
                     <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
                       <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-400" /> {day.dinner.prep_time_minutes + day.dinner.cook_time_minutes} Min
+                        <Clock className="w-3 h-3 text-slate-400" /> {currentDiRecipe.prep_time_minutes + currentDiRecipe.cook_time_minutes} Min
                       </span>
                       <span className="flex items-center gap-1 font-semibold text-emerald-700">
-                        <Flame className="w-3 h-3 text-orange-500" /> {diPortion?.scaled_calories || day.dinner.base_calories} kcal
+                        <Flame className="w-3 h-3 text-orange-500" /> {diPortion?.scaled_calories || currentDiRecipe.base_calories} kcal
                       </span>
                       <span className="font-semibold text-blue-700">
-                        {diPortion?.scaled_protein_g || day.dinner.base_protein_g}g Protein
+                        {diPortion?.scaled_protein_g || currentDiRecipe.base_protein_g}g Protein
                       </span>
                     </div>
 
@@ -822,7 +905,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
 
                   <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
                     <button
-                      onClick={() => setSelectedRecipeModal({ recipe: day.dinner, dayIndex, mealType: 'dinner', isCooked: !!day.is_dinner_cooked })}
+                      onClick={() => setSelectedRecipeModal({ recipe: currentDiRecipe, dayIndex, mealType: 'dinner', isCooked: !!day.is_dinner_cooked })}
                       className="text-xs font-bold text-emerald-700 hover:text-emerald-800"
                     >
                       Rezept & Anleitung ansehen →
@@ -841,20 +924,20 @@ export const WeeklyPlanView: React.FC<Props> = ({
           recipe={selectedRecipeModal.recipe}
           dayIndex={selectedRecipeModal.dayIndex}
           mealType={selectedRecipeModal.mealType}
-          activeMember={currentMember}
+          activeMember={selectedRecipeModal.targetMember || currentMember}
           portion={
-            isAllSelected
+            isAllSelected && !selectedRecipeModal.targetMember
               ? getAggregatedMealPortion(
                   plan.days[selectedRecipeModal.dayIndex],
                   selectedRecipeModal.mealType,
                   members,
                   selectedRecipeModal.recipe
                 )
-              : plan.days[selectedRecipeModal.dayIndex]?.portions?.[currentMember.id]?.[selectedRecipeModal.mealType]
+              : plan.days[selectedRecipeModal.dayIndex]?.portions?.[(selectedRecipeModal.targetMember || currentMember).id]?.[selectedRecipeModal.mealType]
           }
           pantryItems={pantryItems}
           isCooked={selectedRecipeModal.isCooked}
-          isAllMembers={isAllSelected}
+          isAllMembers={isAllSelected && !selectedRecipeModal.targetMember}
           membersCount={members.length}
           onCookMeal={onCookMeal}
           onClose={() => setSelectedRecipeModal(null)}

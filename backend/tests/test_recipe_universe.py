@@ -239,6 +239,75 @@ class TestRecipeUniverseAndSupermarkets(unittest.TestCase):
             save_app_settings(settings)
             weekly_plans_store.clear()
 
+    def test_option_a_mixed_family_dinner_vegetarian_and_lunch_individualized(self):
+        """
+        Verifies Option A:
+        - Dinner is cooked in 1 shared pot for the entire family and MUST be 100% vegetarian-compliant
+          when a family member is vegetarian (no chicken, pork, beef, fish).
+        - Both Dennis and Juna share the exact same dinner.
+        - Juna's breakfast and lunch are strictly vegetarian.
+        - Dennis can receive his high-protein lunches.
+        - PersonMealPortion contains recipe_id.
+        """
+        dennis = enrich_family_member({
+            "id": "mem-1", "name": "Dennis", "gender": "male", "age": 42,
+            "height_cm": 172, "weight_kg": 65, "activity_level": "moderate",
+            "goal": "gain_muscle", "dietary_preference": "high_protein", "allergies": ["fisch"]
+        })
+        juna = enrich_family_member({
+            "id": "mem-3", "name": "Juna Fee", "gender": "female", "age": 12,
+            "height_cm": 150, "weight_kg": 42, "activity_level": "moderate",
+            "goal": "maintain", "dietary_preference": "vegetarian", "allergies": []
+        })
+        family = [dennis, juna]
+
+        meat_keywords = ["hähnchen", "huhn", "pute", "rind", "schwein", "hackfleisch", "lachs", "thunfisch", "fisch", "garnele", "salami", "schinken", "speck"]
+
+        plan = generate_weekly_plan(family_members=family, week_offset=0, shuffle=True, seed=12345)
+
+        for day in plan.days:
+            # 1. Dinner shared pot check
+            self.assertTrue(
+                "vegetarian" in day.dinner.diet_types or "vegan" in day.dinner.diet_types,
+                f"Day {day.day_name} dinner '{day.dinner.title}' must be vegetarian or vegan"
+            )
+            for ing in day.dinner.ingredients:
+                self.assertFalse(
+                    any(m in ing.name.lower() for m in meat_keywords),
+                    f"Day {day.day_name} dinner '{day.dinner.title}' contains meat ingredient '{ing.name}'"
+                )
+
+            d_p = day.portions[dennis.id]
+            j_p = day.portions[juna.id]
+
+            # Dennis and Juna share the exact same dinner (Option A 1-pot)
+            self.assertEqual(d_p["dinner"].recipe_id, day.dinner.id)
+            self.assertEqual(j_p["dinner"].recipe_id, day.dinner.id)
+            self.assertEqual(d_p["dinner"].recipe_title, j_p["dinner"].recipe_title)
+
+            # Recipe ID must be set
+            self.assertIsNotNone(d_p["breakfast"].recipe_id)
+            self.assertIsNotNone(d_p["lunch"].recipe_id)
+            self.assertIsNotNone(j_p["breakfast"].recipe_id)
+            self.assertIsNotNone(j_p["lunch"].recipe_id)
+
+            # Juna's breakfast & lunch must strictly have NO meat or fish
+            for meal_key in ["breakfast", "lunch"]:
+                j_portion = j_p[meal_key]
+                for ing in j_portion.scaled_ingredients:
+                    self.assertFalse(
+                        any(m in ing.name.lower() for m in meat_keywords),
+                        f"Juna's {meal_key} '{j_portion.recipe_title}' contains forbidden ingredient '{ing.name}'"
+                    )
+
+            # Dennis's lunch and breakfast must NOT contain fish (his allergy)
+            for meal_key in ["breakfast", "lunch", "dinner"]:
+                d_portion = d_p[meal_key]
+                for ing in d_portion.scaled_ingredients:
+                    self.assertNotIn("fisch", ing.name.lower())
+                    self.assertNotIn("lachs", ing.name.lower())
+                    self.assertNotIn("thunfisch", ing.name.lower())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -216,6 +216,7 @@ def scale_recipe_for_person(
         member_id=member.id,
         member_name=member.name,
         meal_type=recipe.meal_type,
+        recipe_id=recipe.id,
         recipe_title=recipe.title,
         scale_factor=scale_factor,
         scaled_calories=int(round(recipe.base_calories * scale_factor)),

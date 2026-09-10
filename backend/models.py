@@ -119,6 +119,7 @@ class PersonMealPortion(BaseModel):
     member_id: str
     member_name: str
     meal_type: Literal["breakfast_lunchbox", "lunch_lunchbox", "dinner_home"]
+    recipe_id: Optional[str] = None
     recipe_title: str
     scale_factor: float
     scaled_calories: int

@@ -121,6 +121,7 @@ export interface PersonMealPortion {
   member_id: string;
   member_name: string;
   meal_type: 'breakfast_lunchbox' | 'lunch_lunchbox' | 'dinner_home';
+  recipe_id?: string;
   recipe_title: string;
   scale_factor: number;
   scaled_calories: number;
