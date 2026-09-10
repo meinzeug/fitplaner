@@ -264,9 +264,9 @@ export const ShoppingListView: React.FC<Props> = ({
       >
         <div
           onClick={() => toggleCheck(uniqueKey)}
-          className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
+          className="flex items-start gap-3 cursor-pointer flex-1 min-w-0"
         >
-          <div className="shrink-0">
+          <div className="shrink-0 pt-0.5">
             {isChecked ? (
               <CheckSquare className={thumbMode ? 'w-7 h-7 text-emerald-600' : 'w-5 h-5 text-emerald-600'} />
             ) : (
@@ -274,11 +274,11 @@ export const ShoppingListView: React.FC<Props> = ({
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className={`font-bold text-slate-800 leading-tight truncate ${thumbMode ? 'text-base' : 'text-sm'}`}>
-                {item.exact_product_name || item.name}
-              </span>
-              {item.brand && (
+            <div className={`font-bold text-slate-900 leading-snug break-words ${thumbMode ? 'text-base' : 'text-sm'}`}>
+              {item.exact_product_name || item.name}
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+              {item.brand && (!item.storeTag || (!item.brand.toLowerCase().includes(item.storeTag.toLowerCase()) && !item.storeTag.toLowerCase().includes(item.brand.toLowerCase()))) && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-md font-extrabold bg-slate-100 text-slate-700 border border-slate-200">
                   {item.brand}
                 </span>
@@ -310,7 +310,7 @@ export const ShoppingListView: React.FC<Props> = ({
                 </span>
               )}
             </div>
-            <div className="text-xs text-slate-400 font-medium mt-0.5 flex flex-wrap items-center gap-x-2">
+            <div className="text-xs text-slate-500 font-medium mt-1 flex flex-wrap items-center gap-x-2">
               <span>Rezeptbedarf: {item.total_quantity} {item.unit}</span>
               {item.leftover_after_purchase > 0 && !item.is_covered_by_stock && item.is_pantry_eligible ? (
                 <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded text-[10px] border border-emerald-200">
@@ -327,7 +327,7 @@ export const ShoppingListView: React.FC<Props> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 pl-2 shrink-0">
+        <div className="flex items-start gap-2 pl-2 shrink-0 pt-0.5">
           {/* Smart Substitute Option if sold out */}
           {item.substitutes && item.substitutes.length > 0 && (
             <button

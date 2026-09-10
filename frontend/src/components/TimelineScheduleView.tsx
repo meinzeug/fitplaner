@@ -407,9 +407,9 @@ export const TimelineScheduleView: React.FC<Props> = ({
           {/* Next preview */}
           {data.next_task && (
             <div className="mt-4 pt-3 border-t border-emerald-200/60 flex items-center justify-between text-xs text-slate-500">
-              <div className="flex items-center space-x-1.5">
-                <span className="font-semibold text-slate-600">Als Nächstes um {data.next_task.time_str} Uhr:</span>
-                <span className="truncate max-w-md font-medium text-slate-800">{data.next_task.title}</span>
+              <div className="flex items-center space-x-1.5 flex-1 min-w-0 pr-2">
+                <span className="font-semibold text-slate-600 shrink-0">Als Nächstes um {data.next_task.time_str} Uhr:</span>
+                <span className="font-medium text-slate-800 break-words">{data.next_task.title}</span>
               </div>
               <span className="text-emerald-700 font-bold shrink-0">In Kürze</span>
             </div>
@@ -439,7 +439,7 @@ export const TimelineScheduleView: React.FC<Props> = ({
                 <div className="bg-black/20 backdrop-blur-sm p-3.5 rounded-2xl border border-white/10 flex flex-col justify-between">
                   <div>
                     <div className="text-[10px] uppercase font-bold text-amber-200">Morgiges Frühstück</div>
-                    <div className="text-sm font-bold text-white truncate">{data.prep_tomorrow.breakfast_title}</div>
+                    <div className="text-sm font-bold text-white leading-snug break-words">{data.prep_tomorrow.breakfast_title}</div>
                     <div className="text-[11px] text-amber-200 mt-0.5">⏱️ {data.prep_tomorrow.breakfast_prep_min} Min. anrühren & über Nacht quellen</div>
                   </div>
                   {data.prep_tomorrow.breakfast_recipe_id && (
@@ -456,7 +456,7 @@ export const TimelineScheduleView: React.FC<Props> = ({
                 <div className="bg-black/20 backdrop-blur-sm p-3.5 rounded-2xl border border-white/10 flex flex-col justify-between">
                   <div>
                     <div className="text-[10px] uppercase font-bold text-amber-200">Morgige Brotdose (Mittag to-go)</div>
-                    <div className="text-sm font-bold text-white truncate">{data.prep_tomorrow.lunch_title}</div>
+                    <div className="text-sm font-bold text-white leading-snug break-words">{data.prep_tomorrow.lunch_title}</div>
                     <div className="text-[11px] text-amber-200 mt-0.5">🍱 Box füllen & ab in den Kühlschrank</div>
                   </div>
                   {data.prep_tomorrow.lunch_recipe_id && (

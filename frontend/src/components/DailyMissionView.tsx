@@ -516,7 +516,7 @@ export const DailyMissionView: React.FC<Props> = ({
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-300 opacity-90"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-3 justify-between">
-                    <div className="text-white text-sm font-bold truncate">
+                    <div className="text-white text-sm font-bold leading-snug line-clamp-2 pr-2">
                       {dailyHub.dinner_recipe.title}
                     </div>
                     <span className="text-[10px] bg-emerald-500/90 text-slate-950 px-2 py-0.5 rounded-md font-extrabold shrink-0">
