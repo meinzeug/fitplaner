@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../api/client';
 import {
   Smartphone, QrCode, Wifi, Download, CheckCircle2, ShieldCheck,
   RefreshCw, Trash2, X, ExternalLink, Laptop, ArrowRight, Share2, Plus,
@@ -56,7 +57,7 @@ export const DeviceInstallerModal: React.FC<Props> = ({ onClose }) => {
   const fetchInstallerInfo = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/installer/info');
+      const res = await apiFetch('/api/installer/info');
       if (res.ok) {
         const data = await res.json();
         setInfo(data);
@@ -72,9 +73,9 @@ export const DeviceInstallerModal: React.FC<Props> = ({ onClose }) => {
     setIsScanning(true);
     try {
       // 1. Send UDP broadcast ping
-      await fetch('/api/discovery/broadcast', { method: 'POST' });
+      await apiFetch('/api/discovery/broadcast', { method: 'POST' });
       // 2. Query discovered devices
-      const res = await fetch('/api/discovery/scan');
+      const res = await apiFetch('/api/discovery/scan');
       if (res.ok) {
         const data = await res.json();
         setDiscoveredDevices(data);
@@ -101,7 +102,7 @@ export const DeviceInstallerModal: React.FC<Props> = ({ onClose }) => {
 
   const handlePairDiscovered = async (dev: DiscoveredDevice) => {
     try {
-      await fetch('/api/installer/pair', {
+      await apiFetch('/api/installer/pair', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -122,7 +123,7 @@ export const DeviceInstallerModal: React.FC<Props> = ({ onClose }) => {
     e.preventDefault();
     if (!newDeviceName.trim()) return;
     try {
-      await fetch('/api/installer/pair', {
+      await apiFetch('/api/installer/pair', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -140,7 +141,7 @@ export const DeviceInstallerModal: React.FC<Props> = ({ onClose }) => {
 
   const handleRemoveDevice = async (id: string) => {
     try {
-      await fetch(`/api/installer/devices/${id}`, { method: 'DELETE' });
+      await apiFetch(`/api/installer/devices/${id}`, { method: 'DELETE' });
       await fetchInstallerInfo();
     } catch (e) {
       console.error(e);

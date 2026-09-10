@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FamilyChore, FamilyMember } from '../types';
+import { apiFetch } from '../api/client';
 import {
   CheckCircle2,
   Circle,
@@ -29,7 +30,7 @@ export const FamilyChoresView: React.FC<Props> = ({ members, onNavigateTab }) =>
 
   const fetchChores = async () => {
     try {
-      const res = await fetch('/api/family/chores');
+      const res = await apiFetch('/api/family/chores');
       if (res.ok) {
         const data = await res.json();
         setChores(data);
@@ -48,7 +49,7 @@ export const FamilyChoresView: React.FC<Props> = ({ members, onNavigateTab }) =>
   const handleToggleChore = async (choreId: string, currentStatus: boolean) => {
     setAnimatingChoreId(choreId);
     try {
-      const res = await fetch(`/api/family/chores/${choreId}/toggle`, {
+      const res = await apiFetch(`/api/family/chores/${choreId}/toggle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_completed: !currentStatus })

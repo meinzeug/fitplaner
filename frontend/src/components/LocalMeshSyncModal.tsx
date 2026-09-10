@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MeshStatusResponse, MeshSyncPacket, InstallerInfoResponse, PairedDevice } from '../types';
+import { apiFetch } from '../api/client';
 import {
   Wifi,
   Bluetooth,
@@ -30,12 +31,12 @@ export const LocalMeshSyncModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch('/api/sync/mesh-status');
+      const res = await apiFetch('/api/sync/mesh-status');
       if (res.ok) {
         const data = await res.json();
         setMeshStatus(data);
       }
-      const instRes = await fetch('/api/installer/info');
+      const instRes = await apiFetch('/api/installer/info');
       if (instRes.ok) {
         const instData = await instRes.json();
         setInstallerInfo(instData);
@@ -57,11 +58,11 @@ export const LocalMeshSyncModal: React.FC<Props> = ({ isOpen, onClose }) => {
     setSyncFeedback(null);
     try {
       // 1. Pull snapshot
-      const pullRes = await fetch('/api/sync/mesh-pull');
+      const pullRes = await apiFetch('/api/sync/mesh-pull');
       if (pullRes.ok) {
         const packet: MeshSyncPacket = await pullRes.json();
         // 2. Push merged snapshot
-        const pushRes = await fetch('/api/sync/mesh-push', {
+        const pushRes = await apiFetch('/api/sync/mesh-push', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(packet)

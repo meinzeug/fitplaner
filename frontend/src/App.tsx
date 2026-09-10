@@ -4,6 +4,7 @@ import {
   PantryItem, LeafletBrochure, CustomShoppingItem, DailyHubResponse,
   AppSettings
 } from './types';
+import { apiFetch, isCapacitorNative, getServerUrl } from './api/client';
 import { DailyMissionView } from './components/DailyMissionView';
 import { WeeklyPlanView } from './components/WeeklyPlanView';
 import { ShoppingListView } from './components/ShoppingListView';
@@ -17,10 +18,11 @@ import { FamilyChoresView } from './components/FamilyChoresView';
 import { LocalMeshSyncModal } from './components/LocalMeshSyncModal';
 import { SettingsView } from './components/SettingsView';
 import { RecipeManagerView } from './components/RecipeManagerView';
+import { ServerConnectionModal } from './components/ServerConnectionModal';
 import {
   Users, Calendar, ShoppingBag, Tag, Archive, BookOpen,
   HeartPulse, Sparkles, X, Compass, ChevronRight, CheckCircle2, Smartphone, Download,
-  Heart, Star, Radio, Settings
+  Heart, Star, Radio, Settings, Wifi, WifiOff, Server
 } from 'lucide-react';
 
 export function App() {
@@ -54,22 +56,51 @@ export function App() {
   const [isLoadingOffers, setIsLoadingOffers] = useState(false);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [selectedWeekOffset, setSelectedWeekOffset] = useState<number>(0);
+  const [isServerModalOpen, setIsServerModalOpen] = useState(false);
+  const [isServerOnline, setIsServerOnline] = useState<boolean | null>(null);
 
-  useEffect(() => {
+  const loadAllData = () => {
     fetchSettings();
     fetchDailyHub();
     fetchProfiles();
     fetchOffers(zipCode, onlyHealthy);
-    fetchPlan(0);
-    fetchShoppingList(0);
+    fetchPlan(selectedWeekOffset);
+    fetchShoppingList(selectedWeekOffset);
     fetchRecipes();
     fetchPantry();
     fetchLeaflets();
+  };
+
+  useEffect(() => {
+    loadAllData();
+
+    const handleServerChanged = () => {
+      loadAllData();
+      checkServerHealth();
+    };
+    window.addEventListener('fitplaner_server_changed', handleServerChanged);
+
+    checkServerHealth();
+    const interval = setInterval(checkServerHealth, 20000);
+
+    return () => {
+      window.removeEventListener('fitplaner_server_changed', handleServerChanged);
+      clearInterval(interval);
+    };
   }, []);
+
+  const checkServerHealth = async () => {
+    try {
+      const res = await apiFetch('/api/settings');
+      setIsServerOnline(res.ok);
+    } catch {
+      setIsServerOnline(false);
+    }
+  };
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch('/api/settings');
+      const res = await apiFetch('/api/settings');
       if (res.ok) {
         const data = await res.json();
         setSettings(data);
@@ -84,7 +115,7 @@ export function App() {
 
   const handleSaveSettings = async (newSettings: AppSettings) => {
     try {
-      const res = await fetch('/api/settings', {
+      const res = await apiFetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newSettings),
@@ -104,7 +135,7 @@ export function App() {
 
   const fetchDailyHub = async () => {
     try {
-      const res = await fetch('/api/daily-hub');
+      const res = await apiFetch('/api/daily-hub');
       if (res.ok) {
         const data = await res.json();
         setDailyHub(data);
@@ -116,7 +147,7 @@ export function App() {
 
   const handleDailyHubAction = async (action: string, value?: string) => {
     try {
-      const res = await fetch('/api/daily-hub/action', {
+      const res = await apiFetch('/api/daily-hub/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, value }),
@@ -137,7 +168,7 @@ export function App() {
 
   const fetchProfiles = async () => {
     try {
-      const res = await fetch('/api/profiles');
+      const res = await apiFetch('/api/profiles');
       const data = await res.json();
       setMembers(data);
     } catch (e) {
@@ -148,7 +179,7 @@ export function App() {
   const fetchOffers = async (zip: string, healthy: boolean) => {
     setIsLoadingOffers(true);
     try {
-      const res = await fetch(`/api/offers?zip_code=${zip}&only_healthy=${healthy}`);
+      const res = await apiFetch(`/api/offers?zip_code=${zip}&only_healthy=${healthy}`);
       const data = await res.json();
       setOffers(data);
     } catch (e) {
@@ -160,7 +191,7 @@ export function App() {
 
   const fetchPlan = async (offset: number = selectedWeekOffset) => {
     try {
-      const res = await fetch(`/api/plan/current?week_offset=${offset}`);
+      const res = await apiFetch(`/api/plan/current?week_offset=${offset}`);
       const data = await res.json();
       setWeeklyPlan(data);
     } catch (e) {
@@ -170,7 +201,7 @@ export function App() {
 
   const fetchShoppingList = async (offset: number = selectedWeekOffset) => {
     try {
-      const res = await fetch(`/api/shopping-list?week_offset=${offset}`);
+      const res = await apiFetch(`/api/shopping-list?week_offset=${offset}`);
       const data = await res.json();
       setShoppingList(data);
     } catch (e) {
@@ -186,7 +217,7 @@ export function App() {
 
   const handleUpdateBudget = async (newBudget: number) => {
     try {
-      const res = await fetch('/api/budget', {
+      const res = await apiFetch('/api/budget', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ week_offset: selectedWeekOffset, budget: newBudget }),
@@ -202,7 +233,7 @@ export function App() {
 
   const fetchRecipes = async () => {
     try {
-      const res = await fetch('/api/recipes');
+      const res = await apiFetch('/api/recipes');
       const data = await res.json();
       setAllRecipes(data);
     } catch (e) {
@@ -212,7 +243,7 @@ export function App() {
 
   const fetchPantry = async () => {
     try {
-      const res = await fetch('/api/pantry');
+      const res = await apiFetch('/api/pantry');
       const data = await res.json();
       setPantryItems(data);
     } catch (e) {
@@ -222,7 +253,7 @@ export function App() {
 
   const fetchLeaflets = async () => {
     try {
-      const res = await fetch('/api/leaflets');
+      const res = await apiFetch('/api/leaflets');
       const data = await res.json();
       setLeaflets(data);
     } catch (e) {
@@ -233,7 +264,7 @@ export function App() {
   // Profile Handlers
   const handleSaveMember = async (memberData: Partial<FamilyMember>) => {
     try {
-      const res = await fetch('/api/profiles', {
+      const res = await apiFetch('/api/profiles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(memberData),
@@ -250,7 +281,7 @@ export function App() {
 
   const handleDeleteMember = async (id: string) => {
     try {
-      const res = await fetch(`/api/profiles/${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/profiles/${id}`, { method: 'DELETE' });
       if (res.ok) {
         await fetchProfiles();
         await handleGeneratePlan();
@@ -265,7 +296,7 @@ export function App() {
   const handleGeneratePlan = async () => {
     setIsGeneratingPlan(true);
     try {
-      const res = await fetch(`/api/plan/generate?week_offset=${selectedWeekOffset}`, { method: 'POST' });
+      const res = await apiFetch(`/api/plan/generate?week_offset=${selectedWeekOffset}`, { method: 'POST' });
       if (res.ok) {
         const newPlan = await res.json();
         setWeeklyPlan(newPlan);
@@ -281,7 +312,7 @@ export function App() {
 
   const handleSwapMeal = async (dayIndex: number, mealType: string, newRecipeId: string) => {
     try {
-      const res = await fetch('/api/plan/swap', {
+      const res = await apiFetch('/api/plan/swap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -304,7 +335,7 @@ export function App() {
 
   const handleCookMeal = async (dayIndex: number, mealType: string) => {
     try {
-      const res = await fetch('/api/pantry/cook-meal', {
+      const res = await apiFetch('/api/pantry/cook-meal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -331,7 +362,7 @@ export function App() {
       const isExisting = pantryItems.some((i) => i.id === item.id);
       const url = isExisting ? `/api/pantry/${item.id}` : '/api/pantry';
       const method = isExisting ? 'PUT' : 'POST';
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item),
@@ -348,7 +379,7 @@ export function App() {
 
   const handleDeletePantryItem = async (id: string) => {
     try {
-      const res = await fetch(`/api/pantry/${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/pantry/${id}`, { method: 'DELETE' });
       if (res.ok) {
         await fetchPantry();
         await fetchShoppingList(selectedWeekOffset);
@@ -361,7 +392,7 @@ export function App() {
 
   const handleBookCartToPantry = async (items: any[]) => {
     try {
-      const res = await fetch('/api/pantry/book-cart', {
+      const res = await apiFetch('/api/pantry/book-cart', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items }),
@@ -379,7 +410,7 @@ export function App() {
   // Custom Shopping Items
   const handleAddCustomItem = async (itemData: Partial<CustomShoppingItem>) => {
     try {
-      const res = await fetch('/api/custom-shopping-items', {
+      const res = await apiFetch('/api/custom-shopping-items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(itemData),
@@ -394,7 +425,7 @@ export function App() {
 
   const handleDeleteCustomItem = async (id: string) => {
     try {
-      const res = await fetch(`/api/custom-shopping-items/${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/custom-shopping-items/${id}`, { method: 'DELETE' });
       if (res.ok) {
         await fetchShoppingList(selectedWeekOffset);
       }
@@ -446,27 +477,27 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      {/* Top Navigation Bar */}
+      {/* Top Navigation Bar (Material 3 Mobile App Bar & Desktop Nav) */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('heute')}>
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
+            {/* Logo & Brand */}
+            <div className="flex items-center gap-2.5 cursor-pointer min-w-0" onClick={() => setActiveTab('heute')}>
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 shrink-0">
                 <HeartPulse className="w-5 h-5" />
               </div>
-              <div>
-                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center gap-1.5">
-                  FitPlaner
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold">Multi-Supermarkt</span>
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center gap-1.5 truncate">
+                  <span>FitPlaner</span>
+                  <span className="hidden xs:inline text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold">Multi-Markt</span>
                 </h1>
-                <span className="text-[10px] text-slate-400 font-semibold block uppercase tracking-wider">
+                <span className="hidden sm:block text-[10px] text-slate-400 font-semibold uppercase tracking-wider truncate">
                   Smarter Ernährungsplaner & Familien-Manager
                 </span>
               </div>
             </div>
 
-            {/* Super App Kern-Navigation */}
+            {/* Desktop Super App Kern-Navigation */}
             <nav className="hidden md:flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200/70">
               <button
                 onClick={() => setActiveTab('heute')}
@@ -546,25 +577,49 @@ export function App() {
               </button>
             </nav>
 
-            {/* Quick Actions (P2P-Mesh, Smartphone, Prospekte, Familie, Angebote) */}
-            <div className="flex items-center gap-1.5">
+            {/* Quick Actions (Responsive & Non-Overflowing) */}
+            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+              {/* Server Connection Status Pill */}
               <button
-                onClick={() => setIsMeshSyncModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-extrabold transition shadow-2xs"
-                title="Halb-Autarke P2P-Synchronisation über lokales WLAN & Bluetooth LE"
+                onClick={() => setIsServerModalOpen(true)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-black transition ${
+                  isServerOnline === true
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                    : isServerOnline === false
+                    ? 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 animate-pulse'
+                    : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                }`}
+                title="Server-Verbindung (Klicken zum Konfigurieren)"
               >
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                  {isServerOnline === true && (
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  )}
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                    isServerOnline === true ? 'bg-emerald-500' : isServerOnline === false ? 'bg-rose-500' : 'bg-amber-400'
+                  }`} />
                 </span>
-                <Radio className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="hidden sm:inline">P2P-Mesh</span>
+                <Server className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">
+                  {isServerOnline === true ? 'Server OK' : isServerOnline === false ? 'Offline' : 'Server'}
+                </span>
               </button>
 
+              {/* P2P-Mesh Button */}
+              <button
+                onClick={() => setIsMeshSyncModalOpen(true)}
+                className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-extrabold transition shadow-2xs"
+                title="Halb-Autarke P2P-Synchronisation über lokales WLAN & Bluetooth LE"
+              >
+                <Radio className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="hidden lg:inline">P2P-Mesh</span>
+              </button>
+
+              {/* Desktop Only Actions */}
               <a
                 href="/FitPlaner.apk"
                 download="FitPlaner.apk"
-                className="hidden lg:flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-slate-500 hover:text-emerald-700 hover:bg-slate-100 text-xs font-semibold transition border border-transparent hover:border-slate-200"
+                className="hidden xl:flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-slate-500 hover:text-emerald-700 hover:bg-slate-100 text-xs font-semibold transition border border-transparent hover:border-slate-200"
                 title="Android APK direkt herunterladen (4,2 MB)"
               >
                 <Download className="w-3.5 h-3.5 text-slate-400" />
@@ -573,11 +628,11 @@ export function App() {
 
               <button
                 onClick={() => setActiveModalView('installer')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
+                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
                 title="APK auf Smartphone installieren & im WLAN verbinden"
               >
                 <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="hidden sm:inline">📱 Handy</span>
+                <span className="hidden xl:inline">📱 Handy</span>
               </button>
 
               <button
@@ -591,20 +646,20 @@ export function App() {
 
               <button
                 onClick={() => setActiveModalView('profiles')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
+                className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
                 title="Familienmitglieder & Kalorienbedarf anpassen"
               >
                 <Users className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Familie ({members.length})</span>
+                <span className="hidden sm:inline">Familie ({members.length})</span>
               </button>
 
               <button
                 onClick={() => setActiveModalView('settings')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
+                className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5"
                 title="Supermarkt-Auswahl, Budget & Einstellungen"
               >
                 <Settings className="w-3.5 h-3.5 text-slate-600" />
-                <span className="hidden sm:inline">Einstellungen</span>
+                <span className="hidden md:inline">Einstellungen</span>
               </button>
             </div>
           </div>
@@ -659,6 +714,35 @@ export function App() {
             onDeletePantryItem={handleDeletePantryItem}
             onRefreshPantry={fetchPantry}
           />
+        )}
+
+        {(activeTab === 'vitalitaet' || activeTab === 'aemtli') && (
+          <div className="mb-6 flex items-center justify-center">
+            <div className="inline-flex p-1 bg-slate-200/80 backdrop-blur-md rounded-2xl border border-slate-300/60 shadow-inner max-w-full overflow-x-auto no-scrollbar">
+              <button
+                onClick={() => setActiveTab('vitalitaet')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                  activeTab === 'vitalitaet'
+                    ? 'bg-white text-emerald-800 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-950'
+                }`}
+              >
+                <Heart className={`w-3.5 h-3.5 ${activeTab === 'vitalitaet' ? 'text-rose-500 fill-rose-500/20' : 'text-slate-400'}`} />
+                <span>Gesundheit & Vitalität</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('aemtli')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                  activeTab === 'aemtli'
+                    ? 'bg-white text-amber-900 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-950'
+                }`}
+              >
+                <Star className={`w-3.5 h-3.5 ${activeTab === 'aemtli' ? 'text-amber-500 fill-amber-500' : 'text-slate-400'}`} />
+                <span>Ämtli & Aufgaben</span>
+              </button>
+            </div>
+          </div>
         )}
 
         {activeTab === 'vitalitaet' && (
@@ -782,6 +866,10 @@ export function App() {
                   settings={settings}
                   onSaveSettings={handleSaveSettings}
                   onClose={() => setActiveModalView(null)}
+                  onOpenServerModal={() => {
+                    setActiveModalView(null);
+                    setIsServerModalOpen(true);
+                  }}
                 />
               )}
             </div>
@@ -793,6 +881,13 @@ export function App() {
       <LocalMeshSyncModal
         isOpen={isMeshSyncModalOpen}
         onClose={() => setIsMeshSyncModalOpen(false)}
+      />
+
+      {/* Server Connection Modal (Dynamic Host & Port Configuration) */}
+      <ServerConnectionModal
+        isOpen={isServerModalOpen}
+        onClose={() => setIsServerModalOpen(false)}
+        onConnected={loadAllData}
       />
 
       {/* Recipe Modal */}
@@ -822,71 +917,93 @@ export function App() {
         />
       )}
 
-      {/* Mobile Bottom Tab Bar (5 Super-App Tabs) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-2 py-2 flex items-center justify-around shadow-lg">
+      {/* Mobile Bottom Tab Bar (Material 3 Dock) */}
+      <nav aria-label="Hauptnavigation" className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 px-1 pt-1.5 pb-[env(safe-area-inset-bottom,8px)] shadow-[0_-4px_24px_rgba(0,0,0,0.06)] flex items-center justify-around select-none">
         <button
           onClick={() => setActiveTab('heute')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl text-[10px] font-black ${
-            activeTab === 'heute' ? 'text-emerald-700 bg-emerald-50' : 'text-slate-500'
-          }`}
+          className="flex-1 flex flex-col items-center py-1 group focus:outline-none"
         >
-          <Sparkles className="w-4 h-4 text-amber-500" />
-          Heute
+          <div className={`px-4 py-1 rounded-full transition-all flex items-center justify-center ${
+            activeTab === 'heute' ? 'bg-emerald-100 text-emerald-800' : 'text-slate-500 group-hover:text-slate-900'
+          }`}>
+            <Sparkles className={`w-5 h-5 ${activeTab === 'heute' ? 'text-amber-500' : ''}`} />
+          </div>
+          <span className={`text-[10px] tracking-tight mt-0.5 ${
+            activeTab === 'heute' ? 'font-black text-emerald-900' : 'font-semibold text-slate-500'
+          }`}>
+            Heute
+          </span>
         </button>
 
         <button
           onClick={() => setActiveTab('woche')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl text-[10px] font-black ${
-            activeTab === 'woche' ? 'text-emerald-700 bg-emerald-50' : 'text-slate-500'
-          }`}
+          className="flex-1 flex flex-col items-center py-1 group focus:outline-none"
         >
-          <Calendar className="w-4 h-4" />
-          Woche
+          <div className={`px-4 py-1 rounded-full transition-all flex items-center justify-center ${
+            activeTab === 'woche' ? 'bg-emerald-100 text-emerald-800' : 'text-slate-500 group-hover:text-slate-900'
+          }`}>
+            <Calendar className="w-5 h-5" />
+          </div>
+          <span className={`text-[10px] tracking-tight mt-0.5 ${
+            activeTab === 'woche' ? 'font-black text-emerald-900' : 'font-semibold text-slate-500'
+          }`}>
+            Woche
+          </span>
         </button>
 
         <button
           onClick={() => setActiveTab('rezepte')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl text-[10px] font-black ${
-            activeTab === 'rezepte' ? 'text-emerald-700 bg-emerald-50' : 'text-slate-500'
-          }`}
+          className="flex-1 flex flex-col items-center py-1 group focus:outline-none"
         >
-          <BookOpen className="w-4 h-4" />
-          Rezepte
+          <div className={`px-4 py-1 rounded-full transition-all flex items-center justify-center ${
+            activeTab === 'rezepte' ? 'bg-emerald-100 text-emerald-800' : 'text-slate-500 group-hover:text-slate-900'
+          }`}>
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <span className={`text-[10px] tracking-tight mt-0.5 ${
+            activeTab === 'rezepte' ? 'font-black text-emerald-900' : 'font-semibold text-slate-500'
+          }`}>
+            Rezepte
+          </span>
         </button>
 
         <button
           onClick={() => setActiveTab('einkauf')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl text-[10px] font-black relative ${
-            activeTab === 'einkauf' ? 'text-emerald-700 bg-emerald-50' : 'text-slate-500'
-          }`}
+          className="flex-1 flex flex-col items-center py-1 group focus:outline-none relative"
         >
-          <ShoppingBag className="w-4 h-4" />
-          Einkauf
-          {expiringCount > 0 && (
-            <span className="w-2 h-2 rounded-full bg-amber-500 absolute top-1 right-2" />
-          )}
+          <div className={`px-4 py-1 rounded-full transition-all flex items-center justify-center relative ${
+            activeTab === 'einkauf' ? 'bg-emerald-100 text-emerald-800' : 'text-slate-500 group-hover:text-slate-900'
+          }`}>
+            <ShoppingBag className="w-5 h-5" />
+            {expiringCount > 0 && (
+              <span className="absolute top-0.5 right-2 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white" />
+            )}
+          </div>
+          <span className={`text-[10px] tracking-tight mt-0.5 ${
+            activeTab === 'einkauf' ? 'font-black text-emerald-900' : 'font-semibold text-slate-500'
+          }`}>
+            Einkauf
+          </span>
         </button>
 
         <button
           onClick={() => setActiveTab('vitalitaet')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl text-[10px] font-black ${
-            activeTab === 'vitalitaet' ? 'text-emerald-700 bg-emerald-50' : 'text-slate-500'
-          }`}
+          className="flex-1 flex flex-col items-center py-1 group focus:outline-none"
         >
-          <Heart className="w-4 h-4 text-rose-500" />
-          Gesundheit
+          <div className={`px-4 py-1 rounded-full transition-all flex items-center justify-center ${
+            (activeTab === 'vitalitaet' || activeTab === 'aemtli')
+              ? 'bg-emerald-100 text-emerald-800'
+              : 'text-slate-500 group-hover:text-slate-900'
+          }`}>
+            <Heart className={`w-5 h-5 ${(activeTab === 'vitalitaet' || activeTab === 'aemtli') ? 'text-rose-500 fill-rose-500/20' : ''}`} />
+          </div>
+          <span className={`text-[10px] tracking-tight mt-0.5 ${
+            (activeTab === 'vitalitaet' || activeTab === 'aemtli') ? 'font-black text-emerald-900' : 'font-semibold text-slate-500'
+          }`}>
+            Vitalität
+          </span>
         </button>
-
-        <button
-          onClick={() => setActiveTab('aemtli')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl text-[10px] font-black ${
-            activeTab === 'aemtli' ? 'text-amber-700 bg-amber-50' : 'text-slate-500'
-          }`}
-        >
-          <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-          Aufgaben
-        </button>
-      </div>
+      </nav>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { WeeklyPlan, FamilyMember, Recipe, PantryItem, PersonMealPortion, ScaledIngredient, DayPlan } from '../types';
 import { RecipeModal } from './RecipeModal';
+import { apiFetch } from '../api/client';
 import {
   Calendar, RefreshCw, Box, UtensilsCrossed, Clock, Flame, Sparkles,
   ArrowRightLeft, ChefHat, Sun, Moon, Coffee,
@@ -238,7 +239,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
 
   const fetchTimeOfDay = async () => {
     try {
-      const res = await fetch('/api/time-of-day');
+      const res = await apiFetch('/api/time-of-day');
       const data = await res.json();
       setTimeOfDayData(data);
     } catch (e) {

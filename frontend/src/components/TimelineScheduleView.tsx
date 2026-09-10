@@ -5,6 +5,7 @@ import {
   ScheduleTimeSettings,
   Recipe
 } from '../types';
+import { apiFetch } from '../api/client';
 import {
   Clock,
   CheckCircle2,
@@ -62,7 +63,7 @@ export const TimelineScheduleView: React.FC<Props> = ({
 
   const fetchTimeline = async () => {
     try {
-      const res = await fetch('/api/schedule/timeline');
+      const res = await apiFetch('/api/schedule/timeline');
       if (res.ok) {
         const json: DailyTimelineResponse = await res.json();
         setData(json);
@@ -83,7 +84,7 @@ export const TimelineScheduleView: React.FC<Props> = ({
 
   const handleToggleTask = async (taskId: string, isCompleted: boolean) => {
     try {
-      const res = await fetch(`/api/schedule/task/${taskId}/toggle`, {
+      const res = await apiFetch(`/api/schedule/task/${taskId}/toggle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_completed: !isCompleted })
@@ -99,7 +100,7 @@ export const TimelineScheduleView: React.FC<Props> = ({
 
   const handleCompletePrepTomorrow = async () => {
     try {
-      const res = await fetch('/api/schedule/prep-tomorrow/complete', {
+      const res = await apiFetch('/api/schedule/prep-tomorrow/complete', {
         method: 'POST'
       });
       if (res.ok) {
@@ -123,7 +124,7 @@ export const TimelineScheduleView: React.FC<Props> = ({
     e.preventDefault();
     setIsSavingSettings(true);
     try {
-      const res = await fetch('/api/schedule/settings', {
+      const res = await apiFetch('/api/schedule/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settingsForm)

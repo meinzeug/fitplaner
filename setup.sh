@@ -61,8 +61,9 @@ fi
 
 # 2. Python Virtual Environment (.venv)
 echo -e "\n${COLOR_BLUE}[2/6] Richte Python-Umgebung ein (.venv)...${COLOR_RESET}"
-if [ ! -d ".venv" ]; then
+if [ ! -d ".venv" ] || ! .venv/bin/pip --version &>/dev/null; then
     echo "Erstelle isoliertes virtuelles Python Environment in $ROOT_DIR/.venv..."
+    rm -rf .venv
     python3 -m venv .venv || {
         echo -e "${COLOR_RED}❌ Fehler beim Erstellen der venv! Möglicherweise fehlt python3-venv.${COLOR_RESET}"
         echo "Installiere es mit: sudo apt install python3-venv"

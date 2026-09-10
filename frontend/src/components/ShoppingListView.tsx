@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingList, ShoppingItem, CustomShoppingItem, PantryItem } from '../types';
 import { PantryView } from './PantryView';
+import { apiFetch, getServerUrl } from '../api/client';
 import {
   ShoppingBag, Share2, Printer, Check, CheckSquare, Square, Plus,
   Archive, Sparkles, Trash2, PackageCheck, ChevronLeft, ChevronRight,
@@ -61,7 +62,7 @@ export const ShoppingListView: React.FC<Props> = ({
     try {
       const dayNames = days.map((d) => DAY_MAP[d] || d);
       const daysQuery = days.length === 7 ? '' : `&days=${encodeURIComponent(dayNames.join(','))}`;
-      const res = await fetch(`/api/shopping-list?week_offset=${weekOffset}${daysQuery}`);
+      const res = await apiFetch(`/api/shopping-list?week_offset=${weekOffset}${daysQuery}`);
       if (res.ok) {
         const data = await res.json();
         setActiveList(data);
@@ -129,7 +130,7 @@ export const ShoppingListView: React.FC<Props> = ({
   const handleCopyWhatsApp = async () => {
     try {
       const daysQuery = selectedDays.length < 7 ? `?days=${encodeURIComponent(selectedDays.map((d) => DAY_MAP[d] || d).join(','))}` : '';
-      const res = await fetch(`/api/shopping-list/export-whatsapp${daysQuery}`);
+      const res = await apiFetch(`/api/shopping-list/export-whatsapp${daysQuery}`);
       const data = await res.json();
       if (data.text) {
         await navigator.clipboard.writeText(data.text);
@@ -144,7 +145,8 @@ export const ShoppingListView: React.FC<Props> = ({
   const handleDownloadPdf = () => {
     setIsDownloadingPdf(true);
     const daysQuery = selectedDays.length < 7 ? `&days=${encodeURIComponent(selectedDays.map((d) => DAY_MAP[d] || d).join(','))}` : '';
-    const downloadUrl = `/api/shopping-list/export-pdf?week_offset=${selectedWeekOffset}${daysQuery}`;
+    const baseUrl = getServerUrl();
+    const downloadUrl = `${baseUrl}/api/shopping-list/export-pdf?week_offset=${selectedWeekOffset}${daysQuery}`;
     const link = document.createElement('a');
     link.href = downloadUrl;
     link.setAttribute('download', `Einkaufsliste_KW${selectedWeekOffset}.pdf`);

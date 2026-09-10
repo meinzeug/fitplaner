@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Recipe, RecipeIngredient, DetailedInstruction } from '../types';
 import { getRetailerBadgeClass } from '../utils/retailerBadges';
+import { apiFetch } from '../api/client';
 import {
   Search, Plus, Clock, Flame, ChefHat, Box, Utensils, X,
   Sparkles, Check, Edit3, Trash2, AlertCircle, AlertTriangle,
@@ -53,7 +54,7 @@ export const RecipeManagerView: React.FC<Props> = ({
   const fetchRecipes = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/recipes');
+      const res = await apiFetch('/api/recipes');
       if (res.ok) {
         const data = await res.json();
         setRecipes(data);
@@ -182,13 +183,13 @@ export const RecipeManagerView: React.FC<Props> = ({
 
       let response: Response;
       if (isCreatingNew) {
-        response = await fetch('/api/recipes', {
+        response = await apiFetch('/api/recipes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(finalRecipe),
         });
       } else {
-        response = await fetch(`/api/recipes/${finalRecipe.id}`, {
+        response = await apiFetch(`/api/recipes/${finalRecipe.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(finalRecipe),
@@ -231,7 +232,7 @@ export const RecipeManagerView: React.FC<Props> = ({
     const recipeId = deleteConfirmRecipe.id;
 
     try {
-      const res = await fetch(`/api/recipes/${recipeId}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/recipes/${recipeId}`, { method: 'DELETE' });
       if (res.ok || res.status === 404) {
         setRecipes((prev) => prev.filter((r) => r.id !== recipeId));
         showToast('🗑️ Rezept erfolgreich gelöscht.');

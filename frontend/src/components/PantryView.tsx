@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PantryItem } from '../types';
+import { apiFetch } from '../api/client';
 import { Archive, Plus, Barcode, FileText, Trash2, AlertTriangle, CheckCircle, Clock, Calendar, Sparkles, Search, ChevronRight, Pencil } from 'lucide-react';
 
 interface Props {
@@ -93,7 +94,7 @@ export const PantryView: React.FC<Props> = ({
     if (!barcodeInput.trim()) return;
     setBarcodeLoading(true);
     try {
-      const res = await fetch('/api/scanners/barcode', {
+      const res = await apiFetch('/api/scanners/barcode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ barcode: barcodeInput.trim() }),
@@ -134,7 +135,7 @@ export const PantryView: React.FC<Props> = ({
     if (!receiptText.trim()) return;
     setReceiptLoading(true);
     try {
-      const res = await fetch('/api/scanners/receipt', {
+      const res = await apiFetch('/api/scanners/receipt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ receipt_text: receiptText }),
@@ -153,7 +154,7 @@ export const PantryView: React.FC<Props> = ({
   const handleBookReceiptItems = async () => {
     if (!receiptResult || !receiptResult.items) return;
     try {
-      await fetch('/api/pantry/book-cart', {
+      await apiFetch('/api/pantry/book-cart', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: receiptResult.items }),

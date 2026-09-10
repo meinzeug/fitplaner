@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FamilyVitalityScore, MemberVitalityDetail } from '../types';
+import { apiFetch } from '../api/client';
 import {
   Heart,
   Sparkles,
@@ -30,7 +31,7 @@ export const FamilyVitalityView: React.FC<Props> = ({ onUpdateWater, onNavigateT
 
   const fetchVitality = async () => {
     try {
-      const res = await fetch('/api/vitality/radar');
+      const res = await apiFetch('/api/vitality/radar');
       if (res.ok) {
         const data = await res.json();
         setVitality(data);
@@ -52,7 +53,7 @@ export const FamilyVitalityView: React.FC<Props> = ({ onUpdateWater, onNavigateT
       if (onUpdateWater) {
         await onUpdateWater(memberId, delta);
       } else {
-        await fetch(`/api/family/members/${memberId}/water`, {
+        await apiFetch(`/api/family/members/${memberId}/water`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ delta_ml: delta })

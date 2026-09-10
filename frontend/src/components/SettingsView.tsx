@@ -3,13 +3,15 @@ import { AppSettings } from '../types';
 import {
   Settings, Store, Check, Wallet, Heart, Radio,
   Smartphone, Sparkles, CheckCircle2, RotateCcw,
-  Sliders, ShieldCheck, HelpCircle, Calendar, UtensilsCrossed
+  Sliders, ShieldCheck, HelpCircle, Calendar, UtensilsCrossed, Server
 } from 'lucide-react';
+import { getServerUrl, isCapacitorNative } from '../api/client';
 
 interface Props {
   settings: AppSettings;
   onSaveSettings: (newSettings: AppSettings) => Promise<void>;
   onClose?: () => void;
+  onOpenServerModal?: () => void;
 }
 
 interface SupermarketInfo {
@@ -101,6 +103,7 @@ export const SettingsView: React.FC<Props> = ({
   settings,
   onSaveSettings,
   onClose,
+  onOpenServerModal,
 }) => {
   const defaultDays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
   const defaultMealSharing = {
@@ -281,6 +284,40 @@ export const SettingsView: React.FC<Props> = ({
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* SECTION 0: Server & Heimnetzwerk-Verbindung */}
+        <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 sm:p-6 rounded-3xl shadow-md border border-slate-700/50 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30 shrink-0">
+                <Server className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-white flex items-center gap-2">
+                  Server-Verbindung & WLAN
+                  {isCapacitorNative() && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">Android APK</span>
+                  )}
+                </h3>
+                <p className="text-xs text-slate-300 font-mono mt-0.5 break-all">
+                  {getServerUrl() || 'http://localhost:8090'}
+                </p>
+              </div>
+            </div>
+            {onOpenServerModal && (
+              <button
+                type="button"
+                onClick={onOpenServerModal}
+                className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition shadow-sm shrink-0 flex items-center gap-1.5"
+              >
+                <span>Ändern</span>
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Der FitPlaner Server läuft auf deinem PC im lokalen Netzwerk. Hier kannst du die Ziel-IP anpassen oder die Verbindung testen.
+          </p>
+        </div>
+
         {/* SECTION 1: Supermärkte & Händler */}
         <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
