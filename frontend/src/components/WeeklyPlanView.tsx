@@ -3,6 +3,7 @@ import { WeeklyPlan, FamilyMember, Recipe, PantryItem, PersonMealPortion, Scaled
 import { RecipeModal } from './RecipeModal';
 import { SavingsVitalityCockpit } from './SavingsVitalityCockpit';
 import { getRecipeGlycemicBadge } from '../utils/plantDiversityTracker';
+import { formatHumanQuantity } from '../utils/humanQuantity';
 import { apiFetch } from '../api/client';
 import {
   Calendar, RefreshCw, Box, UtensilsCrossed, Clock, Flame, Sparkles,
@@ -837,22 +838,25 @@ export const WeeklyPlanView: React.FC<Props> = ({
                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-1 text-xs">
                       <span className="font-bold text-slate-700 block mb-1">
                         {isAllSelected
-                          ? `Gesamtmenge für alle ${members.length} Familienmitglieder:`
+                          ? `Zutaten für alle ${members.length} Personen:`
                           : `Portion für ${currentMember.name}:`}
                       </span>
-                      {bfPortion?.scaled_ingredients.map((ing, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-slate-600">
-                          <span>• {ing.name}</span>
-                          <span className="font-mono font-semibold text-slate-800 flex items-center">
-                            {ing.amount} {ing.unit}
-                            {ing.matched_retailer && (
-                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold shadow-xs ${getRetailerBadgeClass(resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers))}`}>
-                                {resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers)}
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      ))}
+                      {bfPortion?.scaled_ingredients.map((ing, idx) => {
+                        const h = formatHumanQuantity(typeof ing.amount === 'number' ? ing.amount : parseFloat(String(ing.amount)), ing.unit);
+                        return (
+                          <div key={idx} className="flex items-center justify-between text-slate-600">
+                            <span>• {ing.name}</span>
+                            <span className="font-mono font-semibold text-slate-800 flex items-center">
+                              {h.amount} {h.unit}
+                              {ing.matched_retailer && (
+                                <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold shadow-xs ${getRetailerBadgeClass(resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers))}`}>
+                                  {resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers)}
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -951,22 +955,25 @@ export const WeeklyPlanView: React.FC<Props> = ({
                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-1 text-xs">
                       <span className="font-bold text-slate-700 block mb-1">
                         {isAllSelected
-                          ? `Gesamtmenge für alle ${members.length} Familienmitglieder:`
+                          ? `Zutaten für alle ${members.length} Personen:`
                           : `Portion für ${currentMember.name}:`}
                       </span>
-                      {luPortion?.scaled_ingredients.map((ing, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-slate-600">
-                          <span>• {ing.name}</span>
-                          <span className="font-mono font-semibold text-slate-800 flex items-center">
-                            {ing.amount} {ing.unit}
-                            {ing.matched_retailer && (
-                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold shadow-xs ${getRetailerBadgeClass(resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers))}`}>
-                                {resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers)}
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      ))}
+                      {luPortion?.scaled_ingredients.map((ing, idx) => {
+                        const h = formatHumanQuantity(typeof ing.amount === 'number' ? ing.amount : parseFloat(String(ing.amount)), ing.unit);
+                        return (
+                          <div key={idx} className="flex items-center justify-between text-slate-600">
+                            <span>• {ing.name}</span>
+                            <span className="font-mono font-semibold text-slate-800 flex items-center">
+                              {h.amount} {h.unit}
+                              {ing.matched_retailer && (
+                                <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold shadow-xs ${getRetailerBadgeClass(resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers))}`}>
+                                  {resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers)}
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -1064,22 +1071,25 @@ export const WeeklyPlanView: React.FC<Props> = ({
                     <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-1 text-xs">
                       <span className="font-bold text-slate-700 block mb-1">
                         {isAllSelected
-                          ? `Gesamtmenge für alle ${members.length} Familienmitglieder:`
-                          : `Teller-Portion für ${currentMember.name}:`}
+                          ? `Zutaten für alle ${members.length} Personen:`
+                          : `Portion für ${currentMember.name}:`}
                       </span>
-                      {diPortion?.scaled_ingredients.map((ing, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-slate-600">
-                          <span>• {ing.name}</span>
-                          <span className="font-mono font-semibold text-slate-800 flex items-center">
-                            {ing.amount} {ing.unit}
-                            {ing.matched_retailer && (
-                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold shadow-xs ${getRetailerBadgeClass(resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers))}`}>
-                                {resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers)}
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      ))}
+                      {diPortion?.scaled_ingredients.map((ing, idx) => {
+                        const h = formatHumanQuantity(typeof ing.amount === 'number' ? ing.amount : parseFloat(String(ing.amount)), ing.unit);
+                        return (
+                          <div key={idx} className="flex items-center justify-between text-slate-600">
+                            <span>• {ing.name}</span>
+                            <span className="font-mono font-semibold text-slate-800 flex items-center">
+                              {h.amount} {h.unit}
+                              {ing.matched_retailer && (
+                                <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold shadow-xs ${getRetailerBadgeClass(resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers))}`}>
+                                  {resolveDisplayRetailer(ing.matched_retailer, plan.active_retailers)}
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 

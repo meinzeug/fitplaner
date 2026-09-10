@@ -1,8 +1,8 @@
 import React from 'react';
-import { Recipe, PersonMealPortion, PantryItem, FamilyMember } from '../types';
+import { Recipe, PersonMealPortion, FamilyMember, PantryItem, Retailer } from '../types';
+import { formatHumanQuantity } from '../utils/humanQuantity';
 import {
-  Clock, Flame, CheckCircle2, Box, Utensils, ChefHat, X, Sparkles,
-  AlertCircle, AlertTriangle, ShieldCheck
+  Clock, Flame, Users, ChefHat, CheckCircle2, AlertCircle, AlertTriangle, Box, X, ShieldCheck, Heart, Sparkles, Scale, Info, Utensils
 } from 'lucide-react';
 import { getRetailerBadgeClass } from '../utils/retailerBadges';
 import { resolveDisplayRetailer } from './WeeklyPlanView';
@@ -143,32 +143,32 @@ export const RecipeModal: React.FC<Props> = ({
           })()}
 
           {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-4 gap-2 text-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
-            <div>
-              <span className="text-[10px] text-slate-400 font-semibold block uppercase">Vorbereitung</span>
-              <span className="text-sm font-bold text-slate-800 flex items-center justify-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-slate-400" /> {recipe.prep_time_minutes} Min
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-2 text-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
+            <div className="min-w-0">
+              <span className="text-[9px] sm:text-[10px] text-slate-400 font-bold block uppercase truncate">Vorber.</span>
+              <span className="text-xs sm:text-sm font-bold text-slate-800 flex items-center justify-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" /> {recipe.prep_time_minutes}m
               </span>
             </div>
-            <div>
-              <span className="text-[10px] text-slate-400 font-semibold block uppercase">Kochzeit</span>
-              <span className="text-sm font-bold text-slate-800 flex items-center justify-center gap-1">
-                <ChefHat className="w-3.5 h-3.5 text-slate-400" /> {recipe.cook_time_minutes} Min
+            <div className="min-w-0">
+              <span className="text-[9px] sm:text-[10px] text-slate-400 font-bold block uppercase truncate">Kochen</span>
+              <span className="text-xs sm:text-sm font-bold text-slate-800 flex items-center justify-center gap-1">
+                <ChefHat className="w-3.5 h-3.5 text-slate-400 shrink-0" /> {recipe.cook_time_minutes}m
               </span>
             </div>
-            <div>
-              <span className="text-[10px] text-slate-400 font-semibold block uppercase">
-                {isAll ? (countDisplay ? `Familie (${countDisplay} P.)` : 'Familien-Portion') : `Portion ${activeMember.name}`}
+            <div className="min-w-0">
+              <span className="text-[9px] sm:text-[10px] text-slate-400 font-bold block uppercase truncate">
+                {isAll ? (countDisplay ? `Fam. (${countDisplay}P)` : 'Familie') : 'Kalorien'}
               </span>
-              <span className="text-sm font-black text-orange-600 flex items-center justify-center gap-1">
-                <Flame className="w-3.5 h-3.5" /> {portion?.scaled_calories || recipe.base_calories} kcal
+              <span className="text-xs sm:text-sm font-black text-orange-600 flex items-center justify-center gap-1">
+                <Flame className="w-3.5 h-3.5 shrink-0" /> {portion?.scaled_calories || recipe.base_calories}
               </span>
             </div>
-            <div>
-              <span className="text-[10px] text-slate-400 font-semibold block uppercase">
-                {isAll ? 'Gesamt-Protein' : 'Protein'}
+            <div className="min-w-0">
+              <span className="text-[9px] sm:text-[10px] text-slate-400 font-bold block uppercase truncate">
+                Protein
               </span>
-              <span className="text-sm font-black text-blue-700">
+              <span className="text-xs sm:text-sm font-black text-blue-700">
                 {portion?.scaled_protein_g || recipe.base_protein_g}g
               </span>
             </div>
@@ -207,7 +207,10 @@ export const RecipeModal: React.FC<Props> = ({
                     </div>
 
                     <div className="text-right flex items-center justify-end">
-                      <span className="font-mono font-bold text-slate-900">{ing.amount} {ing.unit}</span>
+                      {(() => {
+                        const h = formatHumanQuantity(typeof ing.amount === 'number' ? ing.amount : parseFloat(String(ing.amount)), ing.unit);
+                        return <span className="font-mono font-bold text-slate-900">{h.amount} {h.unit}</span>;
+                      })()}
                       {displayRetailer && (
                         <span className={`ml-1.5 text-[10px] px-2 py-0.5 rounded-md font-bold shadow-xs ${getRetailerBadgeClass(displayRetailer)}`}>
                           {displayRetailer}

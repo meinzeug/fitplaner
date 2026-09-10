@@ -779,7 +779,7 @@ export function App() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-10">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-36 sm:pb-32 md:pb-16">
         {activeTab === 'heute' && (
           <DailyMissionView
             dailyHub={dailyHub}

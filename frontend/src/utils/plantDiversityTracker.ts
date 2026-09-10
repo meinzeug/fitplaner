@@ -361,24 +361,24 @@ export function getRecipeGlycemicBadge(recipe: Recipe): {
 
   if (estimatedGL <= 10) {
     return {
-      label: '🟢 Niedrige Glykämische Last',
+      label: '🌿 Blutzucker-freundlich',
       level: 'low',
       color: '#10B981',
-      explanation: 'Optimal für Blutzucker-Stabilität & anhaltende Konzentration ohne Heißhunger.',
+      explanation: 'Optimal für stabilen Blutzucker & anhaltende Konzentration ohne Heißhunger.',
     };
   } else if (estimatedGL <= 19) {
     return {
-      label: '🟡 Moderate Glykämische Last',
+      label: '🔋 Hält lange satt',
       level: 'medium',
       color: '#F59E0B',
-      explanation: 'Gleichmäßige Energieversorgung, ideal vor dem Sport.',
+      explanation: 'Gleichmäßige Energieversorgung über viele Stunden.',
     };
   } else {
     return {
-      label: '🔴 Höhere Glykämische Last',
+      label: '⚡ Schnelle Energie',
       level: 'high',
       color: '#EF4444',
-      explanation: 'Schnelle Kohlenhydrate – am besten mit Proteinen oder Ballaststoffen kombinieren.',
+      explanation: 'Liefert rasch Energie für den Körper.',
     };
   }
 }

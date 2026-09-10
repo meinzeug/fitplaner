@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ShoppingList, ShoppingItem, CustomShoppingItem, PantryItem, FamilyMember, ShoppingItemOverride, Retailer, RecurringPurchaseRule } from '../types';
+import { formatHumanQuantity, formatHumanQuantityText } from '../utils/humanQuantity';
 import { PantryView } from './PantryView';
 import { ChatGptLiveModal } from './ChatGptLiveModal';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
@@ -286,6 +287,7 @@ export const ShoppingListView: React.FC<Props> = ({
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [showSplitModal, setShowSplitModal] = useState(false);
   const [isBarcodeScannerOpen, setIsBarcodeScannerOpen] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
 
   const handleAddScannedProduct = async (product: {
     name: string;
@@ -936,10 +938,10 @@ export const ShoppingListView: React.FC<Props> = ({
             </div>
 
             <div className="text-xs text-slate-500 font-medium mt-1 flex flex-wrap items-center gap-x-2">
-              <span>Bedarf: {item.total_quantity} {item.unit}</span>
+              <span>Bedarf: {formatHumanQuantityText(item.total_quantity, item.unit)}</span>
               {item.leftover_after_purchase > 0 && !item.is_covered_by_stock && item.is_pantry_eligible ? (
                 <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded text-[10px] border border-emerald-200">
-                  📦 Rest {item.leftover_after_purchase} {item.unit} wandert ins Vorratslager
+                  📦 Rest {formatHumanQuantityText(item.leftover_after_purchase, item.unit)} wandert ins Vorratslager
                 </span>
               ) : (
                 !item.is_covered_by_stock && !item.is_pantry_eligible && (
@@ -1331,270 +1333,77 @@ export const ShoppingListView: React.FC<Props> = ({
       ) : (
         /* Einkaufsliste View */
         <>
-          {/* Sticky Supermarkt Live-Modus Cockpit */}
+          {/* Sticky Supermarkt Live-Modus Cockpit (wenn aktiv) */}
           {isLiveMode && (
-            <div className="sticky top-2 z-30 bg-slate-950 text-white rounded-3xl p-4 shadow-2xl border border-emerald-600/50 mb-4 space-y-3 backdrop-blur-md bg-opacity-95 animate-fadeIn">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                  </span>
-                  <span className="text-sm font-black tracking-wide uppercase text-emerald-400">
-                    🛒 Live im Laden
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsBarcodeScannerOpen(true)}
-                    className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs flex items-center gap-1.5 border border-slate-700 shadow-sm active:scale-95 transition"
-                    title="Artikel-Barcode im Laden scannen"
-                  >
-                    <Barcode className="w-4 h-4 text-emerald-400" />
-                    <span>Scan</span>
-                  </button>
-
-                  <button
-                    onClick={() => setShowFinishShoppingModal(true)}
-                    className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition"
-                  >
-                    <PackageCheck className="w-4 h-4" />
-                    <span>Einkauf fertig ({checkedItemsCount}/{totalActiveItemsCount})</span>
-                  </button>
-
-                  <button
-                    onClick={toggleLiveMode}
-                    className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
-                    title="Live-Modus beenden"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Live Progress Bar */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs font-bold text-slate-300">
-                  <span>{checkedItemsCount} von {totalActiveItemsCount} Artikeln im Wagen</span>
-                  <span className="font-mono text-emerald-400">{progressPercent}%</span>
-                </div>
-                <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700">
-                  <div
-                    className="bg-gradient-to-r from-emerald-500 to-teal-400 h-2.5 rounded-full transition-all duration-300"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Live Cart Financials */}
-              <div className="grid grid-cols-3 gap-2 pt-1">
-                <div className="bg-slate-900/90 rounded-xl p-2 text-center border border-slate-800">
-                  <div className="text-[10px] text-slate-400 font-bold uppercase">Im Wagen</div>
-                  <div className="text-sm font-black font-mono text-emerald-400">
-                    {checkedCost.toFixed(2)} €
+            <div className="sticky top-2 z-30 bg-slate-950 text-white rounded-2xl p-3 shadow-xl border border-emerald-500/50 mb-3 flex items-center justify-between gap-2 backdrop-blur-md bg-opacity-95 animate-fadeIn">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="relative flex h-2.5 w-2.5 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                </span>
+                <div className="min-w-0">
+                  <div className="text-xs font-black text-white truncate">
+                    {checkedItemsCount} von {totalActiveItemsCount} im Wagen ({progressPercent}%)
                   </div>
-                </div>
-                <div className="bg-slate-900/90 rounded-xl p-2 text-center border border-slate-800">
-                  <div className="text-[10px] text-slate-400 font-bold uppercase">Noch offen</div>
-                  <div className="text-sm font-black font-mono text-amber-400">
-                    {remainingCost.toFixed(2)} €
-                  </div>
-                </div>
-                <div className="bg-slate-900/90 rounded-xl p-2 text-center border border-slate-800">
-                  <div className="text-[10px] text-slate-400 font-bold uppercase">Budget-Puffer</div>
-                  <div className={`text-sm font-black font-mono ${(shoppingList?.budget || 120) - (checkedCost + remainingCost) >= 0 ? 'text-teal-400' : 'text-red-400'}`}>
-                    {((shoppingList?.budget || 120) - (checkedCost + remainingCost)).toFixed(2)} €
+                  <div className="text-[10px] text-emerald-400 font-mono truncate">
+                    {checkedCost.toFixed(2)} € bezahlt • noch {remainingCost.toFixed(2)} €
                   </div>
                 </div>
               </div>
 
-              {/* Quick Filial-Tabs in Cockpit */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5 scrollbar-none">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
-                  onClick={() => setSelectedStoreFilter('all')}
-                  className={`px-3 py-1 rounded-xl text-xs font-bold shrink-0 transition ${
-                    selectedStoreFilter === 'all'
-                      ? 'bg-white text-slate-900 font-black shadow-sm'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                  }`}
+                  type="button"
+                  onClick={() => setIsBarcodeScannerOpen(true)}
+                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 active:scale-95 transition"
+                  title="Barcode scannen"
                 >
-                  Alle ({totalActiveItemsCount})
+                  <Barcode className="w-4 h-4" />
                 </button>
-                {availableStores.map(({ key, count, meta }) => {
-                  const isSelected = selectedStoreFilter === key;
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => setSelectedStoreFilter(key)}
-                      className={`px-3 py-1 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1 border ${
-                        isSelected
-                          ? 'bg-emerald-500 text-slate-950 font-black border-emerald-400 shadow-sm'
-                          : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-                      }`}
-                    >
-                      <span>{meta.icon}</span>
-                      <span>{meta.label}</span>
-                      <span className="text-[10px] opacity-80 font-mono">({count})</span>
-                    </button>
-                  );
-                })}
+
+                <button
+                  type="button"
+                  onClick={() => setShowFinishShoppingModal(true)}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md active:scale-95 transition"
+                >
+                  Fertig ✅
+                </button>
+
+                <button
+                  type="button"
+                  onClick={toggleLiveMode}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-white"
+                  title="Live-Modus schließen"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             </div>
           )}
 
-          {/* Week Selector Strip */}
-          <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+          {/* Clean Store Filter & Action Bar (Direkt ganz oben!) */}
+          <div className="bg-white rounded-2xl p-2.5 border border-slate-200 shadow-xs flex items-center justify-between gap-2">
+            {/* Horizontal Store Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none flex-1 min-w-0">
               <button
-                onClick={() => onChangeWeek(selectedWeekOffset - 1)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition active:scale-95"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Vorherige Woche</span>
-                <span className="sm:hidden">Zurück</span>
-              </button>
-
-              <span className="text-xs sm:text-sm font-black text-slate-800 flex items-center gap-1.5 px-2">
-                <Calendar className="w-4 h-4 text-emerald-600" />
-                {shoppingList.week_label || 'Aktuelle Woche'}
-              </span>
-
-              <button
-                onClick={() => onChangeWeek(selectedWeekOffset + 1)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition active:scale-95"
-              >
-                <span className="hidden sm:inline">Nächste Woche</span>
-                <span className="sm:hidden">Weiter</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* View Mode Toggle: Gang-Laufweg vs Supermarkt */}
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-              <button
-                onClick={() => setViewMode('aisle')}
-                className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold transition ${
-                  viewMode === 'aisle' ? 'bg-white text-emerald-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Compass className="w-3.5 h-3.5 text-emerald-600" />
-                <span>🚶‍♂️ Gang-Laufweg</span>
-              </button>
-              <button
-                onClick={() => setViewMode('store')}
-                className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold transition ${
-                  viewMode === 'store' ? 'bg-white text-emerald-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5 text-slate-500" />
-                <span>🏪 Nach Filiale</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Day Filter Bar */}
-          <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5 mr-1">
-                <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-                🛒 Einkauf für Tage:
-              </span>
-              {ALL_DAYS_SHORT.map((dayShort) => {
-                const isSelected = selectedDays.includes(dayShort);
-                return (
-                  <button
-                    key={dayShort}
-                    onClick={() => toggleDayFilter(dayShort)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
-                      isSelected
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800'
-                    }`}
-                  >
-                    {dayShort}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[11px] font-bold text-slate-400 mr-1">Schnellwahl:</span>
-              <button
-                onClick={() => setSelectedDays([...ALL_DAYS_SHORT])}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                  selectedDays.length === 7
-                    ? 'bg-emerald-100 text-emerald-800 font-bold border border-emerald-300'
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                }`}
-              >
-                Alle Tage
-              </button>
-              <button
-                onClick={() => setSelectedDays(['Mo', 'Di', 'Mi'])}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                  selectedDays.length === 3 && selectedDays.every((d) => ['Mo', 'Di', 'Mi'].includes(d))
-                    ? 'bg-emerald-100 text-emerald-800 font-bold border border-emerald-300'
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                }`}
-              >
-                Mo–Mi
-              </button>
-              <button
-                onClick={() => setSelectedDays(['Do', 'Fr', 'Sa'])}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                  selectedDays.length === 3 && selectedDays.every((d) => ['Do', 'Fr', 'Sa'].includes(d))
-                    ? 'bg-emerald-100 text-emerald-800 font-bold border border-emerald-300'
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                }`}
-              >
-                Do–Sa
-              </button>
-            </div>
-          </div>
-
-          {/* Filial-Filter Bar */}
-          <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div className="flex items-center justify-between w-full md:w-auto">
-              <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5 mr-1">
-                <Store className="w-3.5 h-3.5 text-emerald-600" />
-                Filiale filtern:
-              </span>
-              {selectedStoreFilter !== 'all' && (
-                <button
-                  onClick={() => setSelectedStoreFilter('all')}
-                  className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 active:scale-95 transition md:hidden"
-                >
-                  Alle anzeigen ↺
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none w-full md:w-auto">
-              <button
+                type="button"
                 onClick={() => setSelectedStoreFilter('all')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1.5 active:scale-95 ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold shrink-0 transition ${
                   selectedStoreFilter === 'all'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                <span>🛒 Alle Filialen</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                  selectedStoreFilter === 'all' ? 'bg-white/20 text-white' : 'bg-black/5 text-slate-700'
-                }`}>
-                  {allItemsWithStore.length}
-                </span>
+                Alle ({totalActiveItemsCount})
               </button>
-
               {availableStores.map(({ key, count, meta }) => {
                 const isSelected = selectedStoreFilter === key;
                 return (
                   <button
                     key={key}
+                    type="button"
                     onClick={() => setSelectedStoreFilter(key)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1.5 active:scale-95 border ${
+                    className={`px-2.5 py-1.5 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1 border ${
                       isSelected
                         ? `${meta.activeBg} ${meta.activeBorder}`
                         : `${meta.bg} hover:opacity-90`
@@ -1602,427 +1411,58 @@ export const ShoppingListView: React.FC<Props> = ({
                   >
                     <span>{meta.icon}</span>
                     <span>{meta.label}</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                      isSelected ? 'bg-black/20 text-white' : 'bg-black/5 text-slate-700'
-                    }`}>
-                      {count}
-                    </span>
+                    <span className="text-[10px] opacity-80 font-mono">({count})</span>
                   </button>
                 );
               })}
-
-              <button
-                onClick={() => setOnlyDealsFilter(!onlyDealsFilter)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1.5 active:scale-95 border ${
-                  onlyDealsFilter
-                    ? 'bg-gradient-to-r from-red-600 to-amber-500 text-white border-red-600 shadow-sm'
-                    : 'bg-amber-50/80 text-amber-900 border-amber-200 hover:bg-amber-100'
-                }`}
-                title="Nur aktuelle Prospekt-Angebote mit Rabatten anzeigen"
-              >
-                <Flame className={`w-3.5 h-3.5 ${onlyDealsFilter ? 'text-yellow-200 fill-yellow-200' : 'text-amber-600'}`} />
-                <span>🔥 Nur Prospekt-Deals</span>
-              </button>
-
-              {selectedStoreFilter !== 'all' && (
-                <button
-                  onClick={() => setSelectedStoreFilter('all')}
-                  className="hidden md:inline-flex text-xs font-bold text-emerald-600 hover:text-emerald-700 px-2 py-1 active:scale-95 transition ml-1"
-                >
-                  Zurücksetzen ↺
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Header Banner & Savings */}
-          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6 rounded-3xl shadow-xl flex flex-col gap-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <ShoppingBag className="w-6 h-6 text-emerald-400" />
-                  <h2 className="text-2xl font-bold">Wochen-Einkaufsliste</h2>
-                </div>
-                <p className="text-xs text-slate-400 max-w-lg">
-                  {viewMode === 'aisle'
-                    ? 'Sortiert nach deinem Supermarkt-Laufweg (Obst & Gemüse ➔ Kühlregal ➔ Fleisch/Fisch ➔ Trockenware). Kein Zickzack-Laufen mehr!'
-                    : 'Getrennt nach Netto, NP und Vorratskammer.'}
-                </p>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsBarcodeScannerOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-black rounded-xl text-xs shadow-lg transition active:scale-95 border border-emerald-400/40"
-                  title="Supermarkt Barcode mit der Smartphone-Kamera scannen"
-                >
-                  <Barcode className="w-4 h-4 text-emerald-200" />
-                  <span>📷 Barcode scannen</span>
-                </button>
-
-                <button
-                  onClick={() => setIsChatGptModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-black rounded-xl text-xs shadow-lg transition active:scale-95"
-                  title="Live KI-Einkaufsbegleiter mit Kamera und Audio in ChatGPT oder In-App starten"
-                >
-                  <Sparkles className="w-4 h-4 text-slate-950 fill-slate-950" />
-                  <span>⚡ KI-Begleiter (ChatGPT Live)</span>
-                </button>
-
-                {onOpenNettoBrowser && (
-                  <button
-                    onClick={onOpenNettoBrowser}
-                    className="flex items-center gap-1.5 px-3.5 py-2.5 bg-amber-400 hover:bg-amber-500 text-stone-950 rounded-xl text-xs font-black shadow-md transition active:scale-95"
-                    title="Netto-Online Kategorieseiten live und ohne KI auslesen"
-                  >
-                    <span>🟡 Netto Live-Deals</span>
-                  </button>
-                )}
-
-                {onOpenPdfScanner && (
-                  <button
-                    onClick={onOpenPdfScanner}
-                    className="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-black shadow-md transition active:scale-95"
-                    title="Supermarkt PDF-Prospekt ohne KI analysieren"
-                  >
-                    <span>📄 PDF-Scanner</span>
-                  </button>
-                )}
-
-                <button
-                  onClick={handleDownloadPdf}
-                  disabled={isDownloadingPdf}
-                  className="flex items-center gap-1.5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black shadow-md transition active:scale-95 disabled:opacity-50"
-                  title="Fertige Einkaufsliste als druckbares PDF herunterladen"
-                >
-                  <FileDown className={`w-4 h-4 ${isDownloadingPdf ? 'animate-bounce' : ''}`} />
-                  <span>{isDownloadingPdf ? 'Generiere PDF...' : '📄 PDF herunterladen'}</span>
-                </button>
-
-                <button
-                  onClick={handleBookAllToPantry}
-                  className="flex items-center gap-1.5 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow transition active:scale-95"
-                  title="Nur haltbare Trockenwaren-Reste (z.B. Nudeln, Reis, Kerne) ins Vorratslager buchen. Frischeprodukte (Fleisch, Fisch, Gemüse) werden frisch verzehrt."
-                >
-                  <PackageCheck className="w-4 h-4" />
-                  Restmengen ins Lager buchen
-                </button>
-
-                <button
-                  onClick={handleCopyWhatsApp}
-                  className="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow transition active:scale-95"
-                >
-                  <Share2 className="w-4 h-4" />
-                  WhatsApp
-                </button>
-
-                <button
-                  onClick={() => window.print()}
-                  className="p-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs transition"
-                  title="Drucken"
-                >
-                  <Printer className="w-4 h-4" />
-                </button>
-              </div>
             </div>
 
-            {/* Cost, Budget & Savings Widget */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-800/80 p-4 rounded-2xl border border-slate-700">
-              <div>
-                <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">Tatsächliche Kosten</span>
-                <span className="text-xl sm:text-2xl font-black text-white">{shoppingList.total_price.toFixed(2)} €</span>
-              </div>
-
-              <div>
-                <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">Wochenbudget</span>
-                <span className="text-xl sm:text-2xl font-black text-white">{(shoppingList.budget || 120).toFixed(2)} €</span>
-              </div>
-
-              <div>
-                <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">Budget-Rest</span>
-                <span className={`text-xl sm:text-2xl font-black ${
-                  (shoppingList.budget_difference || 0) < 0 ? 'text-red-400' : 'text-emerald-400'
-                }`}>
-                  {(shoppingList.budget_difference || 0) > 0 ? '+' : ''}{(shoppingList.budget_difference || 0).toFixed(2)} €
-                </span>
-              </div>
-
-              <div>
-                <span className="text-[11px] font-semibold text-emerald-400 block uppercase tracking-wider">Ersparnis Rabatte</span>
-                <span className="text-xl sm:text-2xl font-black text-emerald-400">~{shoppingList.total_savings.toFixed(2)} €</span>
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs text-slate-400">
-                <span>Budget-Auslastung: {Math.round((shoppingList.total_price / Math.max(1, shoppingList.budget || 120)) * 100)}%</span>
-                <span>Limit: {(shoppingList.budget || 120).toFixed(2)} €</span>
-              </div>
-              <div className="w-full h-2.5 bg-slate-700 rounded-full overflow-hidden p-0.5">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    shoppingList.budget_status === 'exceeded'
-                      ? 'bg-red-500'
-                      : shoppingList.budget_status === 'warning'
-                      ? 'bg-amber-400'
-                      : 'bg-emerald-400'
-                  }`}
-                  style={{
-                    width: `${Math.min(100, Math.round((shoppingList.total_price / Math.max(1, shoppingList.budget || 120)) * 100))}%`,
-                  }}
-                />
-              </div>
-            </div>
-
-            {shoppingList.budget_status === 'exceeded' && (
-              <div className="p-3 bg-red-950/70 border border-red-500/40 rounded-xl flex items-center gap-2.5 text-xs text-red-200">
-                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-                <span>
-                  Achtung: Der Einkauf übersteigt das für diese Woche festgelegte Budget um <strong>{Math.abs(shoppingList.budget_difference || 0).toFixed(2)} €</strong>.
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Multi-Store Basket Comparison & Optimal Split */}
-          {multiStoreReport && (
-            <div className="bg-gradient-to-br from-slate-900 via-indigo-950/70 to-slate-900 text-white p-5 rounded-3xl border border-indigo-500/30 shadow-lg">
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-amber-400 text-stone-950 flex items-center justify-center font-black text-base shadow-md">
-                    ⚡
-                  </div>
-                  <div>
-                    <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                      Multi-Store Best-Price & Warenkorb-Split
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        KI-FREI BERECHNET
-                      </span>
-                    </h3>
-                    <p className="text-xs text-slate-400">
-                      Vergleich deiner Einkaufsliste über alle Supermärkte mit optimalem Spar-Split.
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setShowSplitModal(!showSplitModal)}
-                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-sm"
-                >
-                  {showSplitModal ? 'Split-Details schließen' : '🔍 Split-Aufteilung ansehen'}
-                </button>
-              </div>
-
-              {/* Comparison Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {/* Netto */}
-                <div className="bg-slate-800/80 p-3 rounded-2xl border border-amber-500/30">
-                  <span className="text-[10px] font-bold text-amber-300 uppercase block">🟡 Nur Netto</span>
-                  <div className="text-lg font-black text-white mt-0.5">
-                    {(multiStoreReport.singleStoreBaskets['Netto']?.totalCost || 48.2).toFixed(2)} €
-                  </div>
-                  <span className="text-[10px] text-slate-400">
-                    {multiStoreReport.singleStoreBaskets['Netto']?.dealItemsCount || 8} Knüller-Angebote
-                  </span>
-                </div>
-
-                {/* NP */}
-                <div className="bg-slate-800/80 p-3 rounded-2xl border border-red-500/30">
-                  <span className="text-[10px] font-bold text-red-300 uppercase block">🔴 Nur NP</span>
-                  <div className="text-lg font-black text-white mt-0.5">
-                    {(multiStoreReport.singleStoreBaskets['NP']?.totalCost || 51.4).toFixed(2)} €
-                  </div>
-                  <span className="text-[10px] text-slate-400">
-                    {multiStoreReport.singleStoreBaskets['NP']?.dealItemsCount || 6} Knüller-Angebote
-                  </span>
-                </div>
-
-                {/* Lidl */}
-                <div className="bg-slate-800/80 p-3 rounded-2xl border border-blue-500/30">
-                  <span className="text-[10px] font-bold text-blue-300 uppercase block">🔵 Nur Lidl</span>
-                  <div className="text-lg font-black text-white mt-0.5">
-                    {(multiStoreReport.singleStoreBaskets['Lidl']?.totalCost || 49.8).toFixed(2)} €
-                  </div>
-                  <span className="text-[10px] text-slate-400">Fitness- & Frische-Deals</span>
-                </div>
-
-                {/* Optimal Split */}
-                <div className="bg-gradient-to-br from-emerald-950/90 to-teal-900/90 p-3 rounded-2xl border border-emerald-400/50 shadow-inner">
-                  <span className="text-[10px] font-black text-emerald-300 uppercase block flex items-center gap-1">
-                    <span>🔥 Optimaler Spar-Split</span>
-                  </span>
-                  <div className="text-xl font-black text-emerald-300 mt-0.5">
-                    {multiStoreReport.optimalSplit.totalCost.toFixed(2)} €
-                  </div>
-                  <span className="text-[10px] font-bold text-emerald-400">
-                    +{(multiStoreReport.optimalSplit.totalSavingsVsBestSingle || 8.4).toFixed(2)} € extra gespart!
-                  </span>
-                </div>
-              </div>
-
-              {/* Split Breakdown Details if toggled */}
-              {showSplitModal && (
-                <div className="mt-4 p-4 bg-slate-950/70 rounded-2xl border border-white/10 space-y-3">
-                  <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                    Deine optimale Einkaufs-Route für maximale Ersparnis:
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {Object.entries(multiStoreReport.optimalSplit.splits).map(([store, data]) => {
-                      if (data.items.length === 0) return null;
-                      return (
-                        <div key={store} className="bg-slate-900/90 p-3 rounded-xl border border-slate-700">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-bold text-xs text-white">
-                              {store === 'Netto' ? '🟡 Netto Marken-Discount' : store === 'NP' ? '🔴 NP Discount' : `🏪 ${store}`}
-                            </span>
-                            <span className="text-xs font-black text-amber-400">
-                              {data.subtotal.toFixed(2)} € ({data.items.length} Artikel)
-                            </span>
-                          </div>
-                          <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
-                            {data.items.map((item, idx) => (
-                              <div key={idx} className="flex items-center justify-between text-[11px] text-slate-300">
-                                <span className="truncate pr-2">• {item.name}</span>
-                                <span className="shrink-0 text-slate-400 font-mono">
-                                  {item.packs_to_buy || 1}x ({item.total_price ? `${item.total_price.toFixed(2)} €` : '1.49 €'})
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Add Custom Item Form */}
-          <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
-            <h3 className="text-xs font-bold text-slate-700 mb-3 uppercase tracking-wider flex items-center gap-1.5">
-              <Plus className="w-4 h-4 text-emerald-600" />
-              Eigenen Artikel auf die Liste setzen (z. B. Backpapier, Hafermilch, Zahnpasta)
-            </h3>
-            <form onSubmit={handleCreateCustom} className="flex flex-wrap sm:flex-nowrap gap-2">
-              <input
-                type="text"
-                placeholder="Artikelname..."
-                value={customName}
-                onChange={(e) => setCustomName(e.target.value)}
-                className="flex-1 min-w-[200px] px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <input
-                type="number"
-                min="1"
-                value={customQty}
-                onChange={(e) => setCustomQty(parseFloat(e.target.value) || 1)}
-                className="w-20 px-3 py-2 text-xs rounded-xl border border-slate-200 text-center font-bold"
-              />
-              <select
-                value={customUnit}
-                onChange={(e) => setCustomUnit(e.target.value)}
-                className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
-              >
-                <option value="Stück">Stück</option>
-                <option value="Packung">Packung</option>
-                <option value="g">Gramm (g)</option>
-                <option value="ml">Milliliter (ml)</option>
-                <option value="Rolle">Rolle</option>
-              </select>
-              <select
-                value={customRetailer}
-                onChange={(e) => setCustomRetailer(e.target.value)}
-                className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-bold"
-              >
-                <option value="Netto">🟡 Netto Marken-Discount</option>
-                <option value="NP">🔴 NP Discount</option>
-                <option value="dm">🟣 dm Drogerie</option>
-                <option value="Rossmann">🔴 Rossmann Drogerie</option>
-                <option value="Apotheke">🟢 Apotheke / Gesundheit</option>
-                <option value="Tierbedarf">🐾 Tierbedarf</option>
-                <option value="Lidl">🔵 Lidl</option>
-                <option value="Aldi Süd">🔷 Aldi</option>
-                <option value="Rewe">🔴 Rewe</option>
-                <option value="Kaufland">🔴 Kaufland</option>
-                <option value="Edeka">🟡 Edeka</option>
-                <option value="Sonstiges">⚪ Sonstiges</option>
-              </select>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition shrink-0"
-              >
-                + Hinzufügen
-              </button>
+            {/* Quick Actions: 📷 Scan & ••• Mehr */}
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
                 onClick={() => setIsBarcodeScannerOpen(true)}
-                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-emerald-400 font-black text-xs rounded-xl shadow-sm transition shrink-0 flex items-center gap-1.5 active:scale-95"
-                title="Barcode scannen und automatisch zur Einkaufsliste hinzufügen"
+                className="px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-black transition active:scale-95 flex items-center gap-1 shadow-2xs"
+                title="Barcode scannen"
               >
-                <Barcode className="w-4 h-4 text-emerald-400" />
-                <span>📷 Barcode scannen</span>
+                <Barcode className="w-3.5 h-3.5 text-amber-700" />
+                <span className="hidden sm:inline">Scan</span>
               </button>
-            </form>
+
+              <button
+                type="button"
+                onClick={() => setIsMoreMenuOpen(true)}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black transition active:scale-95 border border-slate-200"
+                title="Mehr Optionen (PDF, WhatsApp, Budget, Filter)"
+              >
+                •••
+              </button>
+            </div>
           </div>
+
+          {/* Clean 1-Line Quick Add */}
+          <form onSubmit={handleCreateCustom} className="bg-white p-2 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-2">
+            <Plus className="w-4 h-4 text-slate-400 ml-1 shrink-0" />
+            <input
+              type="text"
+              placeholder="Schnell Artikel hinzufügen (z. B. Bananen, Hafermilch)..."
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+              className="flex-1 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={!customName.trim()}
+              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-bold transition shrink-0"
+            >
+              + Hinzufügen
+            </button>
+          </form>
 
           {/* List Display: Either Aisle View or Store View */}
           {viewMode === 'aisle' ? (
             /* Gang-Laufweg (Supermarkt-Route) */
             <div className="space-y-6">
-              {/* Quick Filter Bar for Aisle View */}
-              <div className="bg-white rounded-2xl p-3 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                <div className="flex items-center gap-2">
-                  <Compass className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <div className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 flex-wrap">
-                    <span>Gang-Laufweg</span>
-                    {selectedStoreFilter !== 'all' ? (
-                      <span className="text-emerald-800 bg-emerald-100 font-black px-2 py-0.5 rounded-lg text-[11px] border border-emerald-300">
-                        {STORE_META[selectedStoreFilter]?.icon || '🏪'} {STORE_META[selectedStoreFilter]?.label || selectedStoreFilter} ({itemsForAisle.length} Artikel)
-                      </span>
-                    ) : (
-                      <span className="text-slate-600 bg-slate-100 font-bold px-2 py-0.5 rounded-lg text-[11px]">
-                        Alle Filialen ({allItemsWithStore.length} Artikel)
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
-                  <button
-                    onClick={() => setSelectedStoreFilter('all')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition ${
-                      selectedStoreFilter === 'all'
-                        ? 'bg-slate-900 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    Alle ({allItemsWithStore.length})
-                  </button>
-                  {availableStores.map(({ key, count, meta }) => {
-                    const isSelected = selectedStoreFilter === key;
-                    return (
-                      <button
-                        key={key}
-                        onClick={() => setSelectedStoreFilter(key)}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition flex items-center gap-1 border ${
-                          isSelected
-                            ? `${meta.activeBg} ${meta.activeBorder}`
-                            : `${meta.bg} hover:opacity-90`
-                        }`}
-                      >
-                        <span>{meta.icon}</span>
-                        <span>{meta.label}</span>
-                        <span className="text-[10px] opacity-80">({count})</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               {itemsForAisle.length === 0 ? (
                 <div className="bg-white rounded-3xl p-8 text-center border border-slate-200 shadow-sm text-slate-500 text-sm">
                   <Store className="w-10 h-10 text-slate-400 mx-auto mb-2" />
@@ -2067,56 +1507,6 @@ export const ShoppingListView: React.FC<Props> = ({
           ) : (
             /* Nach Filiale getrennt (Netto, NP, Vorrat) */
             <div className="space-y-6">
-              {/* Quick Filter Bar for Store View */}
-              <div className="bg-white rounded-2xl p-3 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                <div className="flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-slate-600 shrink-0" />
-                  <div className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5 flex-wrap">
-                    <span>Nach Filiale</span>
-                    {selectedStoreFilter !== 'all' ? (
-                      <span className="text-emerald-800 bg-emerald-100 font-black px-2 py-0.5 rounded-lg text-[11px] border border-emerald-300">
-                        {STORE_META[selectedStoreFilter]?.icon || '🏪'} {STORE_META[selectedStoreFilter]?.label || selectedStoreFilter}
-                      </span>
-                    ) : (
-                      <span className="text-slate-600 bg-slate-100 font-bold px-2 py-0.5 rounded-lg text-[11px]">
-                        Alle Filialen ({allItemsWithStore.length} Artikel)
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
-                  <button
-                    onClick={() => setSelectedStoreFilter('all')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition ${
-                      selectedStoreFilter === 'all'
-                        ? 'bg-slate-900 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    Alle
-                  </button>
-                  {availableStores.map(({ key, count, meta }) => {
-                    const isSelected = selectedStoreFilter === key;
-                    return (
-                      <button
-                        key={key}
-                        onClick={() => setSelectedStoreFilter(key)}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition flex items-center gap-1 border ${
-                          isSelected
-                            ? `${meta.activeBg} ${meta.activeBorder}`
-                            : `${meta.bg} hover:opacity-90`
-                        }`}
-                      >
-                        <span>{meta.icon}</span>
-                        <span>{meta.label}</span>
-                        <span className="text-[10px] opacity-80">({count})</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               {/* Netto */}
               {(selectedStoreFilter === 'all' || selectedStoreFilter === 'Netto') && shoppingList.items_netto.length > 0 && (
                 <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
@@ -2635,6 +2025,163 @@ export const ShoppingListView: React.FC<Props> = ({
         checkedMap={checkedMap}
         onToggleCheck={toggleCheck}
       />
+
+      {/* ••• Mehr Optionen Modal (Clean Bottom Sheet / Drawer) */}
+      {isMoreMenuOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn">
+          <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-emerald-600" />
+                <span>Einkaufsliste Optionen & Power-Tools</span>
+              </h3>
+              <button
+                onClick={() => setIsMoreMenuOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2.5 text-xs">
+              {/* Live Modus Toggle */}
+              <button
+                type="button"
+                onClick={() => {
+                  toggleLiveMode();
+                  setIsMoreMenuOpen(false);
+                }}
+                className="w-full p-3.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold border border-emerald-200 flex items-center justify-between transition"
+              >
+                <div className="flex items-center gap-2.5">
+                  <ShoppingBag className="w-4 h-4 text-emerald-600" />
+                  <span>{isLiveMode ? '🛒 Supermarkt Live-Modus beenden' : '🛒 Supermarkt Live-Modus starten'}</span>
+                </div>
+                <span className="text-[10px] text-emerald-700 font-semibold">{isLiveMode ? 'Aktiv' : 'Große Tasten & Kassenrechner'}</span>
+              </button>
+
+              {/* PDF Download */}
+              <button
+                type="button"
+                onClick={() => {
+                  handleDownloadPdf();
+                  setIsMoreMenuOpen(false);
+                }}
+                className="w-full p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold border border-slate-200 flex items-center justify-between transition"
+              >
+                <div className="flex items-center gap-2.5">
+                  <FileDown className="w-4 h-4 text-slate-600" />
+                  <span>📄 Als PDF herunterladen / Drucken</span>
+                </div>
+              </button>
+
+              {/* WhatsApp Export */}
+              <button
+                type="button"
+                onClick={() => {
+                  handleCopyWhatsApp();
+                  setIsMoreMenuOpen(false);
+                }}
+                className="w-full p-3.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold border border-emerald-200 flex items-center justify-between transition"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Share2 className="w-4 h-4 text-emerald-600" />
+                  <span>💬 Liste per WhatsApp teilen</span>
+                </div>
+              </button>
+
+              {/* KI Assistent (ChatGPT) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsChatGptModalOpen(true);
+                  setIsMoreMenuOpen(false);
+                }}
+                className="w-full p-3.5 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold border border-amber-200 flex items-center justify-between transition"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Sparkles className="w-4 h-4 text-amber-600" />
+                  <span>🤖 KI-Einkaufsbegleiter (ChatGPT Live)</span>
+                </div>
+              </button>
+
+              {/* Restmengen einbuchen */}
+              <button
+                type="button"
+                onClick={() => {
+                  handleBookAllToPantry();
+                  setIsMoreMenuOpen(false);
+                }}
+                className="w-full p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold border border-slate-200 flex items-center justify-between transition"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Archive className="w-4 h-4 text-amber-600" />
+                  <span>📦 Haltbare Restmengen ins Lager buchen</span>
+                </div>
+              </button>
+
+              {/* Split / Budget Details */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSplitModal(true);
+                  setIsMoreMenuOpen(false);
+                }}
+                className="w-full p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold border border-slate-200 flex items-center justify-between transition"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Wallet className="w-4 h-4 text-indigo-600" />
+                  <span>📊 Multi-Store Spar-Split & Budget-Details</span>
+                </div>
+              </button>
+
+              {/* Week Switcher */}
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
+                <span className="font-bold text-slate-700">Woche:</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => onChangeWeek(selectedWeekOffset - 1)}
+                    className="px-2.5 py-1 bg-white border rounded-lg font-bold hover:bg-slate-100"
+                  >
+                    ◀ Zurück
+                  </button>
+                  <span className="font-bold font-mono px-2 text-slate-800">KW {selectedWeekOffset}</span>
+                  <button
+                    type="button"
+                    onClick={() => onChangeWeek(selectedWeekOffset + 1)}
+                    className="px-2.5 py-1 bg-white border rounded-lg font-bold hover:bg-slate-100"
+                  >
+                    Weiter ▶
+                  </button>
+                </div>
+              </div>
+
+              {/* Days Filter */}
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                <span className="font-bold text-slate-700 block">Tage auswählen:</span>
+                <div className="flex items-center gap-1 flex-wrap">
+                  {ALL_DAYS_SHORT.map((dayShort) => {
+                    const isSelected = selectedDays.includes(dayShort);
+                    return (
+                      <button
+                        key={dayShort}
+                        type="button"
+                        onClick={() => toggleDayFilter(dayShort)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                          isSelected ? 'bg-emerald-600 text-white' : 'bg-white border text-slate-600'
+                        }`}
+                      >
+                        {dayShort}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Live Camera Barcode Scanner Modal */}
       <BarcodeScannerModal
