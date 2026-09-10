@@ -111,13 +111,19 @@ export const ShoppingListView: React.FC<Props> = ({
 
     const collectItems = (items: ShoppingItem[]) => {
       for (const it of items) {
-        if (!it.is_covered_by_stock) {
-          allItemsToBook.push({
-            name: it.name,
-            total_quantity: it.pack_size ? it.packs_to_buy * it.pack_size : it.total_quantity,
-            unit: it.unit,
-            category: it.category,
-          });
+        // STRICT RULE: Only shelf-stable dry goods (is_pantry_eligible) migrate to pantry with surplus
+        if (!it.is_covered_by_stock && it.is_pantry_eligible) {
+          const surplus = it.leftover_after_purchase;
+          if (surplus > 0) {
+            allItemsToBook.push({
+              name: it.name,
+              total_quantity: surplus,
+              leftover_after_purchase: surplus,
+              unit: it.unit,
+              category: it.category,
+              source: 'Restmenge',
+            });
+          }
         }
       }
     };
@@ -129,7 +135,6 @@ export const ShoppingListView: React.FC<Props> = ({
     if (shoppingList.items_rewe) collectItems(shoppingList.items_rewe);
     if (shoppingList.items_kaufland) collectItems(shoppingList.items_kaufland);
     if (shoppingList.items_edeka) collectItems(shoppingList.items_edeka);
-    collectItems(shoppingList.items_pantry);
 
     for (const c of shoppingList.custom_items) {
       allItemsToBook.push({
@@ -137,17 +142,18 @@ export const ShoppingListView: React.FC<Props> = ({
         total_quantity: c.quantity,
         unit: c.unit,
         category: c.category,
+        source: 'Kauf',
       });
     }
 
     if (allItemsToBook.length === 0) {
-      alert('Alle benötigten Zutaten sind bereits im Lager vorhanden!');
+      alert('Keine haltbaren Trockenprodukte mit Restmengen zum Einbuchen vorhanden. Frischeprodukte (Fleisch, Fisch, Gemüse etc.) werden frisch verzehrt und nicht eingelagert.');
       return;
     }
 
     await onBookCartToPantry(allItemsToBook);
     setBookedToast(true);
-    setTimeout(() => setBookedToast(false), 3000);
+    setTimeout(() => setBookedToast(false), 4000);
   };
 
   const handleCreateCustom = async (e: React.FormEvent) => {
@@ -256,10 +262,16 @@ export const ShoppingListView: React.FC<Props> = ({
             </div>
             <div className="text-xs text-slate-400 font-medium mt-0.5 flex flex-wrap items-center gap-x-2">
               <span>Rezeptbedarf: {item.total_quantity} {item.unit}</span>
-              {item.leftover_after_purchase > 0 && !item.is_covered_by_stock && (
-                <span className="text-emerald-600 font-semibold">
-                  (Rest {item.leftover_after_purchase} {item.unit} wandert ins Lager)
+              {item.leftover_after_purchase > 0 && !item.is_covered_by_stock && item.is_pantry_eligible ? (
+                <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded text-[10px] border border-emerald-200">
+                  📦 Rest {item.leftover_after_purchase} {item.unit} wandert ins Vorratslager
                 </span>
+              ) : (
+                !item.is_covered_by_stock && !item.is_pantry_eligible && (
+                  <span className="text-slate-400 text-[10px]">
+                    🌱 Frischeprodukt (frisch verbrauchen)
+                  </span>
+                )
               )}
             </div>
           </div>
@@ -439,10 +451,10 @@ export const ShoppingListView: React.FC<Props> = ({
                 <button
                   onClick={handleBookAllToPantry}
                   className="flex items-center gap-1.5 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow transition active:scale-95"
-                  title="Gekaufte Packungsgrößen ins Vorratslager übertragen"
+                  title="Nur haltbare Trockenwaren-Reste (z.B. Nudeln, Reis, Kerne) ins Vorratslager buchen. Frischeprodukte (Fleisch, Fisch, Gemüse) werden frisch verzehrt."
                 >
                   <PackageCheck className="w-4 h-4" />
-                  Einkauf ins Lager buchen
+                  Restmengen ins Lager buchen
                 </button>
 
                 <button
@@ -864,9 +876,9 @@ export const ShoppingListView: React.FC<Props> = ({
       )}
 
       {bookedToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2 border border-blue-500 animate-bounce text-xs font-bold">
-          <PackageCheck className="w-4 h-4 text-blue-400" />
-          <span>Alle gekauften Packungen ins Vorratslager gebucht!</span>
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2 border border-blue-500 animate-bounce text-xs font-bold max-w-sm">
+          <PackageCheck className="w-4 h-4 text-blue-400 shrink-0" />
+          <span>Haltbare Restmengen (Trockenware) ins Vorratslager gebucht! Frischeprodukte (Fleisch, Fisch, Gemüse) verbleiben frisch.</span>
         </div>
       )}
     </div>

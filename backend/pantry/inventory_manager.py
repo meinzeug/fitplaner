@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import List, Dict, Optional, Tuple, Any
 from backend.models import PantryItem, ScaledIngredient
 from backend.pantry.expiry_tracker import calculate_shelf_life_status
+from backend.pantry.shelf_stability import is_shelf_stable_dry_good
 
 
 STANDARD_PACK_SIZES: Dict[str, Tuple[float, str]] = {
@@ -288,13 +289,35 @@ def deduct_consumption(ingredients: List[ScaledIngredient]) -> List[Dict[str, An
 def book_shopping_cart_to_pantry(items: List[Dict[str, Any]]) -> List[PantryItem]:
     """
     Takes checked shopping list items and books purchased quantities into pantry.
+    STRICT RULE: ONLY shelf-stable dry goods (Trockenprodukte wie Nudeln, Reis, Kerne,
+    Gewürze, Öle, Linsen etc.) are allowed to enter the pantry.
+    Fresh products (Fleisch, Fisch, frisches Gemüse, frisches Obst, Kühlregal)
+    are strictly filtered out because they are consumed fresh and not stockpiled.
+
+    If leftover_after_purchase is provided and > 0, it books the surplus amount.
     """
     booked = []
     for raw in items:
-        name = raw.get("name", "")
-        qty = float(raw.get("quantity") or raw.get("total_quantity") or 0.0)
+        name = raw.get("name", "").strip()
+        cat = raw.get("category", "")
+
+        # Guard: Fresh items (meat, fish, veg, fresh dairy) must NEVER migrate to the pantry
+        if not is_shelf_stable_dry_good(name, cat):
+            continue
+
+        # Determine quantity: prefer surplus / leftover_after_purchase if available
+        surplus = raw.get("leftover_after_purchase")
+        if surplus is not None and float(surplus) > 0:
+            qty = float(surplus)
+            source = "Restmenge"
+        else:
+            qty = float(raw.get("quantity") or raw.get("total_quantity") or 0.0)
+            source = raw.get("source") or "Kauf"
+
+        if qty <= 0:
+            continue
+
         unit = raw.get("unit", "g")
-        cat = raw.get("category", "Vorratskammer")
         mhd = raw.get("mhd_date")
 
         existing = find_pantry_item_by_name(name)
@@ -311,12 +334,12 @@ def book_shopping_cart_to_pantry(items: List[Dict[str, Any]]) -> List[PantryItem
                 name=name,
                 current_quantity=qty,
                 unit=unit,
-                category=cat,
+                category=cat or "Vorratskammer",
                 mhd_date=mhd or formatted_mhd,
                 shelf_life_status=status,  # type: ignore
                 days_left=days,
                 standard_pack_size=pack_size,
-                source="Kauf",
+                source=source,
                 added_date=datetime.now().strftime("%d.%m.%Y"),
             )
             _pantry_store.append(new_item)

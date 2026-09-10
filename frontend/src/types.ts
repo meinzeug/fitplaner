@@ -229,6 +229,7 @@ export interface ShoppingItem {
   packs_to_buy: number;
   leftover_after_purchase: number;
   is_covered_by_stock: boolean;
+  is_pantry_eligible?: boolean;
   aisle?: string;
   substitutes?: string[];
   exact_product_name?: string;

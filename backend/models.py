@@ -229,6 +229,7 @@ class ShoppingItem(BaseModel):
     packs_to_buy: int = 1
     leftover_after_purchase: float = 0.0
     is_covered_by_stock: bool = False
+    is_pantry_eligible: bool = False
     aisle: str = "Trockensortiment & Vorräte"
     substitutes: List[str] = Field(default_factory=list)
     exact_product_name: Optional[str] = None

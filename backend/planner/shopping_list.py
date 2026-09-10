@@ -9,6 +9,7 @@ import hashlib
 from typing import Dict, Tuple, List, Optional
 from backend.models import WeeklyPlan, ShoppingList, ShoppingItem, CustomShoppingItem
 from backend.pantry.inventory_manager import find_pantry_item_by_name
+from backend.pantry.shelf_stability import is_shelf_stable_dry_good
 from backend.nutrition.price_database import get_product_price, get_realistic_pack_size
 
 
@@ -249,11 +250,17 @@ def generate_shopping_list_from_plan(
         pack_size, pack_unit = get_realistic_pack_size(name)
         base_pack_price = price_info.get("pack_price", 1.99) if price_info else 1.99
 
-        # Check existing pantry stock
-        pantry_match = find_pantry_item_by_name(name)
-        in_stock_qty = pantry_match.current_quantity if pantry_match else 0.0
+        # Check shelf stability: Only durable dry goods can stay in pantry
+        is_shelf_stable = is_shelf_stable_dry_good(name, cat)
 
-        if in_stock_qty >= needed_qty:
+        # Fresh products (meat, fish, veg, fresh dairy) must ALWAYS be bought fresh
+        if is_shelf_stable:
+            pantry_match = find_pantry_item_by_name(name)
+            in_stock_qty = pantry_match.current_quantity if pantry_match else 0.0
+        else:
+            in_stock_qty = 0.0
+
+        if is_shelf_stable and in_stock_qty >= needed_qty:
             is_covered = True
             net_need = 0.0
             packs_to_buy = 0
@@ -268,7 +275,13 @@ def generate_shopping_list_from_plan(
                 store = primary_retailer
             net_need = max(0.0, needed_qty - in_stock_qty)
             packs_to_buy = max(1, math.ceil(net_need / max(1.0, pack_size)))
-            leftover = round((packs_to_buy * pack_size) - net_need, 1)
+
+            # Leftovers that migrate to the pantry are ONLY calculated for shelf-stable dry goods!
+            # Fresh goods (meat, fish, vegetables, fresh dairy) are consumed fresh and NEVER migrate to pantry!
+            if is_shelf_stable:
+                leftover = round((packs_to_buy * pack_size) - net_need, 1)
+            else:
+                leftover = 0.0
 
             is_sale = store in ["Netto", "NP", "Lidl", "Aldi Nord", "Aldi Süd", "Rewe", "Kaufland", "Edeka"]
             if is_sale:
@@ -317,6 +330,7 @@ def generate_shopping_list_from_plan(
             packs_to_buy=packs_to_buy,
             leftover_after_purchase=leftover,
             is_covered_by_stock=is_covered,
+            is_pantry_eligible=is_shelf_stable,
             aisle=aisle,
             substitutes=substitutes,
             exact_product_name=exact_name,
