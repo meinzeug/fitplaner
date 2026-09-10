@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
 import { FamilyMember } from '../types';
-import { Users, Plus, Trash2, Edit2, Flame, ShieldCheck, Sparkles, AlertCircle, Ban } from 'lucide-react';
+import { Users, Plus, Trash2, Edit2, Flame, ShieldCheck, Sparkles, AlertCircle, Ban, Tag } from 'lucide-react';
+import { EU_ALLERGENS_CATALOG, DISLIKE_CATEGORIES, AllergenCatalogEntry } from '../backend_embedded/dietValidator';
 
 interface Props {
   members: FamilyMember[];
   onSaveMember: (member: Partial<FamilyMember>) => Promise<void>;
   onDeleteMember: (id: string) => Promise<void>;
+  onOpenHealthDossier?: (memberId: string) => void;
 }
 
-const COMMON_ALLERGIES = ['Laktose', 'Gluten', 'Nuesse', 'Eier', 'Fisch', 'Soja'];
-const COMMON_DISLIKED = ['Brokkoli', 'Champignons', 'Zucchini', 'Tomaten', 'Lachs', 'Rindfleisch', 'Zwiebeln', 'Spinat'];
-
-export const FamilyProfiles: React.FC<Props> = ({ members, onSaveMember, onDeleteMember }) => {
+export const FamilyProfiles: React.FC<Props> = ({
+  members,
+  onSaveMember,
+  onDeleteMember,
+  onOpenHealthDossier,
+}) => {
   const [isEditing, setIsEditing] = useState(false);
   const [customDislikeInput, setCustomDislikeInput] = useState('');
   const [formData, setFormData] = useState<Partial<FamilyMember>>({
@@ -158,6 +162,16 @@ export const FamilyProfiles: React.FC<Props> = ({ members, onSaveMember, onDelet
                   </div>
 
                   <div className="flex items-center gap-1">
+                    {onOpenHealthDossier && (
+                      <button
+                        onClick={() => onOpenHealthDossier(member.id)}
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition shadow-2xs"
+                        title="Private elektronische Krankenakte (ePA) & Notfall-Pass öffnen"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Krankenakte</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => openEditModal(member)}
                       className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
@@ -198,28 +212,32 @@ export const FamilyProfiles: React.FC<Props> = ({ members, onSaveMember, onDelet
 
                 {/* Allergies & Dislikes Pills */}
                 {((member.allergies && member.allergies.length > 0) || (member.disliked_foods && member.disliked_foods.length > 0)) && (
-                  <div className="mb-4 space-y-1.5 bg-slate-50 p-3 rounded-2xl border border-slate-100 text-xs">
+                  <div className="mb-4 space-y-2 bg-slate-50 p-3.5 rounded-2xl border border-slate-100 text-xs">
                     {member.allergies && member.allergies.length > 0 && (
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-bold text-rose-700 flex items-center gap-1">
+                        <span className="font-bold text-rose-700 flex items-center gap-1 shrink-0">
                           <AlertCircle className="w-3.5 h-3.5 text-rose-600" /> Allergien:
                         </span>
-                        {member.allergies.map((a, idx) => (
-                          <span key={idx} className="bg-rose-100 text-rose-800 px-2 py-0.5 rounded-md font-bold text-[11px] capitalize">
-                            {a}
-                          </span>
-                        ))}
+                        {member.allergies.map((a, idx) => {
+                          const cat = EU_ALLERGENS_CATALOG.find((e) => e.id === a.toLowerCase() || e.name.toLowerCase().includes(a.toLowerCase()));
+                          return (
+                            <span key={idx} className="bg-rose-100 text-rose-800 px-2.5 py-0.5 rounded-lg font-bold text-[11px] flex items-center gap-1 border border-rose-200">
+                              <span>{cat?.icon || '⚠️'}</span>
+                              <span className="capitalize">{cat?.name || a}</span>
+                            </span>
+                          );
+                        })}
                       </div>
                     )}
 
                     {member.disliked_foods && member.disliked_foods.length > 0 && (
-                      <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-slate-200/60">
-                        <span className="font-bold text-slate-600 flex items-center gap-1">
-                          <Ban className="w-3.5 h-3.5 text-slate-500" /> Mag nicht:
+                      <div className="flex items-center gap-1.5 flex-wrap pt-1.5 border-t border-slate-200/60">
+                        <span className="font-bold text-amber-800 flex items-center gap-1 shrink-0">
+                          <Ban className="w-3.5 h-3.5 text-amber-600" /> Mag nicht:
                         </span>
                         {member.disliked_foods.map((f, idx) => (
-                          <span key={idx} className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md font-medium text-[11px] capitalize">
-                            {f}
+                          <span key={idx} className="bg-amber-100/70 text-amber-900 px-2 py-0.5 rounded-lg font-semibold text-[11px] capitalize border border-amber-200">
+                            🚫 {f}
                           </span>
                         ))}
                       </div>
@@ -367,74 +385,123 @@ export const FamilyProfiles: React.FC<Props> = ({ members, onSaveMember, onDelet
                 </select>
               </div>
 
-              {/* Allergies Selector */}
+              {/* Allergies Selector (14 EU Allergens) */}
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1">
-                  <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
-                  Allergien & Unverträglichkeiten
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4 text-rose-600" />
+                  <span>Offizielle EU-Allergene (14 Hauptallergene):</span>
                 </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {COMMON_ALLERGIES.map((allergy) => {
-                    const norm = allergy.toLowerCase();
-                    const isSelected = (formData.allergies || []).includes(norm);
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-1 p-1.5 bg-slate-50 rounded-2xl border border-slate-200/70">
+                  {EU_ALLERGENS_CATALOG.map((allergen) => {
+                    const isSelected = (formData.allergies || []).includes(allergen.id);
                     return (
                       <button
                         type="button"
-                        key={allergy}
-                        onClick={() => toggleAllergy(allergy)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                        key={allergen.id}
+                        onClick={() => toggleAllergy(allergen.id)}
+                        className={`px-2.5 py-1.5 rounded-xl text-left text-xs font-bold transition flex items-center gap-2 border ${
                           isSelected
-                            ? 'bg-rose-600 text-white shadow-sm'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                            : 'bg-white text-slate-700 hover:bg-rose-50 border-slate-200'
                         }`}
+                        title={allergen.description}
                       >
-                        {isSelected ? '✓ ' : ''}{allergy}
+                        <span className="text-base shrink-0">{allergen.icon}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate">{allergen.name}</div>
+                          <div className={`text-[10px] font-normal truncate ${isSelected ? 'text-rose-100' : 'text-slate-400'}`}>
+                            {allergen.description}
+                          </div>
+                        </div>
+                        {isSelected && <span className="text-xs shrink-0">✓</span>}
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Disliked Foods Selector */}
+              {/* Disliked Foods Selector (Categorized) */}
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1">
-                  <Ban className="w-3.5 h-3.5 text-slate-500" />
-                  Mag ich nicht (Ausschlüsse)
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Ban className="w-4 h-4 text-slate-500" />
+                    <span>Mag ich nicht (Zutaten-Ausschlüsse):</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-normal">Wähle oder tippe unten</span>
                 </label>
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {COMMON_DISLIKED.map((food) => {
-                    const norm = food.toLowerCase();
-                    const isSelected = (formData.disliked_foods || []).includes(norm);
-                    return (
-                      <button
-                        type="button"
-                        key={food}
-                        onClick={() => toggleDisliked(food)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                          isSelected
-                            ? 'bg-slate-900 text-white shadow-sm'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        }`}
+
+                {/* Selected Dislikes Tags */}
+                {(formData.disliked_foods || []).length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 p-2 bg-amber-50/50 rounded-xl border border-amber-200/60 mb-2">
+                    {formData.disliked_foods?.map((f) => (
+                      <span
+                        key={f}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-900 text-white rounded-lg text-xs font-bold shadow-xs"
                       >
-                        {isSelected ? '✕ ' : ''}{food}
-                      </button>
-                    );
-                  })}
+                        <span className="capitalize">{f}</span>
+                        <button
+                          type="button"
+                          onClick={() => toggleDisliked(f)}
+                          className="hover:text-rose-400 text-slate-300 ml-0.5"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Quick categories accordion / chips */}
+                <div className="space-y-2 mb-2 max-h-52 overflow-y-auto pr-1 p-1.5 bg-slate-50 rounded-2xl border border-slate-200/70">
+                  {DISLIKE_CATEGORIES.map((cat) => (
+                    <div key={cat.title} className="bg-white p-2.5 rounded-xl border border-slate-100">
+                      <div className="text-[11px] font-bold text-slate-600 mb-1.5 flex items-center gap-1.5">
+                        <span>{cat.icon}</span>
+                        <span>{cat.title}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {cat.items.map((food) => {
+                          const norm = food.toLowerCase();
+                          const isSelected = (formData.disliked_foods || []).includes(norm);
+                          return (
+                            <button
+                              type="button"
+                              key={food}
+                              onClick={() => toggleDisliked(food)}
+                              className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition ${
+                                isSelected
+                                  ? 'bg-slate-900 text-white shadow-xs font-bold'
+                                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                              }`}
+                            >
+                              {isSelected ? '✕ ' : '+ '}{food}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
-                {/* Custom dislike input */}
+                {/* Custom dislike text input */}
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Weiteres Lebensmittel ausschließen..."
+                    placeholder="Beliebige Zutat ausschließen (z.B. Koriander, Rosenkohl)..."
                     value={customDislikeInput}
                     onChange={(e) => setCustomDislikeInput(e.target.value)}
-                    className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCustomDislike();
+                      }
+                    }}
+                    className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                   <button
                     type="button"
                     onClick={handleAddCustomDislike}
-                    className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold"
+                    className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs"
                   >
                     + Hinzufügen
                   </button>

@@ -5,8 +5,9 @@ import { apiFetch } from '../api/client';
 import {
   Calendar, RefreshCw, Box, UtensilsCrossed, Clock, Flame, Sparkles,
   ArrowRightLeft, ChefHat, Sun, Moon, Coffee,
-  ChevronLeft, ChevronRight, Wallet, AlertTriangle, Users, BookOpen
+  ChevronLeft, ChevronRight, Wallet, AlertTriangle, Users, BookOpen, ShieldCheck
 } from 'lucide-react';
+import { isRecipeSafeForFamily, getRecipeFamilyConflicts } from '../backend_embedded/dietValidator';
 
 /**
  * Utility to return authentic brand colors and border classes for German retailers.
@@ -960,13 +961,36 @@ export const WeeklyPlanView: React.FC<Props> = ({
                     {/* Meal Title */}
                     <div
                       onClick={() => setSelectedRecipeModal({ recipe: currentDiRecipe, dayIndex, mealType: 'dinner', isCooked: !!day.is_dinner_cooked })}
-                      className="cursor-pointer group mb-2"
+                      className="cursor-pointer group mb-1.5"
                     >
                       <h4 className="font-bold text-slate-800 text-base group-hover:text-emerald-700 transition flex items-center gap-1.5">
                         {currentDiRecipe.title}
                         <ChefHat className="w-4 h-4 text-slate-300 group-hover:text-emerald-600 transition" />
                       </h4>
                     </div>
+
+                    {/* Family Safety Badge for Dinner */}
+                    {(() => {
+                      const diConflicts = getRecipeFamilyConflicts(currentDiRecipe, members);
+                      if (diConflicts.length === 0) {
+                        return (
+                          <div className="mb-2">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                              100% Familien-sicher (Allergie-geprüft)
+                            </span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="mb-2">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 border border-rose-200">
+                            <AlertTriangle className="w-3 h-3 text-rose-600" />
+                            Warnung: {diConflicts.map(c => `${c.memberName} (${c.reasons[0]})`).join(', ')}
+                          </span>
+                        </div>
+                      );
+                    })()}
 
                     <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
                       <span className="flex items-center gap-1">
@@ -1046,6 +1070,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
               : plan.days[selectedRecipeModal.dayIndex]?.portions?.[(selectedRecipeModal.targetMember || currentMember).id]?.[selectedRecipeModal.mealType]
           }
           pantryItems={pantryItems}
+          familyMembers={members}
           isCooked={selectedRecipeModal.isCooked}
           isAllMembers={isAllSelected && !selectedRecipeModal.targetMember}
           membersCount={members.length}
@@ -1065,7 +1090,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
                   Alternative Mahlzeit wählen ({plan.days[activeSwap.dayIndex].day_name})
                 </h3>
                 <span className="text-xs text-slate-500">
-                  Wähle ein anderes geprüftes Rezept – die Portionsgrößen werden sofort neu berechnet.
+                  Wähle ein anderes geprüftes Rezept – Familien-Allergien werden automatisch berücksichtigt.
                 </span>
               </div>
               <button
@@ -1083,28 +1108,58 @@ export const WeeklyPlanView: React.FC<Props> = ({
                   if (activeSwap.mealType === 'lunch') return r.meal_type === 'lunch_lunchbox';
                   return r.meal_type === 'dinner_home';
                 })
-                .map((r) => (
-                  <div
-                    key={r.id}
-                    onClick={() => {
-                      onSwapMeal(activeSwap.dayIndex, activeSwap.mealType, r.id);
-                      setActiveSwap(null);
-                    }}
-                    className="p-4 rounded-2xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/40 cursor-pointer transition flex items-center justify-between"
-                  >
-                    <div>
-                      <h4 className="font-bold text-slate-800 text-sm mb-1">{r.title}</h4>
-                      <div className="flex items-center gap-3 text-xs text-slate-500">
-                        <span>{r.prep_time_minutes} Min</span>
-                        <span>{r.base_calories} kcal</span>
-                        <span>{r.base_protein_g}g Protein</span>
+                .sort((a, b) => {
+                  const aConflicts = getRecipeFamilyConflicts(a, members).length;
+                  const bConflicts = getRecipeFamilyConflicts(b, members).length;
+                  return aConflicts - bConflicts;
+                })
+                .map((r) => {
+                  const conflicts = getRecipeFamilyConflicts(r, members);
+                  const isSafe = conflicts.length === 0;
+
+                  return (
+                    <div
+                      key={r.id}
+                      onClick={() => {
+                        onSwapMeal(activeSwap.dayIndex, activeSwap.mealType, r.id);
+                        setActiveSwap(null);
+                      }}
+                      className={`p-4 rounded-2xl border transition flex items-center justify-between cursor-pointer ${
+                        isSafe
+                          ? 'border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/40'
+                          : 'border-rose-200 bg-rose-50/20 hover:border-rose-400'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1 pr-3">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <h4 className="font-bold text-slate-800 text-sm">{r.title}</h4>
+                          {isSafe ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              <ShieldCheck className="w-3 h-3 text-emerald-600" /> Familien-sicher
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 border border-rose-200">
+                              <AlertTriangle className="w-3 h-3 text-rose-600" />
+                              Konflikt: {conflicts.map(c => `${c.memberName} (${c.reasons[0]})`).join(', ')}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-slate-500">
+                          <span>{r.prep_time_minutes} Min</span>
+                          <span>{r.base_calories} kcal</span>
+                          <span>{r.base_protein_g}g Protein</span>
+                        </div>
                       </div>
+                      <button
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm shrink-0 ${
+                          isSafe ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-white'
+                        }`}
+                      >
+                        Wählen
+                      </button>
                     </div>
-                    <button className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm">
-                      Wählen
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           </div>
         </div>

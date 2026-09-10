@@ -237,6 +237,9 @@ export interface ShoppingItem {
   exact_product_name?: string;
   brand?: string;
   barcode?: string;
+  original_price?: number;
+  discount_percent?: number;
+  leaflet_title?: string;
 }
 
 export interface FreshPickItem {
@@ -536,5 +539,135 @@ export interface AppSettings {
   };
 }
 
+export interface EmergencyContact {
+  id: string;
+  name: string;
+  relationship: string;
+  phone: string;
+  alternative_phone?: string;
+  is_primary: boolean;
+}
 
+export interface MedicalCondition {
+  id: string;
+  name: string;
+  icd10?: string;
+  snomed_ct?: string;
+  onset_date?: string;
+  status: 'active' | 'recurrence' | 'remission' | 'resolved';
+  severity: 'mild' | 'moderate' | 'severe';
+  doctor_notes?: string;
+  dietary_implication?: string;
+}
 
+export interface AllergyRecord {
+  id: string;
+  substance: string;
+  category: 'medication' | 'food' | 'environmental' | 'biologic';
+  criticality: 'life_threatening' | 'severe' | 'moderate' | 'mild';
+  reaction: string;
+  verification_status: 'confirmed' | 'suspected' | 'refuted';
+  emergency_treatment?: string;
+}
+
+export interface MedicationRecord {
+  id: string;
+  trade_name: string;
+  active_substance: string;
+  pzn?: string;
+  dosage: string;
+  schedule_morning: number;
+  schedule_noon: number;
+  schedule_evening: number;
+  schedule_night: number;
+  instructions?: string;
+  is_essential: boolean;
+  prescriber?: string;
+}
+
+export interface VaccinationRecord {
+  id: string;
+  disease: string;
+  vaccine_name: string;
+  date_administered: string;
+  batch_number?: string;
+  administered_by?: string;
+  next_booster_due?: string;
+  is_up_to_date: boolean;
+}
+
+export interface ClinicalFindingDocument {
+  id: string;
+  title: string;
+  doc_type: 'lab_report' | 'discharge_letter' | 'radiology' | 'ecg' | 'prescription' | 'other';
+  date: string;
+  author_facility?: string;
+  summary?: string;
+  key_values?: Record<string, string>;
+  attachment_name?: string;
+  attachment_mime?: string;
+  attachment_encrypted_data?: string;
+}
+
+export interface MemberHealthDossier {
+  member_id: string;
+  member_name: string;
+  blood_type: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | '0+' | '0-' | 'unknown';
+  rhesus_factor: 'positive' | 'negative' | 'unknown';
+  organ_donor_status: 'yes' | 'no' | 'undecided' | 'with_exceptions';
+  organ_donor_notes?: string;
+  emergency_contacts: EmergencyContact[];
+  primary_physician?: {
+    name: string;
+    phone: string;
+    clinic_name?: string;
+    address?: string;
+  };
+  insurance_info?: {
+    provider_name: string;
+    insurance_number: string;
+    card_expiry?: string;
+    has_travel_insurance: boolean;
+    travel_insurance_policy?: string;
+    emergency_hotline?: string;
+  };
+  allergies: AllergyRecord[];
+  conditions: MedicalCondition[];
+  medications: MedicationRecord[];
+  vaccinations: VaccinationRecord[];
+  findings: ClinicalFindingDocument[];
+  last_updated: string;
+  is_encrypted: boolean;
+  encryption_salt?: string;
+  integrity_hash?: string;
+}
+
+export interface NettoOnlineProduct {
+  sku: string;
+  title: string;
+  brand?: string;
+  price: number;
+  raw_price: string;
+  base_price?: string;
+  old_price?: number;
+  discount_percent?: number;
+  image_url: string;
+  product_url: string;
+  category: string;
+}
+
+export interface PdfExtractedDeal {
+  id: string;
+  title: string;
+  retailer: 'Netto' | 'NP' | 'Lidl' | 'Aldi Nord' | 'Aldi Süd' | 'Rewe' | 'Kaufland' | 'Edeka' | 'Supermarkt';
+  price: number;
+  old_price?: number;
+  discount_percent?: number;
+  unit?: string;
+  amount?: string;
+  category: string;
+  page_number: number;
+  x_percent: number;
+  y_percent: number;
+  raw_text: string;
+}

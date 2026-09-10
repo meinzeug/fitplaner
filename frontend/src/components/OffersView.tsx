@@ -10,6 +10,8 @@ interface Props {
   onlyHealthy: boolean;
   onToggleHealthy: (healthy: boolean) => void;
   onRefresh: () => void;
+  onOpenNettoBrowser?: () => void;
+  onOpenPdfScanner?: () => void;
 }
 
 export const OffersView: React.FC<Props> = ({
@@ -20,6 +22,8 @@ export const OffersView: React.FC<Props> = ({
   onlyHealthy,
   onToggleHealthy,
   onRefresh,
+  onOpenNettoBrowser,
+  onOpenPdfScanner,
 }) => {
   const [selectedRetailer, setSelectedRetailer] = useState<'All' | 'Netto' | 'NP'>('All');
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,20 +60,42 @@ export const OffersView: React.FC<Props> = ({
             </p>
           </div>
 
-          {/* PLZ & Reload */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-600">PLZ:</span>
-            <input
-              type="text"
-              value={zipCode}
-              maxLength={5}
-              onChange={(e) => onZipCodeChange(e.target.value)}
-              className="w-20 px-3 py-1.5 text-sm border border-slate-200 rounded-lg text-center font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-            />
+          {/* PLZ & Reload & Scraper Buttons */}
+          <div className="flex flex-wrap items-center gap-2">
+            {onOpenNettoBrowser && (
+              <button
+                onClick={onOpenNettoBrowser}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-400 hover:bg-amber-500 text-stone-950 rounded-xl text-xs font-black shadow-xs transition active:scale-95"
+                title="Netto-Online Kategorieseiten live und ohne KI auslesen"
+              >
+                <span>🟡 Netto-Online Live</span>
+              </button>
+            )}
+
+            {onOpenPdfScanner && (
+              <button
+                onClick={onOpenPdfScanner}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-xs transition active:scale-95"
+                title="PDF-Prospekt ohne KI analysieren"
+              >
+                <span>📄 PDF-Prospekt Scanner</span>
+              </button>
+            )}
+
+            <div className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-xl border border-slate-200">
+              <span className="text-[11px] font-semibold text-slate-600">PLZ:</span>
+              <input
+                type="text"
+                value={zipCode}
+                maxLength={5}
+                onChange={(e) => onZipCodeChange(e.target.value)}
+                className="w-16 px-2 py-0.5 text-xs border border-slate-200 rounded-lg text-center font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              />
+            </div>
             <button
               onClick={onRefresh}
               disabled={isLoading}
-              className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold shadow-sm transition active:scale-95 disabled:opacity-50"
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold shadow-sm transition active:scale-95 disabled:opacity-50"
             >
               {isLoading ? 'Lädt...' : 'Aktualisieren'}
             </button>

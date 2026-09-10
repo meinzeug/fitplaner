@@ -2,10 +2,11 @@ import React from 'react';
 import { Recipe, PersonMealPortion, PantryItem, FamilyMember } from '../types';
 import {
   Clock, Flame, CheckCircle2, Box, Utensils, ChefHat, X, Sparkles,
-  AlertCircle
+  AlertCircle, AlertTriangle, ShieldCheck
 } from 'lucide-react';
 import { getRetailerBadgeClass } from '../utils/retailerBadges';
 import { resolveDisplayRetailer } from './WeeklyPlanView';
+import { getRecipeFamilyConflicts, isRecipeSafeForFamily } from '../backend_embedded/dietValidator';
 
 interface Props {
   recipe: Recipe | null;
@@ -14,6 +15,7 @@ interface Props {
   activeMember: FamilyMember;
   portion?: PersonMealPortion;
   pantryItems: PantryItem[];
+  familyMembers?: FamilyMember[];
   isCooked?: boolean;
   isAllMembers?: boolean;
   membersCount?: number;
@@ -30,6 +32,7 @@ export const RecipeModal: React.FC<Props> = ({
   activeMember,
   portion,
   pantryItems,
+  familyMembers = [],
   isCooked = false,
   isAllMembers = false,
   membersCount,
@@ -105,6 +108,40 @@ export const RecipeModal: React.FC<Props> = ({
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
+          {/* Family Safety Check Banner */}
+          {(() => {
+            const checkMembers = familyMembers.length > 0 ? familyMembers : (activeMember && activeMember.id !== 'all' ? [activeMember] : []);
+            const conflicts = checkMembers.length > 0 ? getRecipeFamilyConflicts(recipe, checkMembers) : [];
+
+            if (conflicts.length > 0) {
+              return (
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3.5 flex items-start gap-3 text-xs">
+                  <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <span className="font-bold text-rose-900 block text-sm">
+                      ⚠️ Allergie- / Abneigungswarnung für die Familie:
+                    </span>
+                    <ul className="mt-1 space-y-1 text-rose-800">
+                      {conflicts.map((c, i) => (
+                        <li key={i} className="flex items-start gap-1">
+                          <span className="font-bold text-rose-950">• {c.memberName}:</span>
+                          <span>{c.reasons.join(' | ')}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 flex items-center gap-2.5 text-xs text-emerald-900 font-semibold shadow-2xs">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>✓ 100% Familien-sicher: Alle Zutaten sind frei von bekannten Allergien & Abneigungen.</span>
+              </div>
+            );
+          })()}
+
           {/* Quick Metrics Bar */}
           <div className="grid grid-cols-4 gap-2 text-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
             <div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { FamilyVitalityScore, MemberVitalityDetail } from '../types';
+import { FamilyVitalityScore, MemberVitalityDetail, FamilyMember } from '../types';
 import { apiFetch } from '../api/client';
+import { HealthDossierView } from './HealthDossierView';
 import {
   Heart,
   Sparkles,
@@ -16,15 +17,27 @@ import {
   Lightbulb,
   Zap,
   Star,
-  Users
+  Users,
+  Shield,
+  FileText,
 } from 'lucide-react';
 
 interface Props {
   onUpdateWater?: (memberId: string, deltaMl: number) => Promise<void>;
   onNavigateTab?: (tab: 'heute' | 'woche' | 'einkauf' | 'vitalitaet' | 'aemtli') => void;
+  familyMembers?: FamilyMember[];
+  initialSubTab?: 'radar' | 'epa';
+  targetMemberId?: string;
 }
 
-export const FamilyVitalityView: React.FC<Props> = ({ onUpdateWater, onNavigateTab }) => {
+export const FamilyVitalityView: React.FC<Props> = ({
+  onUpdateWater,
+  onNavigateTab,
+  familyMembers = [],
+  initialSubTab = 'radar',
+  targetMemberId,
+}) => {
+  const [healthSubTab, setHealthSubTab] = useState<'radar' | 'epa'>(initialSubTab);
   const [vitality, setVitality] = useState<FamilyVitalityScore | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingWaterMemberId, setUpdatingWaterMemberId] = useState<string | null>(null);
@@ -80,16 +93,47 @@ export const FamilyVitalityView: React.FC<Props> = ({ onUpdateWater, onNavigateT
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-fadeIn pb-16">
-      {/* 🌟 HERO: Familiengesundheits-Score & Mikrobiom-Zentrale */}
-      <div className="bg-gradient-to-br from-emerald-700 via-teal-800 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 -translate-y-6 translate-x-6 w-72 h-72 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
+      {/* 🏥 Sub-Navigation: Vitalitäts-Radar vs Private Krankenakte (ePA) */}
+      <div className="flex items-center gap-2 bg-slate-200/80 p-1.5 rounded-2xl border border-slate-300 shadow-2xs">
+        <button
+          onClick={() => setHealthSubTab('radar')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition ${
+            healthSubTab === 'radar'
+              ? 'bg-white text-emerald-800 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-emerald-600" />
+          <span>🌟 Vitalitäts-Radar & Mikronährstoffe</span>
+        </button>
 
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-md px-3.5 py-1 rounded-full text-xs font-black tracking-wide uppercase text-amber-300">
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>Super App • Maximale Familiengesundheit</span>
-            </div>
+        <button
+          onClick={() => setHealthSubTab('epa')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition ${
+            healthSubTab === 'epa'
+              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4 text-amber-300" />
+          <span>🏥 Private Krankenakte (ePA & Notfall-Pass)</span>
+        </button>
+      </div>
+
+      {healthSubTab === 'epa' ? (
+        <HealthDossierView members={familyMembers} initialMemberId={targetMemberId} />
+      ) : (
+        <>
+          {/* 🌟 HERO: Familiengesundheits-Score & Mikrobiom-Zentrale */}
+          <div className="bg-gradient-to-br from-emerald-700 via-teal-800 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 -translate-y-6 translate-x-6 w-72 h-72 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div className="space-y-2 max-w-2xl">
+                <div className="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-md px-3.5 py-1 rounded-full text-xs font-black tracking-wide uppercase text-amber-300">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Super App • Maximale Familiengesundheit</span>
+                </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               Familien-Vitalitäts-Radar: {vitality.overall_score}/100 Punkte
             </h1>
@@ -360,6 +404,8 @@ export const FamilyVitalityView: React.FC<Props> = ({ onUpdateWater, onNavigateT
           ))}
         </div>
       </div>
-    </div>
+    </>
+  )}
+</div>
   );
 };

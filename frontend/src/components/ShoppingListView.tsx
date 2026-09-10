@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingList, ShoppingItem, CustomShoppingItem, PantryItem } from '../types';
+import { ShoppingList, ShoppingItem, CustomShoppingItem, PantryItem, FamilyMember } from '../types';
 import { PantryView } from './PantryView';
+import { ChatGptLiveModal } from './ChatGptLiveModal';
 import { apiFetch, getServerUrl } from '../api/client';
 import {
   ShoppingBag, Share2, Printer, Check, CheckSquare, Square, Plus,
   Archive, Sparkles, Trash2, PackageCheck, ChevronLeft, ChevronRight,
   Calendar, Wallet, AlertTriangle, Compass, Smartphone, HelpCircle,
-  X, ArrowRight, ShieldCheck, RefreshCw, Layers, FileDown, Barcode, Store
+  X, ArrowRight, ShieldCheck, RefreshCw, Layers, FileDown, Barcode, Store,
+  Flame
 } from 'lucide-react';
 
 interface Props {
@@ -17,10 +19,13 @@ interface Props {
   onBookCartToPantry: (items: any[]) => Promise<void>;
   onAddCustomItem: (item: Partial<CustomShoppingItem>) => Promise<void>;
   onDeleteCustomItem: (id: string) => Promise<void>;
+  familyMembers?: FamilyMember[];
   pantryItems?: PantryItem[];
   onSavePantryItem?: (item: PantryItem) => Promise<void>;
   onDeletePantryItem?: (id: string) => Promise<void>;
   onRefreshPantry?: () => void;
+  onOpenNettoBrowser?: () => void;
+  onOpenPdfScanner?: () => void;
 }
 
 const ALL_DAYS_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
@@ -109,13 +114,18 @@ export const ShoppingListView: React.FC<Props> = ({
   onBookCartToPantry,
   onAddCustomItem,
   onDeleteCustomItem,
+  familyMembers = [],
   pantryItems = [],
   onSavePantryItem,
   onDeletePantryItem,
   onRefreshPantry,
+  onOpenNettoBrowser,
+  onOpenPdfScanner,
 }) => {
   const [selectedDays, setSelectedDays] = useState<string[]>(['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']);
   const [activeList, setActiveList] = useState<ShoppingList | null>(initialShoppingList);
+  const [isChatGptModalOpen, setIsChatGptModalOpen] = useState(false);
+  const [onlyDealsFilter, setOnlyDealsFilter] = useState(false);
 
   useEffect(() => {
     setActiveList(initialShoppingList);
@@ -322,13 +332,17 @@ export const ShoppingListView: React.FC<Props> = ({
     }));
   }, [allItemsWithStore]);
 
-  // Filtered items for aisle view based on selected store
+  // Filtered items for aisle view based on selected store and deals filter
   const itemsForAisle = useMemo(() => {
-    if (selectedStoreFilter === 'all') {
-      return allItemsWithStore;
+    let items = selectedStoreFilter === 'all'
+      ? allItemsWithStore
+      : allItemsWithStore.filter((i) => i.storeTag === selectedStoreFilter);
+
+    if (onlyDealsFilter) {
+      items = items.filter((i) => i.is_on_sale && !i.is_covered_by_stock);
     }
-    return allItemsWithStore.filter((i) => i.storeTag === selectedStoreFilter);
-  }, [allItemsWithStore, selectedStoreFilter]);
+    return items;
+  }, [allItemsWithStore, selectedStoreFilter, onlyDealsFilter]);
 
   const aisleGroups: Record<string, typeof allItemsWithStore> = {
     '1. Obst- & Gemüse-Insel': [],
@@ -390,6 +404,12 @@ export const ShoppingListView: React.FC<Props> = ({
                   {item.storeTag}
                 </span>
               )}
+              {item.is_on_sale && !item.is_covered_by_stock && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-gradient-to-r from-red-600 to-amber-500 text-white shadow-xs">
+                  <Flame className="w-3 h-3 text-yellow-200 fill-yellow-200" />
+                  <span>PROSPEKT-DEAL</span>
+                </span>
+              )}
               {item.is_covered_by_stock ? (
                 <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
                   Im Vorrat (0 €)
@@ -441,13 +461,26 @@ export const ShoppingListView: React.FC<Props> = ({
           )}
 
           <div className="text-right">
-            <span className={`font-black font-mono block ${thumbMode ? 'text-base text-slate-900' : 'text-sm text-slate-900'}`}>
-              {item.is_covered_by_stock ? '0,00 €' : `~${(item.total_price || 0).toFixed(2)} €`}
-            </span>
-            {item.savings && item.savings > 0 && !item.is_covered_by_stock && (
-              <span className="text-[10px] text-red-600 block font-bold">
-                -{item.savings.toFixed(2)} €
+            {item.is_covered_by_stock ? (
+              <span className={`font-black font-mono block text-emerald-700 ${thumbMode ? 'text-base' : 'text-sm'}`}>
+                0,00 €
               </span>
+            ) : (
+              <>
+                {item.is_on_sale && item.original_price && item.original_price > (item.total_price || 0) && (
+                  <span className="text-[11px] text-slate-400 line-through block font-mono">
+                    {item.original_price.toFixed(2)} €
+                  </span>
+                )}
+                <span className={`font-black font-mono block ${item.is_on_sale ? 'text-red-600' : 'text-slate-900'} ${thumbMode ? 'text-base' : 'text-sm'}`}>
+                  ~{(item.total_price || 0).toFixed(2)} €
+                </span>
+                {item.savings && item.savings > 0 && (
+                  <span className="text-[10px] bg-red-100 text-red-700 px-1 py-0.5 rounded font-black block text-center mt-0.5">
+                    -{item.savings.toFixed(2)} € {item.discount_percent ? `(-${item.discount_percent}%)` : ''}
+                  </span>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -686,6 +719,19 @@ export const ShoppingListView: React.FC<Props> = ({
                 );
               })}
 
+              <button
+                onClick={() => setOnlyDealsFilter(!onlyDealsFilter)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1.5 active:scale-95 border ${
+                  onlyDealsFilter
+                    ? 'bg-gradient-to-r from-red-600 to-amber-500 text-white border-red-600 shadow-sm'
+                    : 'bg-amber-50/80 text-amber-900 border-amber-200 hover:bg-amber-100'
+                }`}
+                title="Nur aktuelle Prospekt-Angebote mit Rabatten anzeigen"
+              >
+                <Flame className={`w-3.5 h-3.5 ${onlyDealsFilter ? 'text-yellow-200 fill-yellow-200' : 'text-amber-600'}`} />
+                <span>🔥 Nur Prospekt-Deals</span>
+              </button>
+
               {selectedStoreFilter !== 'all' && (
                 <button
                   onClick={() => setSelectedStoreFilter('all')}
@@ -714,6 +760,35 @@ export const ShoppingListView: React.FC<Props> = ({
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setIsChatGptModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-black rounded-xl text-xs shadow-lg transition active:scale-95"
+                  title="Live KI-Einkaufsbegleiter mit Kamera und Audio in ChatGPT oder In-App starten"
+                >
+                  <Sparkles className="w-4 h-4 text-slate-950 fill-slate-950" />
+                  <span>⚡ KI-Begleiter (ChatGPT Live)</span>
+                </button>
+
+                {onOpenNettoBrowser && (
+                  <button
+                    onClick={onOpenNettoBrowser}
+                    className="flex items-center gap-1.5 px-3.5 py-2.5 bg-amber-400 hover:bg-amber-500 text-stone-950 rounded-xl text-xs font-black shadow-md transition active:scale-95"
+                    title="Netto-Online Kategorieseiten live und ohne KI auslesen"
+                  >
+                    <span>🟡 Netto Live-Deals</span>
+                  </button>
+                )}
+
+                {onOpenPdfScanner && (
+                  <button
+                    onClick={onOpenPdfScanner}
+                    className="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-black shadow-md transition active:scale-95"
+                    title="Supermarkt PDF-Prospekt ohne KI analysieren"
+                  >
+                    <span>📄 PDF-Scanner</span>
+                  </button>
+                )}
+
                 <button
                   onClick={handleDownloadPdf}
                   disabled={isDownloadingPdf}
@@ -1273,6 +1348,17 @@ export const ShoppingListView: React.FC<Props> = ({
           <span>Haltbare Restmengen (Trockenware) ins Vorratslager gebucht! Frischeprodukte (Fleisch, Fisch, Gemüse) verbleiben frisch.</span>
         </div>
       )}
+
+      {/* ChatGPT Live Shopping Companion Modal */}
+      <ChatGptLiveModal
+        isOpen={isChatGptModalOpen}
+        onClose={() => setIsChatGptModalOpen(false)}
+        shoppingList={shoppingList}
+        familyMembers={familyMembers}
+        selectedStoreFilter={selectedStoreFilter}
+        checkedMap={checkedMap}
+        onToggleCheck={toggleCheck}
+      />
     </div>
   );
 };

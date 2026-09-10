@@ -20,6 +20,8 @@ import { SettingsView } from './components/SettingsView';
 import { RecipeManagerView } from './components/RecipeManagerView';
 import { ServerConnectionModal } from './components/ServerConnectionModal';
 import { OnboardingModal } from './components/OnboardingModal';
+import { NettoOnlineBrowserModal } from './components/NettoOnlineBrowserModal';
+import { PdfLeafletScannerModal } from './components/PdfLeafletScannerModal';
 import {
   Users, Calendar, ShoppingBag, Tag, Archive, BookOpen,
   HeartPulse, Sparkles, X, Compass, ChevronRight, CheckCircle2, Smartphone, Download,
@@ -33,6 +35,10 @@ export function App() {
   // Slide-over / Modal view for secondary tasks (Profiles, Leaflets, Offers, Installer, Settings)
   const [activeModalView, setActiveModalView] = useState<'profiles' | 'leaflets' | 'offers' | 'installer' | 'settings' | null>(null);
   const [isMeshSyncModalOpen, setIsMeshSyncModalOpen] = useState(false);
+  const [isNettoBrowserOpen, setIsNettoBrowserOpen] = useState(false);
+  const [isPdfScannerOpen, setIsPdfScannerOpen] = useState(false);
+  const [targetHealthMemberId, setTargetHealthMemberId] = useState<string | undefined>(undefined);
+  const [targetHealthSubTab, setTargetHealthSubTab] = useState<'radar' | 'epa'>('radar');
 
   // Recipe Modal state
   const [recipeModalData, setRecipeModalData] = useState<{
@@ -740,10 +746,13 @@ export function App() {
             onBookCartToPantry={handleBookCartToPantry}
             onAddCustomItem={handleAddCustomItem}
             onDeleteCustomItem={handleDeleteCustomItem}
+            familyMembers={members}
             pantryItems={pantryItems}
             onSavePantryItem={handleSavePantryItem}
             onDeletePantryItem={handleDeletePantryItem}
             onRefreshPantry={fetchPantry}
+            onOpenNettoBrowser={() => setIsNettoBrowserOpen(true)}
+            onOpenPdfScanner={() => setIsPdfScannerOpen(true)}
           />
         )}
 
@@ -779,6 +788,9 @@ export function App() {
         {activeTab === 'vitalitaet' && (
           <FamilyVitalityView
             onNavigateTab={setActiveTab}
+            familyMembers={members}
+            initialSubTab={targetHealthSubTab}
+            targetMemberId={targetHealthMemberId}
           />
         )}
 
@@ -858,6 +870,12 @@ export function App() {
                   members={members}
                   onSaveMember={handleSaveMember}
                   onDeleteMember={handleDeleteMember}
+                  onOpenHealthDossier={(memberId) => {
+                    setActiveModalView(null);
+                    setTargetHealthMemberId(memberId);
+                    setTargetHealthSubTab('epa');
+                    setActiveTab('vitalitaet');
+                  }}
                 />
               )}
               {activeModalView === 'leaflets' && (
@@ -889,6 +907,14 @@ export function App() {
                     fetchOffers(zipCode, val);
                   }}
                   onRefresh={() => fetchOffers(zipCode, onlyHealthy)}
+                  onOpenNettoBrowser={() => {
+                    setActiveModalView(null);
+                    setIsNettoBrowserOpen(true);
+                  }}
+                  onOpenPdfScanner={() => {
+                    setActiveModalView(null);
+                    setIsPdfScannerOpen(true);
+                  }}
                 />
               )}
               {activeModalView === 'installer' && <DeviceInstallerModal onClose={() => setActiveModalView(null)} />}
@@ -906,6 +932,38 @@ export function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Netto-Online Deterministic Web Browser Modal (Ohne KI) */}
+      {isNettoBrowserOpen && (
+        <NettoOnlineBrowserModal
+          onClose={() => setIsNettoBrowserOpen(false)}
+          onAddShoppingItem={async (item) => {
+            await handleAddCustomItem({
+              name: item.name,
+              quantity: item.quantity,
+              unit: item.unit,
+              retailer: item.retailer,
+              category: item.category,
+            });
+          }}
+        />
+      )}
+
+      {/* Supermarket PDF Leaflet Scanner Modal (Ohne KI) */}
+      {isPdfScannerOpen && (
+        <PdfLeafletScannerModal
+          onClose={() => setIsPdfScannerOpen(false)}
+          onAddShoppingItem={async (item) => {
+            await handleAddCustomItem({
+              name: item.name,
+              quantity: item.quantity,
+              unit: item.unit,
+              retailer: item.retailer,
+              category: item.category,
+            });
+          }}
+        />
       )}
 
       {/* P2P Mesh Sync Modal */}
