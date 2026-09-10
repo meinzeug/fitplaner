@@ -85,7 +85,9 @@ def resolve_product_details(name: str, retailer: str, pack_size: Optional[float]
     return exact, brand, barcode
 
 
-_custom_shopping_items: List[CustomShoppingItem] = []
+from backend.persistence import load_custom_shopping_items, save_custom_shopping_items
+
+_custom_shopping_items: List[CustomShoppingItem] = load_custom_shopping_items()
 
 
 def get_custom_shopping_items() -> List[CustomShoppingItem]:
@@ -94,6 +96,7 @@ def get_custom_shopping_items() -> List[CustomShoppingItem]:
 
 def add_custom_shopping_item(item: CustomShoppingItem) -> CustomShoppingItem:
     _custom_shopping_items.append(item)
+    save_custom_shopping_items(_custom_shopping_items)
     return item
 
 
@@ -101,7 +104,10 @@ def delete_custom_shopping_item(item_id: str) -> bool:
     global _custom_shopping_items
     initial_len = len(_custom_shopping_items)
     _custom_shopping_items = [i for i in _custom_shopping_items if i.id != item_id]
-    return len(_custom_shopping_items) < initial_len
+    if len(_custom_shopping_items) < initial_len:
+        save_custom_shopping_items(_custom_shopping_items)
+        return True
+    return False
 
 
 def get_substitutes_for_item(name: str) -> List[str]:

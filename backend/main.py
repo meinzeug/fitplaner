@@ -145,25 +145,33 @@ DEFAULT_MEMBERS_DATA = [
     },
 ]
 
-family_profiles: List[FamilyMember] = [enrich_family_member(m) for m in DEFAULT_MEMBERS_DATA]
-weekly_plans_store: Dict[int, WeeklyPlan] = {}
-weekly_budgets_store: Dict[int, float] = {}
-daily_hub_state: Dict[str, Any] = {
+from backend.persistence import (
+    load_family_profiles, save_family_profiles,
+    load_weekly_plans, save_weekly_plans,
+    load_weekly_budgets, save_weekly_budgets,
+    load_daily_hub_state, save_daily_hub_state,
+)
+
+DEFAULT_INITIAL_MEMBERS = [enrich_family_member(m) for m in DEFAULT_MEMBERS_DATA]
+family_profiles: List[FamilyMember] = load_family_profiles(DEFAULT_INITIAL_MEMBERS)
+weekly_plans_store: Dict[int, WeeklyPlan] = load_weekly_plans()
+weekly_budgets_store: Dict[int, float] = load_weekly_budgets()
+daily_hub_state: Dict[str, Any] = load_daily_hub_state({
     "work_end_time": "17:00",
     "fresh_pick_bought": False,
     "lunchbox_packed": False,
     "dinner_cooked": False,
-}
+})
 
 
 def get_or_create_weekly_plan(week_offset: int = 0) -> WeeklyPlan:
     global weekly_plans_store, weekly_budgets_store, family_profiles
     if not family_profiles:
-        for m in DEFAULT_MEMBERS_DATA:
-            family_profiles.append(enrich_family_member(m))
+        family_profiles = load_family_profiles(DEFAULT_INITIAL_MEMBERS)
     settings = get_app_settings()
     if week_offset not in weekly_budgets_store:
         weekly_budgets_store[week_offset] = settings.default_weekly_budget
+        save_weekly_budgets(weekly_budgets_store)
     budget = weekly_budgets_store[week_offset]
 
     cached_plan = weekly_plans_store.get(week_offset)
@@ -181,6 +189,7 @@ def get_or_create_weekly_plan(week_offset: int = 0) -> WeeklyPlan:
             active_retailers=settings.active_retailers,
             primary_retailer=settings.primary_retailer,
         )
+        save_weekly_plans(weekly_plans_store)
     return weekly_plans_store[week_offset]
 
 
@@ -222,9 +231,11 @@ def save_family_member(input_data: MemberInput):
     for i, m in enumerate(family_profiles):
         if m.id == enriched.id:
             family_profiles[i] = enriched
+            save_family_profiles(family_profiles)
             return enriched
 
     family_profiles.append(enriched)
+    save_family_profiles(family_profiles)
     return enriched
 
 
@@ -232,6 +243,7 @@ def save_family_member(input_data: MemberInput):
 def delete_family_member(member_id: str):
     global family_profiles
     family_profiles = [m for m in family_profiles if m.id != member_id]
+    save_family_profiles(family_profiles)
     return {"success": True, "deleted_id": member_id}
 
 
@@ -311,6 +323,8 @@ def cook_and_deduct_meal(req: CookMealRequest):
 
     # Deduct from pantry
     audit_log = deduct_consumption(total_ingredients_consumed)
+    weekly_plans_store[req.week_offset] = plan
+    save_weekly_plans(weekly_plans_store)
 
     return {
         "success": True,
@@ -495,6 +509,7 @@ def update_settings(settings: AppSettings):
     saved = save_app_settings(settings)
     # Clear weekly plans cache so retailer & budget changes take immediate effect
     weekly_plans_store.clear()
+    save_weekly_plans(weekly_plans_store)
     return saved
 
 
@@ -515,6 +530,7 @@ def create_weekly_plan(week_offset: int = Query(0, description="Week offset from
         seed=seed,
     )
     weekly_plans_store[week_offset] = plan
+    save_weekly_plans(weekly_plans_store)
     return plan
 
 
@@ -545,6 +561,7 @@ def swap_meal(req: SwapMealRequest):
         primary_retailer=settings.primary_retailer,
     )
     weekly_plans_store[req.week_offset] = updated
+    save_weekly_plans(weekly_plans_store)
     return updated
 
 
@@ -644,6 +661,7 @@ def get_budget_info(week_offset: int = Query(0, description="Week offset from cu
 @app.post("/api/budget", response_model=BudgetInfo)
 def update_budget(req: UpdateBudgetRequest):
     weekly_budgets_store[req.week_offset] = req.budget
+    save_weekly_budgets(weekly_budgets_store)
     plan = get_or_create_weekly_plan(req.week_offset)
     plan.budget = req.budget
     diff = round(req.budget - plan.total_estimated_cost, 2)
@@ -655,6 +673,7 @@ def update_budget(req: UpdateBudgetRequest):
     else:
         plan.budget_status = "ok"
     weekly_plans_store[req.week_offset] = plan
+    save_weekly_plans(weekly_plans_store)
     return get_budget_info(req.week_offset)
 
 
@@ -877,6 +896,7 @@ def update_daily_action(req: UpdateDailyStatusRequest):
         daily_hub_state["dinner_cooked"] = False
         reset_timeline_tasks()
 
+    save_daily_hub_state(daily_hub_state)
     return get_daily_hub()
 
 
@@ -1060,6 +1080,7 @@ def toggle_family_chore(chore_id: str, req: ToggleChoreRequest):
     chore, delta = toggle_chore(chore_id, req.is_completed, family_profiles)
     if not chore:
         raise HTTPException(status_code=404, detail=f"Chore {chore_id} not found")
+    save_family_profiles(family_profiles)
     return {
         "status": "success",
         "chore": chore,
@@ -1078,6 +1099,7 @@ def update_member_water(member_id: str, req: WaterIntakeRequest):
     for m in family_profiles:
         if m.id == member_id:
             m.water_intake_ml = max(0, getattr(m, "water_intake_ml", 0) + req.delta_ml)
+            save_family_profiles(family_profiles)
             return {
                 "status": "success",
                 "member_id": m.id,

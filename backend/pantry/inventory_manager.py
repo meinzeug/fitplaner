@@ -176,7 +176,9 @@ DEFAULT_PANTRY: List[PantryItem] = [
     ),
 ]
 
-_pantry_store: List[PantryItem] = list(DEFAULT_PANTRY)
+from backend.persistence import load_pantry_items, save_pantry_items
+
+_pantry_store: List[PantryItem] = load_pantry_items(DEFAULT_PANTRY)
 
 
 def get_pack_size(ingredient_name: str, fallback_unit: str = "g") -> Tuple[float, str]:
@@ -239,9 +241,11 @@ def add_or_update_pantry_item(item: PantryItem) -> PantryItem:
     for i, existing in enumerate(_pantry_store):
         if existing.id == item.id:
             _pantry_store[i] = item
+            save_pantry_items(_pantry_store)
             return item
 
     _pantry_store.append(item)
+    save_pantry_items(_pantry_store)
     return item
 
 
@@ -249,7 +253,10 @@ def delete_pantry_item(item_id: str) -> bool:
     global _pantry_store
     initial_len = len(_pantry_store)
     _pantry_store = [i for i in _pantry_store if i.id != item_id]
-    return len(_pantry_store) < initial_len
+    if len(_pantry_store) < initial_len:
+        save_pantry_items(_pantry_store)
+        return True
+    return False
 
 
 def deduct_consumption(ingredients: List[ScaledIngredient]) -> List[Dict[str, Any]]:
@@ -283,6 +290,7 @@ def deduct_consumption(ingredients: List[ScaledIngredient]) -> List[Dict[str, An
                 "note": "Nicht im Lager hinterlegt (frisch verbraucht)",
             })
 
+    save_pantry_items(_pantry_store)
     return audit_log
 
 
@@ -345,4 +353,5 @@ def book_shopping_cart_to_pantry(items: List[Dict[str, Any]]) -> List[PantryItem
             _pantry_store.append(new_item)
             booked.append(new_item)
 
+    save_pantry_items(_pantry_store)
     return booked

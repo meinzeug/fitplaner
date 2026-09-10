@@ -10,23 +10,35 @@ echo "=========================================================="
 echo "🥗 FitPlaner - Smarter Ernährungsplaner & Multi-Supermarkt Familien-Manager"
 echo "=========================================================="
 
-# Check Python environment
+LAN_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7}' || hostname -I | awk '{print $1}')
+if [ -z "$LAN_IP" ]; then
+    LAN_IP="127.0.0.1"
+fi
+
+# Wenn der systemd-Dienst läuft, informiere und öffne den Browser
+if systemctl --user is-active --quiet fitplaner.service 2>/dev/null; then
+    echo "🟢 FitPlaner läuft bereits als dauerhafter systemd-Dienst auf Port $PORT!"
+    echo "👉 Am Linux-PC (Browser):          http://localhost:$PORT"
+    echo "📱 Vom Smartphone / Tablet im WLAN: http://$LAN_IP:$PORT"
+    echo "📲 Android APK Download im WLAN:   http://$LAN_IP:$PORT/FitPlaner.apk"
+    echo "=========================================================="
+    xdg-open "http://localhost:$PORT" 2>/dev/null || true
+    echo "💡 Für Live-Logs: fitplaner logs (oder: journalctl --user -u fitplaner.service -f)"
+    echo "💡 Für Neustart:  fitplaner restart"
+    exit 0
+fi
+
+# Falls der Dienst noch nicht installiert oder inaktiv ist, starte lokal im Vordergrund:
 if [ ! -d ".venv" ]; then
     echo "Erstelle Python virtuelles Environment..."
     python3 -m venv .venv
-    .venv/bin/pip install --upgrade pip fastapi uvicorn httpx pydantic beautifulsoup4 lxml
+    .venv/bin/pip install --upgrade pip fastapi "uvicorn[standard]" httpx pydantic beautifulsoup4 lxml reportlab
 fi
 
-# Build frontend if dist doesn't exist
 if [ ! -d "frontend/dist" ]; then
     echo "Baue Frontend..."
     npm --prefix frontend install
     npm --prefix frontend run build
-fi
-
-LAN_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7}' || hostname -I | awk '{print $1}')
-if [ -z "$LAN_IP" ]; then
-    LAN_IP="127.0.0.1"
 fi
 
 echo "Starte Applikation auf Port $PORT (gebunden an 0.0.0.0)..."

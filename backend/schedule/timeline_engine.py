@@ -15,9 +15,14 @@ from backend.models import (
 )
 
 
-# Global in-memory storage for schedule settings and task completion states
-schedule_settings_store = ScheduleTimeSettings()
-task_completion_store: Dict[str, bool] = {}
+from backend.persistence import (
+    load_schedule_settings, save_schedule_settings,
+    load_task_completions, save_task_completions,
+)
+
+# Persistent storage for schedule settings and task completion states
+schedule_settings_store: ScheduleTimeSettings = load_schedule_settings() or ScheduleTimeSettings()
+task_completion_store: Dict[str, bool] = load_task_completions()
 
 
 def get_schedule_settings() -> ScheduleTimeSettings:
@@ -31,6 +36,7 @@ def update_schedule_settings(new_settings: Dict[str, Any]) -> ScheduleTimeSettin
         if v is not None and k in current_dict:
             current_dict[k] = v
     schedule_settings_store = ScheduleTimeSettings(**current_dict)
+    save_schedule_settings(schedule_settings_store)
     return schedule_settings_store
 
 
@@ -40,12 +46,14 @@ def toggle_timeline_task(task_id: str, is_completed: Optional[bool] = None) -> b
         task_completion_store[task_id] = not task_completion_store.get(task_id, False)
     else:
         task_completion_store[task_id] = is_completed
+    save_task_completions(task_completion_store)
     return task_completion_store[task_id]
 
 
 def reset_timeline_tasks() -> None:
     global task_completion_store
     task_completion_store.clear()
+    save_task_completions(task_completion_store)
 
 
 def parse_time_str(time_str: str) -> tuple[int, int]:
