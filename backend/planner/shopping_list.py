@@ -1,6 +1,6 @@
 """
 Shopping List Aggregator with Multi-Supermarket Store Separation,
-Pack-Size Logic, Pantry Stock Deduction, and In-Store Walkway Sort.
+Realistic Pack-Size & Price Logic, Pantry Stock Deduction, and In-Store Walkway Sort.
 Supports Netto, NP, Lidl, Aldi, Rewe, Kaufland, and Edeka.
 """
 
@@ -8,7 +8,8 @@ import math
 import hashlib
 from typing import Dict, Tuple, List, Optional
 from backend.models import WeeklyPlan, ShoppingList, ShoppingItem, CustomShoppingItem
-from backend.pantry.inventory_manager import get_pack_size, find_pantry_item_by_name
+from backend.pantry.inventory_manager import find_pantry_item_by_name
+from backend.nutrition.price_database import get_product_price, get_realistic_pack_size
 
 
 def generate_product_barcode(product_name: str, retailer: str = "Netto") -> str:
@@ -57,19 +58,19 @@ def resolve_product_details(name: str, retailer: str, pack_size: Optional[float]
 
     pack_str = f" ({int(pack_size) if pack_size and float(pack_size).is_integer() else pack_size}{unit})" if pack_size else ""
 
-    if any(k in n for k in ["lachs", "thunfisch", "forelle", "fisch", "garnelen"]):
+    if any(k in n for k in ["lachs", "thunfisch", "forelle", "fisch", "kabeljau", "garnele"]):
         brand = fish_b
         exact = f"{brand} Frisches {name}{pack_str}"
-    elif any(k in n for k in ["hähnchen", "pute", "hack", "rind", "fleisch"]):
+    elif any(k in n for k in ["hähnchen", "pute", "hack", "rind", "steak", "fleisch"]):
         brand = meat_b
         exact = f"{brand} Frische/s {name}{pack_str}"
-    elif any(k in n for k in ["quark", "skyr", "joghurt", "milch", "käse", "feta", "frischkäse", "butter"]):
+    elif any(k in n for k in ["quark", "skyr", "joghurt", "milch", "käse", "feta", "frischkäse", "butter", "mozzarella", "gouda", "sahne"]):
         brand = dairy_b
         exact = f"{brand} {name}{pack_str}"
-    elif any(k in n for k in ["haferflocken", "leinsamen", "chiasamen", "quinoa", "reis", "linsen"]):
+    elif any(k in n for k in ["haferflocken", "leinsamen", "chiasamen", "quinoa", "reis", "linsen", "couscous", "bulgur", "tofu"]):
         brand = bio_b
         exact = f"{brand} Bio-{name}{pack_str}"
-    elif any(k in n for k in ["apfel", "banane", "beere", "spinat", "brokkoli", "gurke", "tomate", "avocado", "paprika"]):
+    elif any(k in n for k in ["apfel", "äpfel", "banane", "beere", "spinat", "brokkoli", "gurke", "tomate", "avocado", "paprika", "zucchini", "karotte", "kartoffel"]):
         brand = bio_b
         exact = f"{brand} Frische/r {name} (Klasse I)"
     elif "ei" in n:
@@ -108,19 +109,19 @@ def get_substitutes_for_item(name: str) -> List[str]:
     if "brokkoli" in lower_name:
         return ["Zucchini frisch", "TK Kaisergemüse", "Blumenkohl"]
     elif "lachs" in lower_name:
-        return ["Forellenfilet", "Kabeljau / Seelachs", "Hähnchenbrust"]
+        return ["Forellenfilet", "Kabeljaufilet", "Hähnchenbrust"]
     elif "hähnchen" in lower_name or "pute" in lower_name:
-        return ["Putenbrust", "Bio-Tofu natur", "Rinderhack mager"]
+        return ["Putenbrustfilet", "Bio-Tofu natur", "Rinderhack mager"]
     elif "skyr" in lower_name or "quark" in lower_name:
         return ["Magerquark", "Griechischer Joghurt 0%", "Körniger Frischkäse"]
     elif "avocado" in lower_name:
-        return ["Walnüsse", "Natives Olivenöl", "Bio-Hummus"]
+        return ["Walnüsse", "Natives Olivenöl", "Sonnenblumenkerne"]
     elif "beere" in lower_name:
         return ["TK Beerenmischung", "Bio-Äpfel", "Bananen"]
     elif "quinoa" in lower_name:
-        return ["Vollkornreis", "Bulgur", "Hirse"]
+        return ["Naturreis", "Bulgur", "Couscous"]
     elif "spinat" in lower_name:
-        return ["Mangold", "Feldsalat", "Rucola", "TK Blattspinat"]
+        return ["Feldsalat", "Rucola", "TK Blattspinat"]
     elif "tomate" in lower_name:
         return ["Rote Paprika", "Dosentomaten stückig", "Gurke"]
     return ["Gleiche Produktgruppe im Regal prüfen", "Günstige Discounter-Eigenmarke wählen"]
@@ -133,9 +134,9 @@ def generate_shopping_list_from_plan(
     """
     Sums up all required ingredients for all family members across the whole week.
     Separates items into Netto, NP, Lidl, Aldi, Rewe, Kaufland, Edeka, and Pantry.
-    Accounts for existing pantry stock, pack sizes, and leftovers.
+    Uses realistic German supermarket prices, pack-size logic, and pantry stock deduction.
     """
-    aggregated: Dict[Tuple[str, str, str, str], float] = {}
+    aggregated: Dict[Tuple[str, str], Dict[str, Any]] = {}
 
     for day in plan.days:
         for member_id, meal_portions in day.portions.items():
@@ -166,17 +167,23 @@ def generate_shopping_list_from_plan(
 
                     cat = "Frische Lebensmittel"
                     lower_name = ing.name.lower()
-                    if any(w in lower_name for w in ["apfel", "heidelbeere", "beere", "gurke", "paprika", "brokkoli", "süßkartoffel", "spinat", "avocado", "tomate"]):
+                    if any(w in lower_name for w in ["apfel", "äpfel", "heidelbeere", "beere", "himbeere", "erdbeere", "gurke", "paprika", "brokkoli", "süßkartoffel", "spinat", "avocado", "tomate", "zucchini", "karotte", "kartoffel", "zwiebel", "knoblauch", "zitrone", "ingwer"]):
                         cat = "Obst & Gemüse"
-                    elif any(w in lower_name for w in ["lachs", "hähnchen", "ei", "quark", "skyr", "frischkäse", "feta", "thunfisch", "hack"]):
+                    elif any(w in lower_name for w in ["lachs", "hähnchen", "pute", "rind", "steak", "ei", "quark", "skyr", "frischkäse", "feta", "thunfisch", "hack", "kabeljau", "forelle", "garnele", "mozzarella", "gouda", "tofu", "butter", "sahne"]):
                         cat = "Kühlregal / Proteine"
-                    elif any(w in lower_name for w in ["haferflocken", "quinoa", "knäckebrot", "brot", "wrap", "linsen", "kichererbsen", "reis", "nudeln"]):
+                    elif any(w in lower_name for w in ["haferflocken", "dinkel", "quinoa", "knäckebrot", "brot", "wrap", "linsen", "kichererbsen", "bohnen", "reis", "nudeln", "spaghetti", "penne", "couscous", "bulgur", "mehl"]):
                         cat = "Trockensortiment & Vollkorn"
+                    elif any(w in lower_name for w in ["walnuss", "mandel", "kürbiskern", "sonnenblumenkern", "chiasamen", "leinsamen", "erdnuss", "tahini", "cashew", "olivenöl", "rapsöl", "leinöl"]):
+                        cat = "Nüsse, Kerne & Öle"
                     else:
                         cat = "Gewürze & Basics"
 
-                    key = (ing.name, ing.unit, store, cat)
-                    aggregated[key] = aggregated.get(key, 0.0) + ing.amount
+                    clean_name = ing.name.strip()
+                    key = (clean_name, ing.unit)
+                    if key not in aggregated:
+                        aggregated[key] = {"qty": 0.0, "stores": {}, "cat": cat}
+                    aggregated[key]["qty"] += ing.amount
+                    aggregated[key]["stores"][store] = aggregated[key]["stores"].get(store, 0.0) + ing.amount
 
     items_netto: List[ShoppingItem] = []
     items_np: List[ShoppingItem] = []
@@ -191,11 +198,20 @@ def generate_shopping_list_from_plan(
     total_savings = 0.0
     stock_savings = 0.0
 
-    for (name, unit, store, cat), qty in aggregated.items():
+    for (name, unit), entry in aggregated.items():
+        qty = entry["qty"]
+        cat = entry["cat"]
+
+        non_pantry_stores = {s: a for s, a in entry["stores"].items() if s != "Vorratskammer"}
+        if non_pantry_stores:
+            store = max(non_pantry_stores.items(), key=lambda x: x[1])[0]
+        else:
+            store = "Vorratskammer"
+
         if unit in ["g", "ml"]:
-            needed_qty = round(qty / 10) * 10
+            needed_qty = round(qty / 5) * 5
             if needed_qty == 0:
-                needed_qty = 10
+                needed_qty = 5
         elif unit == "Stück":
             needed_qty = round(qty)
             if needed_qty == 0:
@@ -203,34 +219,41 @@ def generate_shopping_list_from_plan(
         else:
             needed_qty = round(qty, 1)
 
+        # Realistic price and pack size lookup
+        price_info = get_product_price(name)
+        pack_size, pack_unit = get_realistic_pack_size(name)
+        base_pack_price = price_info.get("pack_price", 1.99) if price_info else 1.99
+
         # Check existing pantry stock
         pantry_match = find_pantry_item_by_name(name)
         in_stock_qty = pantry_match.current_quantity if pantry_match else 0.0
-
-        pack_size, _ = get_pack_size(name, unit)
 
         if in_stock_qty >= needed_qty:
             is_covered = True
             net_need = 0.0
             packs_to_buy = 0
             estimated_price = 0.0
-            savings = round((needed_qty / max(1.0, pack_size)) * 1.99, 2)
+            savings = round((needed_qty / max(1.0, pack_size)) * base_pack_price, 2)
             leftover = round(in_stock_qty - needed_qty, 1)
             stock_savings += savings
+            unit_price = base_pack_price
         else:
             is_covered = False
+            if store == "Vorratskammer":
+                store = "Netto"
             net_need = max(0.0, needed_qty - in_stock_qty)
             packs_to_buy = max(1, math.ceil(net_need / max(1.0, pack_size)))
             leftover = round((packs_to_buy * pack_size) - net_need, 1)
 
             is_sale = store in ["Netto", "NP", "Lidl", "Aldi Nord", "Aldi Süd", "Rewe", "Kaufland", "Edeka"]
             if is_sale:
-                unit_price = 1.49
-                estimated_price = round(packs_to_buy * 1.69, 2)
-                savings = round(estimated_price * 0.30, 2)
+                # Realistic ~18% discount on average for weekly leaflet deals
+                unit_price = round(base_pack_price * 0.82, 2)
+                estimated_price = round(packs_to_buy * unit_price, 2)
+                savings = round(packs_to_buy * (base_pack_price - unit_price), 2)
             else:
-                unit_price = 0.99
-                estimated_price = round(packs_to_buy * 1.19, 2)
+                unit_price = base_pack_price
+                estimated_price = round(packs_to_buy * unit_price, 2)
                 savings = 0.0
 
             total_cost += estimated_price
@@ -238,13 +261,13 @@ def generate_shopping_list_from_plan(
 
         # Supermarket Aisle Walkway Mapping
         lower_name = name.lower()
-        if any(w in lower_name for w in ["apfel", "heidelbeere", "beere", "gurke", "paprika", "brokkoli", "süßkartoffel", "spinat", "avocado", "tomate"]):
+        if any(w in lower_name for w in ["apfel", "äpfel", "heidelbeere", "beere", "himbeere", "erdbeere", "gurke", "paprika", "brokkoli", "süßkartoffel", "spinat", "avocado", "tomate", "zucchini", "karotte", "kartoffel", "zwiebel", "knoblauch", "zitrone", "ingwer"]):
             aisle = "1. Obst- & Gemüse-Insel"
-        elif any(w in lower_name for w in ["lachs", "thunfisch", "hähnchen", "pute", "hackfleisch"]):
+        elif any(w in lower_name for w in ["lachs", "thunfisch", "hähnchen", "pute", "hack", "rind", "steak", "kabeljau", "forelle", "garnele"]):
             aisle = "3. Fleisch & Frischer Fisch"
-        elif any(w in lower_name for w in ["ei", "quark", "skyr", "frischkäse", "feta", "käse", "milch", "mandelmilch"]):
+        elif any(w in lower_name for w in ["ei", "quark", "skyr", "frischkäse", "feta", "käse", "milch", "mozzarella", "gouda", "tofu", "butter", "sahne"]):
             aisle = "2. Kühlregal & Molkerei"
-        elif any(w in lower_name for w in ["haferflocken", "quinoa", "knäckebrot", "brot", "wrap", "linsen", "kichererbsen", "reis", "nudeln", "penne", "chiasamen", "walnuss"]):
+        elif any(w in lower_name for w in ["haferflocken", "dinkel", "quinoa", "knäckebrot", "brot", "wrap", "linsen", "kichererbsen", "bohnen", "reis", "nudeln", "spaghetti", "penne", "couscous", "bulgur", "mehl", "chiasamen", "walnuss", "mandel"]):
             aisle = "4. Trockensortiment & Vorräte"
         else:
             aisle = "5. Basics & Gewürze"
@@ -259,7 +282,7 @@ def generate_shopping_list_from_plan(
             category=cat,
             retailer=store,  # type: ignore
             is_on_sale=(store != "Vorratskammer"),
-            unit_price=1.49 if store != "Vorratskammer" else 0.99,
+            unit_price=unit_price,
             total_price=estimated_price,
             savings=savings,
             is_checked=False,
@@ -276,7 +299,9 @@ def generate_shopping_list_from_plan(
             barcode=barcode,
         )
 
-        if store == "Netto":
+        if is_covered:
+            items_pantry.append(item)
+        elif store == "Netto":
             items_netto.append(item)
         elif store == "NP":
             items_np.append(item)
@@ -291,7 +316,7 @@ def generate_shopping_list_from_plan(
         elif store == "Edeka":
             items_edeka.append(item)
         else:
-            items_pantry.append(item)
+            items_netto.append(item)
 
     for lst in [items_netto, items_np, items_lidl, items_aldi, items_rewe, items_kaufland, items_edeka, items_pantry]:
         lst.sort(key=lambda x: (x.is_covered_by_stock, x.aisle, x.name))

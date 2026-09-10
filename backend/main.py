@@ -447,6 +447,7 @@ async def analyze_product(query: IngredientQuery):
 
 
 @app.get("/api/recipes", response_model=List[Recipe])
+@app.get("/api/recipes/", response_model=List[Recipe], include_in_schema=False)
 def get_recipes(
     meal_type: Optional[str] = None,
     diet: Optional[str] = None,
@@ -501,6 +502,7 @@ def swap_meal(req: SwapMealRequest):
 
 
 @app.get("/api/shopping-list", response_model=ShoppingList)
+@app.get("/api/shopping-list/", response_model=ShoppingList, include_in_schema=False)
 def get_shopping_list(week_offset: int = Query(0, description="Week offset from current week")):
     plan = get_or_create_weekly_plan(week_offset)
     return generate_shopping_list_from_plan(plan, get_custom_shopping_items())
@@ -596,7 +598,8 @@ def update_budget(req: UpdateBudgetRequest):
 # -----------------------------------------------------------
 
 @app.get("/api/daily-hub", response_model=DailyHubResponse)
-def get_daily_hub():
+@app.get("/api/daily-hub/", response_model=DailyHubResponse, include_in_schema=False)
+def get_daily_hub_data():
     global daily_hub_state, family_profiles
     plan = get_or_create_weekly_plan(0)
 

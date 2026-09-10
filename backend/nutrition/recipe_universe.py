@@ -31,14 +31,8 @@ def _load_universe_if_needed() -> List[Recipe]:
 
     json_path = _get_universe_file_path()
     if not os.path.exists(json_path):
-        # Fallback if json not yet generated
-        from backend.nutrition.recipe_database import RECIPES_DATABASE
-        _RECIPES_CACHE = list(RECIPES_DATABASE)
-        for r in _RECIPES_CACHE:
-            _RECIPES_BY_ID[r.id] = r
-            if r.meal_type in _RECIPES_BY_MEAL:
-                _RECIPES_BY_MEAL[r.meal_type].append(r)
-        return _RECIPES_CACHE
+        from backend.nutrition.generate_universe import build_universe
+        build_universe()
 
     with open(json_path, "r", encoding="utf-8") as f:
         raw_list = json.load(f)

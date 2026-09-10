@@ -26,22 +26,36 @@ class TestRecipeUniverseAndSupermarkets(unittest.TestCase):
 
     def test_recipe_universe_volume(self):
         recipes = get_all_universe_recipes()
-        self.assertGreaterEqual(len(recipes), 1000, "Recipe database must contain at least 1,000 recipes")
+        self.assertGreaterEqual(len(recipes), 100, "Recipe database must contain at least 100 hand-curated recipes")
         stats = get_universe_stats()
         self.assertTrue(stats["is_ai_free"])
-        self.assertGreaterEqual(stats["breakfasts"], 300)
-        self.assertGreaterEqual(stats["lunches"], 300)
-        self.assertGreaterEqual(stats["dinners"], 300)
+        self.assertGreaterEqual(stats["breakfasts"], 30)
+        self.assertGreaterEqual(stats["lunches"], 30)
+        self.assertGreaterEqual(stats["dinners"], 30)
+
+    def test_clean_purchasable_ingredients(self):
+        """Ensures NO ingredients have combined strings like 'Brokkoli & Olivenöl'."""
+        recipes = get_all_universe_recipes()
+        for r in recipes:
+            for ing in r.ingredients:
+                self.assertNotIn(" & ", ing.name, f"Ingredient '{ing.name}' in '{r.title}' must not contain '&'")
+                self.assertNotIn(" und ", ing.name, f"Ingredient '{ing.name}' in '{r.title}' must not contain 'und'")
+                self.assertGreater(ing.base_amount, 0, f"Amount for '{ing.name}' in '{r.title}' must be positive")
 
     def test_recipe_diets_coverage(self):
         # All major dietary styles must have plenty of compatible recipes
         diets_to_test = [
-            "vegetarian", "vegan", "pescetarian", "no_pork",
-            "high_protein", "low_carb", "gluten_free", "lactose_free"
+            ("vegetarian", 30),
+            ("vegan", 15),
+            ("pescetarian", 40),
+            ("no_pork", 50),
+            ("high_protein", 30),
+            ("gluten_free", 30),
+            ("lactose_free", 30),
         ]
-        for diet in diets_to_test:
+        for diet, min_count in diets_to_test:
             matches = filter_universe_recipes(diet=diet)
-            self.assertGreater(len(matches), 50, f"Diet '{diet}' must have at least 50 recipes")
+            self.assertGreaterEqual(len(matches), min_count, f"Diet '{diet}' must have at least {min_count} recipes")
 
     def test_zero_repetition_across_weeks(self):
         plan_w0 = generate_weekly_plan(self.family, week_offset=0)

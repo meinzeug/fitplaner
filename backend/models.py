@@ -504,4 +504,40 @@ class MeshStatusResponse(BaseModel):
     bluetooth_service_uuid: str = "0000ffe0-0000-1000-8000-00805f9b34fb"
 
 
+# -------------------------------------------------------------
+# HOST-CLIENT ARCHITEKTUR: FAMILIENOBERHAUPT & KINDER-APKS
+# -------------------------------------------------------------
 
+class RegisteredClientDevice(BaseModel):
+    device_id: str
+    device_name: str
+    assigned_member_id: Optional[str] = None
+    assigned_member_name: Optional[str] = None
+    last_sync_at: str
+    sync_transport: Literal["wifi", "bluetooth"] = "wifi"
+    synced_chores_count: int = 0
+    synced_water_ml: int = 0
+    is_online: bool = True
+
+
+class ChildDeltaSyncRequest(BaseModel):
+    client_device_id: str
+    client_device_name: str
+    assigned_member_id: Optional[str] = None
+    completed_chore_ids: List[str] = Field(default_factory=list)
+    water_intake_ml: int = 0
+    checked_shopping_items: List[str] = Field(default_factory=list)
+    sync_transport: Literal["wifi", "bluetooth"] = "wifi"
+    timestamp: Optional[str] = None
+
+
+class AuthoritativeSyncBundle(BaseModel):
+    server_timestamp: str
+    host_device_name: str
+    family_members: List[FamilyMember] = Field(default_factory=list)
+    chores: List[FamilyChore] = Field(default_factory=list)
+    total_star_points: int = 0
+    star_goal: int = 50
+    daily_hub_state: Dict[str, Any] = Field(default_factory=dict)
+    checked_shopping_items: List[str] = Field(default_factory=list)
+    sync_status: str = "success"
