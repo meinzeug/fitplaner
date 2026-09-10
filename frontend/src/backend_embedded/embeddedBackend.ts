@@ -23,6 +23,8 @@ import {
   FamilyVitalityScore,
   BudgetInfo,
   Retailer,
+  ProductCatalogItem,
+  RecurringPurchaseRule,
 } from '../types';
 
 import {
@@ -43,6 +45,11 @@ import {
   getRecipeFamilyConflicts,
   getRecipeMemberConflicts,
 } from './dietValidator';
+import {
+  isShelfStableDryGood,
+  getAisleForIngredient,
+  findPantryMatch,
+} from './shelfStability';
 
 // ----------------------------------------------------
 // DEFAULT SEED DATA
@@ -158,12 +165,12 @@ const DEFAULT_PANTRY_ITEMS: PantryItem[] = [
   },
   {
     id: 'pnt-4',
-    name: 'Bio Eier (Freiland)',
-    current_quantity: 6,
-    unit: 'Stück',
-    category: 'Proteinquellen',
+    name: 'Walnusskerne',
+    current_quantity: 200,
+    unit: 'g',
+    category: 'Gesunde Fette & Nüsse',
     shelf_life_status: 'fresh',
-    days_left: 10,
+    days_left: 60,
     source: 'Netto',
     added_date: new Date().toISOString(),
   },
@@ -638,9 +645,14 @@ export function buildShoppingList(
 
   Object.values(aggregated).forEach((entry) => {
     const roundedQty = Math.round(entry.totalQty * 10) / 10;
-    const stock = pantryMap.get(entry.name.toLowerCase().trim()) || 0;
+
+    // Check shelf stability: Only durable dry goods can stay in pantry
+    const isShelfStable = isShelfStableDryGood(entry.name, entry.category);
+
+    // Fresh products (meat, fish, veg, fresh dairy) must ALWAYS be bought fresh
+    const stock = isShelfStable ? (pantryMap.get(entry.name.toLowerCase().trim()) || 0) : 0;
     const netNeed = Math.max(0, Math.round((roundedQty - stock) * 10) / 10);
-    const isCovered = netNeed <= 0;
+    const isCovered = isShelfStable && netNeed <= 0;
 
     let packSize = 1;
     if (entry.unit === 'g') packSize = 500;
@@ -648,7 +660,13 @@ export function buildShoppingList(
     else if (entry.unit === 'Stück') packSize = 6;
 
     const packs = isCovered ? 0 : Math.max(1, Math.ceil(netNeed / packSize));
-    const leftover = Math.max(0, Math.round((packs * packSize - netNeed) * 10) / 10);
+
+    // Leftovers that migrate to the pantry are ONLY calculated for shelf-stable dry goods!
+    // Fresh goods (meat, fish, vegetables, fresh dairy) are consumed fresh and NEVER migrate to pantry!
+    const leftover = isShelfStable
+      ? Math.max(0, Math.round((packs * packSize - netNeed) * 10) / 10)
+      : 0.0;
+
     const unitPrice = 1.49;
     const price = isCovered ? 0 : Math.round(packs * unitPrice * 100) / 100;
 
@@ -662,6 +680,9 @@ export function buildShoppingList(
     totalCost += price;
     totalSavings += savings;
     if (isCovered) stockSavings += unitPrice;
+
+    // Supermarket aisle walkway classification
+    const aisle = getAisleForIngredient(entry.name);
 
     const item: ShoppingItem = {
       name: entry.name,
@@ -683,13 +704,15 @@ export function buildShoppingList(
       packs_to_buy: packs,
       leftover_after_purchase: leftover,
       is_covered_by_stock: isCovered,
-      is_pantry_eligible: true,
-      aisle: entry.category,
+      is_pantry_eligible: isShelfStable,
+      aisle: aisle,
       exact_product_name: `${entry.retailer} ${entry.name}`,
       brand: entry.retailer,
     };
 
-    if (itemsMap[entry.retailer]) {
+    if (isCovered) {
+      itemsMap['Vorratskammer'].push(item);
+    } else if (itemsMap[entry.retailer]) {
       itemsMap[entry.retailer].push(item);
     } else {
       itemsMap['Netto'].push(item);
@@ -713,6 +736,199 @@ export function buildShoppingList(
     covered_by_stock_savings: Math.round(stockSavings * 100) / 100,
   };
 }
+
+// ----------------------------------------------------
+// KNOWN SUPERMARKET PRODUCTS CATALOG (EAN)
+// ----------------------------------------------------
+
+export const KNOWN_SUPERMARKET_PRODUCTS: Record<string, Partial<ProductCatalogItem>> = {
+  '4014400900010': {
+    barcode: '4014400900010',
+    name: 'Kölln Echte Haferflocken Zart',
+    brand: 'Kölln',
+    category: 'Vollkorn & Hülsenfrüchte',
+    quantity: 500,
+    unit: 'g',
+    retailer: 'Netto',
+    price: 1.49,
+    nutri_score: 'A',
+    source: 'Katalog',
+  },
+  '4311501683226': {
+    barcode: '4311501683226',
+    name: 'BioBio Natur Skyr',
+    brand: 'Netto BioBio',
+    category: 'Proteinquellen',
+    quantity: 500,
+    unit: 'g',
+    retailer: 'Netto',
+    price: 1.39,
+    nutri_score: 'A',
+    source: 'Katalog',
+  },
+  '4311501742916': {
+    barcode: '4311501742916',
+    name: 'Gut Ponholz Hähnchenbrustfilet',
+    brand: 'Gut Ponholz',
+    category: 'Proteinquellen',
+    quantity: 400,
+    unit: 'g',
+    retailer: 'Netto',
+    price: 3.99,
+    nutri_score: 'A',
+    source: 'Katalog',
+  },
+  '4311501482010': {
+    barcode: '4311501482010',
+    name: 'Deutscher Brokkoli',
+    brand: 'Gartenkrone',
+    category: 'Obst & Gemüse',
+    quantity: 500,
+    unit: 'g',
+    retailer: 'NP',
+    price: 1.29,
+    nutri_score: 'A',
+    source: 'Katalog',
+  },
+  '8076809513753': {
+    barcode: '8076809513753',
+    name: 'Barilla Spaghetti No. 5',
+    brand: 'Barilla',
+    category: 'Vollkorn & Hülsenfrüchte',
+    quantity: 500,
+    unit: 'g',
+    retailer: 'Netto',
+    price: 1.89,
+    nutri_score: 'A',
+    source: 'Katalog',
+  },
+  '5411188110835': {
+    barcode: '5411188110835',
+    name: 'Alpro Mandelmilch Ungesüßt',
+    brand: 'Alpro',
+    category: 'Kühlregal',
+    quantity: 1000,
+    unit: 'ml',
+    retailer: 'Netto',
+    price: 2.49,
+    nutri_score: 'B',
+    source: 'Katalog',
+  },
+  '5011013100156': {
+    barcode: '5011013100156',
+    name: 'Kerrygold Irische Butter',
+    brand: 'Kerrygold',
+    category: 'Kühlregal',
+    quantity: 250,
+    unit: 'g',
+    retailer: 'NP',
+    price: 2.29,
+    nutri_score: 'D',
+    source: 'Katalog',
+  },
+  '4008400404127': {
+    barcode: '4008400404127',
+    name: 'Kinder Riegel',
+    brand: 'Ferrero',
+    category: 'Süßwaren',
+    quantity: 10,
+    unit: 'Stück',
+    retailer: 'Netto',
+    price: 2.19,
+    nutri_score: 'E',
+    source: 'Katalog',
+  },
+  '4008400320328': {
+    barcode: '4008400320328',
+    name: 'Nutella Nuss-Nougat-Creme',
+    brand: 'Ferrero',
+    category: 'Süßwaren',
+    quantity: 450,
+    unit: 'g',
+    retailer: 'Netto',
+    price: 3.29,
+    nutri_score: 'E',
+    source: 'Katalog',
+  },
+  '4005900000000': {
+    barcode: '4005900000000',
+    name: 'Bio Vollmilch 3,8%',
+    brand: 'BioBio',
+    category: 'Kühlregal',
+    quantity: 1000,
+    unit: 'ml',
+    retailer: 'Netto',
+    price: 1.15,
+    nutri_score: 'B',
+    source: 'Katalog',
+  },
+  '4058172925764': {
+    barcode: '4058172925764',
+    name: 'Balea Cremedusche Milch & Honig',
+    brand: 'Balea',
+    category: 'Drogerie & Körperpflege',
+    quantity: 300,
+    unit: 'ml',
+    retailer: 'dm',
+    price: 0.95,
+    source: 'Drogerie-Katalog',
+  },
+  '4058172925771': {
+    barcode: '4058172925771',
+    name: 'Dontodent Zahncreme Kräuter',
+    brand: 'Dontodent',
+    category: 'Drogerie & Körperpflege',
+    quantity: 125,
+    unit: 'ml',
+    retailer: 'dm',
+    price: 0.85,
+    source: 'Drogerie-Katalog',
+  },
+  '4058172925788': {
+    barcode: '4058172925788',
+    name: 'Sanft & Sicher Toilettenpapier 3-lagig',
+    brand: 'Sanft & Sicher',
+    category: 'Haushalt & Reinigung',
+    quantity: 8,
+    unit: 'Stück',
+    retailer: 'dm',
+    price: 3.45,
+    source: 'Drogerie-Katalog',
+  },
+  '4009175112345': {
+    barcode: '4009175112345',
+    name: 'Frosch Bio-Spülmittel Citrus',
+    brand: 'Frosch',
+    category: 'Haushalt & Reinigung',
+    quantity: 750,
+    unit: 'ml',
+    retailer: 'Rossmann',
+    price: 1.79,
+    source: 'Drogerie-Katalog',
+  },
+  '7613035123456': {
+    barcode: '7613035123456',
+    name: 'Felix Gemischte Vielfalt Katzenfutter',
+    brand: 'Purina Felix',
+    category: 'Tierbedarf',
+    quantity: 12,
+    unit: 'Stück',
+    retailer: 'Netto',
+    price: 4.49,
+    source: 'Supermarkt-Katalog',
+  },
+  '4009932001234': {
+    barcode: '4009932001234',
+    name: 'Doppelherz Magnesium 400 + B-Vitamine',
+    brand: 'Doppelherz',
+    category: 'Gesundheit & Apotheke',
+    quantity: 30,
+    unit: 'Stück',
+    retailer: 'dm',
+    price: 3.99,
+    source: 'Drogerie-Katalog',
+  },
+};
 
 // ----------------------------------------------------
 // EMBEDDED BACKEND ROUTER
@@ -753,6 +969,13 @@ class EmbeddedBackend {
     if (!pantry || pantry.length === 0) {
       for (const p of DEFAULT_PANTRY_ITEMS) {
         await localDbSet(STORES.PANTRY, p.id, p);
+      }
+    } else {
+      // PURGE: Remove any fresh/perishable goods (meat, fish, veg, fresh dairy) erroneously booked into pantry earlier
+      for (const p of pantry) {
+        if (!isShelfStableDryGood(p.name, p.category)) {
+          await localDbDelete(STORES.PANTRY, p.id);
+        }
       }
     }
 
@@ -909,25 +1132,131 @@ class EmbeddedBackend {
       if (pathname.startsWith('/api/pantry/')) {
         const sub = pathname.replace('/api/pantry/', '');
         if (sub === 'cook-meal' && method === 'POST') {
-          return this.json({ success: true, deducted: bodyData?.ingredients?.length || 0 });
+          const weekOffset = Number(bodyData?.week_offset ?? 0);
+          const dayIndex = Number(bodyData?.day_index ?? 0);
+          const mealType = String(bodyData?.meal_type ?? 'dinner');
+
+          let plan = await localDbGet<WeeklyPlan>(STORES.PLANS, `week_${weekOffset}`);
+          if (!plan) {
+            const currentSettings = (await localDbGet<AppSettings>(STORES.SETTINGS, 'current')) || DEFAULT_SETTINGS;
+            const members = await localDbGetAll<FamilyMember>(STORES.PROFILES);
+            const recipes = await localDbGetAll<Recipe>(STORES.RECIPES);
+            const effMembers = members.length > 0 ? members : DEFAULT_MEMBERS_RAW.map((m) => enrichFamilyMember(m));
+            const effRecipes = recipes.length > 0 ? recipes : STARTER_RECIPES;
+            plan = buildWeeklyPlan(weekOffset, effMembers, effRecipes, currentSettings.active_retailers, currentSettings.primary_retailer);
+          }
+
+          const day = plan.days[dayIndex];
+          if (!day) {
+            return this.json({ error: 'Ungültiger Tag im Wochenplan' }, 400);
+          }
+
+          if (mealType === 'breakfast') day.is_breakfast_cooked = true;
+          else if (mealType === 'lunch') day.is_lunch_cooked = true;
+          else if (mealType === 'dinner') {
+            day.is_dinner_cooked = true;
+            this.dailyActionsState.dinner_cooked = true;
+          }
+
+          // Deduct consumed ingredients
+          const totalIngredientsConsumed: ScaledIngredient[] = [];
+          if (day.portions) {
+            for (const memberPortions of Object.values(day.portions)) {
+              const portion = (memberPortions as any)[mealType];
+              if (portion && Array.isArray(portion.scaled_ingredients)) {
+                totalIngredientsConsumed.push(...portion.scaled_ingredients);
+              }
+            }
+          }
+
+          // Live deduct from pantry
+          const currentPantry = await localDbGetAll<PantryItem>(STORES.PANTRY);
+          const deductionLog: any[] = [];
+
+          for (const ing of totalIngredientsConsumed) {
+            const pantryMatch = findPantryMatch(ing.name, currentPantry);
+            if (pantryMatch) {
+              const oldQty = pantryMatch.current_quantity;
+              const newQty = Math.max(0, Math.round((oldQty - ing.amount) * 10) / 10);
+              pantryMatch.current_quantity = newQty;
+              await localDbSet(STORES.PANTRY, pantryMatch.id, pantryMatch);
+              deductionLog.push({
+                ingredient: ing.name,
+                deducted: ing.amount,
+                unit: ing.unit,
+                previous_stock: oldQty,
+                remaining_stock: newQty,
+              });
+            } else {
+              deductionLog.push({
+                ingredient: ing.name,
+                deducted: ing.amount,
+                unit: ing.unit,
+                note: 'Nicht im Lager hinterlegt (frisch verbraucht)',
+              });
+            }
+          }
+
+          await localDbSet(STORES.PLANS, `week_${weekOffset}`, plan);
+
+          return this.json({
+            success: true,
+            day: day.day_name,
+            meal_type: mealType,
+            deduction_log: deductionLog,
+            updated_plan: plan,
+          });
         }
         if (sub === 'book-cart' && method === 'POST') {
           const itemsToBook = bodyData?.items || [];
+          let bookedCount = 0;
+          const currentPantry = await localDbGetAll<PantryItem>(STORES.PANTRY);
+
           for (const it of itemsToBook) {
-            const pntItem: PantryItem = {
-              id: `pnt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-              name: it.name,
-              current_quantity: (it.packs_to_buy || 1) * (it.pack_size || 500),
-              unit: it.unit || 'g',
-              category: it.category || 'Vorratskammer',
-              shelf_life_status: 'fresh',
-              days_left: 60,
-              source: it.retailer || 'Supermarkt',
-              added_date: new Date().toISOString(),
-            };
-            await localDbSet(STORES.PANTRY, pntItem.id, pntItem);
+            const itemName = (it.name || '').trim();
+            const itemCat = it.category || '';
+
+            // STRICT GUARD: Fresh goods (meat, fish, fresh veg, fresh dairy) must NEVER be booked into pantry!
+            if (!isShelfStableDryGood(itemName, itemCat)) {
+              continue;
+            }
+
+            // Determine quantity: prefer surplus / leftover_after_purchase if available
+            let qty = 0;
+            if (it.leftover_after_purchase !== undefined && Number(it.leftover_after_purchase) > 0) {
+              qty = Number(it.leftover_after_purchase);
+            } else if (it.quantity !== undefined && Number(it.quantity) > 0) {
+              qty = Number(it.quantity);
+            } else if (it.total_quantity !== undefined && Number(it.total_quantity) > 0) {
+              qty = Number(it.total_quantity);
+            } else {
+              qty = (it.packs_to_buy || 1) * (it.pack_size || 500);
+            }
+
+            if (qty <= 0) continue;
+
+            const existing = findPantryMatch(itemName, currentPantry);
+            if (existing) {
+              existing.current_quantity = Math.round((existing.current_quantity + qty) * 10) / 10;
+              await localDbSet(STORES.PANTRY, existing.id, existing);
+            } else {
+              const pntItem: PantryItem = {
+                id: `pnt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                name: itemName,
+                current_quantity: Math.round(qty * 10) / 10,
+                unit: it.unit || 'g',
+                category: it.category || 'Vorratskammer',
+                shelf_life_status: 'fresh',
+                days_left: 90,
+                source: it.source || 'Restmenge',
+                added_date: new Date().toISOString(),
+              };
+              await localDbSet(STORES.PANTRY, pntItem.id, pntItem);
+              currentPantry.push(pntItem);
+            }
+            bookedCount++;
           }
-          return this.json({ success: true, count: itemsToBook.length });
+          return this.json({ success: true, count: bookedCount });
         }
         if (method === 'DELETE') {
           await localDbDelete(STORES.PANTRY, sub);
@@ -1196,7 +1525,39 @@ class EmbeddedBackend {
         const action = bodyData?.action;
         if (action === 'toggle_fresh_pick') this.dailyActionsState.fresh_pick_bought = !this.dailyActionsState.fresh_pick_bought;
         else if (action === 'toggle_lunchbox') this.dailyActionsState.lunchbox_packed = !this.dailyActionsState.lunchbox_packed;
-        else if (action === 'toggle_dinner') this.dailyActionsState.dinner_cooked = !this.dailyActionsState.dinner_cooked;
+        else if (action === 'toggle_dinner' || action === 'cook_dinner') {
+          this.dailyActionsState.dinner_cooked = true;
+          // Deduct consumption from pantry for today's dinner
+          const now = new Date();
+          const weekday = (now.getDay() + 6) % 7;
+          let plan = await localDbGet<WeeklyPlan>(STORES.PLANS, 'week_0');
+          if (plan && plan.days && plan.days[weekday]) {
+            const day = plan.days[weekday];
+            day.is_dinner_cooked = true;
+            if (day.dinner && day.portions) {
+              const totalIngredientsConsumed: ScaledIngredient[] = [];
+              for (const memberPortions of Object.values(day.portions)) {
+                const portion = (memberPortions as any)['dinner'];
+                if (portion && Array.isArray(portion.scaled_ingredients)) {
+                  totalIngredientsConsumed.push(...portion.scaled_ingredients);
+                }
+              }
+              const currentPantry = await localDbGetAll<PantryItem>(STORES.PANTRY);
+              for (const ing of totalIngredientsConsumed) {
+                const pantryMatch = findPantryMatch(ing.name, currentPantry);
+                if (pantryMatch) {
+                  pantryMatch.current_quantity = Math.max(0, Math.round((pantryMatch.current_quantity - ing.amount) * 10) / 10);
+                  await localDbSet(STORES.PANTRY, pantryMatch.id, pantryMatch);
+                }
+              }
+            }
+            await localDbSet(STORES.PLANS, 'week_0', plan);
+          }
+        } else if (action === 'reset_day') {
+          this.dailyActionsState.fresh_pick_bought = false;
+          this.dailyActionsState.lunchbox_packed = false;
+          this.dailyActionsState.dinner_cooked = false;
+        }
 
         return this.handleRequest('/api/daily-hub');
       }
@@ -1444,22 +1805,260 @@ class EmbeddedBackend {
         return this.json({ devices: [] });
       }
 
-      // 17. SCANNERS (BARCODE / RECEIPT)
-      if (pathname === '/api/scanners/barcode' && method === 'POST') {
-        const barcode = bodyData?.barcode || '';
-        const pantry = await localDbGetAll<PantryItem>(STORES.PANTRY);
-        const match = pantry.find((p) => p.ean_barcode === barcode || barcode.includes(p.name.slice(0, 4)));
+      // 17. SCANNERS (BARCODE / RECEIPT) & PRODUCT DATABASE
+      if (pathname === '/api/products' && method === 'GET') {
+        const q = (searchParams.get('query') || '').toLowerCase().trim();
+        const customProducts = await localDbGetAll<ProductCatalogItem>(STORES.PRODUCTS);
+        const allKnown = [
+          ...customProducts,
+          ...Object.values(KNOWN_SUPERMARKET_PRODUCTS) as ProductCatalogItem[],
+        ];
+        const filtered = q
+          ? allKnown.filter((p) => p.name?.toLowerCase().includes(q) || p.barcode?.includes(q) || p.brand?.toLowerCase().includes(q))
+          : allKnown;
+        return this.json(filtered);
+      }
 
+      if (pathname === '/api/products' && method === 'POST') {
+        const prod = bodyData as ProductCatalogItem;
+        if (!prod || !prod.barcode) {
+          return this.json({ error: 'Barcode required' }, 400);
+        }
+        prod.last_scanned_at = new Date().toISOString();
+        await localDbSet(STORES.PRODUCTS, prod.barcode, prod);
+        return this.json({ success: true, product: prod });
+      }
+
+      if (pathname === '/api/scanners/barcode' && method === 'POST') {
+        const barcode = (bodyData?.barcode || '').trim();
+        if (!barcode) {
+          return this.json({ found: false, error: 'Empty barcode' }, 400);
+        }
+
+        // 1. Check user saved custom products in STORES.PRODUCTS
+        const savedProd = await localDbGet<ProductCatalogItem>(STORES.PRODUCTS, barcode);
+        if (savedProd) {
+          return this.json({ ...savedProd, found: true, source: 'Eigene Produktdatenbank' });
+        }
+
+        // 2. Check pantry
+        const pantry = await localDbGetAll<PantryItem>(STORES.PANTRY);
+        const matchPantry = pantry.find((p) => p.ean_barcode === barcode);
+        if (matchPantry) {
+          return this.json({
+            found: true,
+            barcode,
+            name: matchPantry.name,
+            brand: 'Vorrat',
+            category: matchPantry.category,
+            quantity: matchPantry.current_quantity,
+            unit: matchPantry.unit,
+            source: 'Vorratskammer',
+          });
+        }
+
+        // 3. Check known catalog
+        if (KNOWN_SUPERMARKET_PRODUCTS[barcode]) {
+          const catProd = KNOWN_SUPERMARKET_PRODUCTS[barcode];
+          return this.json({ ...catProd, found: true, source: 'Supermarkt-Katalog' });
+        }
+
+        // 4. Query Open Food Facts API (if online)
+        try {
+          if (typeof fetch !== 'undefined' && (typeof navigator === 'undefined' || navigator.onLine !== false)) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3500);
+            const offRes = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`, {
+              signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+
+            if (offRes.ok) {
+              const offData = await offRes.json();
+              if (offData.status === 1 && offData.product) {
+                const p = offData.product;
+                const name = p.product_name_de || p.product_name || p.generic_name_de || p.generic_name || `Artikel ${barcode}`;
+                const brand = p.brands || 'Markenartikel';
+                const qtyStr = p.quantity || '';
+                let quantity = 1;
+                let unit = 'Stück';
+                if (/(\d+)\s*(g|kg|ml|l)/i.test(qtyStr)) {
+                  const m = qtyStr.match(/(\d+)\s*(g|kg|ml|l)/i);
+                  if (m) {
+                    quantity = parseFloat(m[1]);
+                    unit = m[2];
+                  }
+                }
+
+                let detectedCategory = 'Lebensmittel';
+                let detectedRetailer: Retailer = 'Netto';
+                const lowerCheck = (name + ' ' + (p.categories || '') + ' ' + (p.categories_tags?.join(' ') || '')).toLowerCase();
+                if (/shampoo|dusch|seife|zahnp|dent|creme|deo|rasier|balea|nivea|isana|hygiene|cosmetic|pflege/i.test(lowerCheck)) {
+                  detectedCategory = 'Drogerie & Körperpflege';
+                  detectedRetailer = 'dm';
+                } else if (/spül|wasch|reiniger|papier|klopapier|toilet|frosch|meister|pril|persil|ariel|clean/i.test(lowerCheck)) {
+                  detectedCategory = 'Haushalt & Reinigung';
+                  detectedRetailer = 'dm';
+                } else if (/katze|hund|pet|tier|felix|whiskas|pedigree|cat|dog/i.test(lowerCheck)) {
+                  detectedCategory = 'Tierbedarf';
+                  detectedRetailer = 'Netto';
+                } else if (/vitamin|magnesium|zink|aspirin|ibu|ratiopharm|doppelherz|supplement/i.test(lowerCheck)) {
+                  detectedCategory = 'Gesundheit & Apotheke';
+                  detectedRetailer = 'dm';
+                } else if (/wasser|water|cola|limonade|bier|beer|wein|wine|juice|saft/i.test(lowerCheck)) {
+                  detectedCategory = 'Getränke';
+                  detectedRetailer = 'Netto';
+                }
+
+                const productItem: ProductCatalogItem = {
+                  barcode,
+                  name,
+                  brand,
+                  category: detectedCategory,
+                  quantity,
+                  unit,
+                  retailer: detectedRetailer,
+                  price: 1.49,
+                  nutri_score: (p.nutriscore_grade || '').toUpperCase(),
+                  image_url: p.image_front_small_url || p.image_url,
+                  source: 'Open Food Facts',
+                  last_scanned_at: new Date().toISOString(),
+                };
+
+                // Auto-cache in local product database
+                await localDbSet(STORES.PRODUCTS, barcode, productItem);
+
+                return this.json({ ...productItem, found: true });
+              }
+            }
+
+            // Also try Open Beauty Facts / Open Products Facts
+            const obfRes = await fetch(`https://world.openbeautyfacts.org/api/v0/product/${barcode}.json`);
+            if (obfRes.ok) {
+              const obfData = await obfRes.json();
+              if (obfData.status === 1 && obfData.product) {
+                const p = obfData.product;
+                const name = p.product_name_de || p.product_name || `Kosmetik ${barcode}`;
+                const brand = p.brands || 'Drogerie';
+                const productItem: ProductCatalogItem = {
+                  barcode,
+                  name,
+                  brand,
+                  category: 'Drogerie & Körperpflege',
+                  quantity: 1,
+                  unit: 'Stück',
+                  retailer: 'dm',
+                  price: 1.95,
+                  image_url: p.image_front_small_url || p.image_url,
+                  source: 'Open Beauty Facts',
+                  last_scanned_at: new Date().toISOString(),
+                };
+                await localDbSet(STORES.PRODUCTS, barcode, productItem);
+                return this.json({ ...productItem, found: true });
+              }
+            }
+          }
+        } catch (offErr) {
+          console.warn('[Barcode Lookup OFF error]', offErr);
+        }
+
+        // 5. Not found -> return found: false with barcode for manual naming
         return this.json({
           barcode,
-          found: true,
-          product_name: match ? match.name : `Supermarkt Artikel (${barcode.slice(-4)})`,
-          brand: 'Eigenmarke',
+          found: false,
+          name: '',
+          brand: '',
           quantity: 1,
-          unit: 'Packung',
-          category: 'Kühlregal',
+          unit: 'Stück',
+          category: 'Drogerie & Körperpflege',
+          retailer: 'dm',
+          price: 1.49,
+          source: 'Neues Produkt',
         });
       }
+
+      // 18. RECURRING PURCHASES & ROUTINES (Drogerie, Haushalt, Nahrung, Haustier etc.)
+      if (pathname === '/api/recurring' && method === 'GET') {
+        const rules = await localDbGetAll<RecurringPurchaseRule>(STORES.RECURRING);
+        return this.json(rules);
+      }
+
+      if (pathname === '/api/recurring' && method === 'POST') {
+        const ruleData = bodyData as Partial<RecurringPurchaseRule>;
+        if (!ruleData || !ruleData.name) {
+          return this.json({ error: 'Name required' }, 400);
+        }
+        const id = ruleData.id || `rec_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        const rule: RecurringPurchaseRule = {
+          id,
+          name: ruleData.name.trim(),
+          barcode: ruleData.barcode,
+          brand: ruleData.brand,
+          category: ruleData.category || 'Drogerie & Körperpflege',
+          retailer: ruleData.retailer || 'dm',
+          quantity: ruleData.quantity || 1,
+          unit: ruleData.unit || 'Stück',
+          price: ruleData.price,
+          frequency: ruleData.frequency || 'weekly',
+          count_per_cycle: ruleData.count_per_cycle || 1,
+          active: ruleData.active !== false,
+          created_at: ruleData.created_at || new Date().toISOString(),
+          last_purchased_at: ruleData.last_purchased_at,
+          next_due_date: ruleData.next_due_date || new Date().toISOString(),
+        };
+        await localDbSet(STORES.RECURRING, rule.id, rule);
+        return this.json({ success: true, rule });
+      }
+
+      if (pathname.startsWith('/api/recurring/') && method === 'DELETE') {
+        const ruleId = pathname.replace('/api/recurring/', '');
+        await localDbDelete(STORES.RECURRING, ruleId);
+        return this.json({ success: true, deleted: ruleId });
+      }
+
+      if (pathname === '/api/recurring/sync-to-list' && method === 'POST') {
+        const rules = await localDbGetAll<RecurringPurchaseRule>(STORES.RECURRING);
+        const activeRules = rules.filter(r => r.active);
+        const currentCustoms = await localDbGetAll<CustomShoppingItem>(STORES.CUSTOM_ITEMS);
+        const addedItems: CustomShoppingItem[] = [];
+
+        for (const rule of activeRules) {
+          // Check if already in custom items by barcode or name
+          const alreadyExists = currentCustoms.some(
+            c => (rule.barcode && c.barcode === rule.barcode) ||
+                 c.name.toLowerCase().trim() === rule.name.toLowerCase().trim()
+          );
+          if (!alreadyExists) {
+            const freqLabel = rule.frequency === 'daily'
+              ? 'täglich'
+              : rule.frequency === 'weekly'
+              ? 'wöchentlich'
+              : rule.frequency === 'biweekly'
+              ? 'alle 2 Wochen'
+              : 'monatlich';
+
+            const newItem: CustomShoppingItem = {
+              id: `rec_item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              name: rule.name,
+              quantity: (rule.quantity || 1) * (rule.count_per_cycle || 1),
+              unit: rule.unit || 'Stück',
+              category: rule.category,
+              retailer: rule.retailer,
+              brand: rule.brand,
+              barcode: rule.barcode,
+              price: rule.price ? rule.price * (rule.count_per_cycle || 1) : undefined,
+              is_checked: false,
+              notes: `🔁 Routine: ${rule.count_per_cycle}x ${freqLabel}`,
+              recurring_rule: rule,
+            };
+            await localDbSet(STORES.CUSTOM_ITEMS, newItem.id, newItem);
+            addedItems.push(newItem);
+            currentCustoms.push(newItem);
+          }
+        }
+        return this.json({ success: true, added_count: addedItems.length, items: addedItems });
+      }
+
       if (pathname === '/api/scanners/receipt' && method === 'POST') {
         return this.json({
           retailer: 'Netto Marken-Discount',

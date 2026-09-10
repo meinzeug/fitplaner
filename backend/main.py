@@ -49,7 +49,7 @@ from backend.schedule.timeline_engine import (
 )
 from backend.scrapers.marktguru_client import get_all_supermarket_offers
 from backend.scrapers.leaflets import get_all_leaflets, get_leaflet_by_retailer
-from backend.scanners.barcode_service import lookup_barcode
+from backend.scanners.barcode_service import lookup_barcode, DEMO_BARCODES
 from backend.scanners.receipt_scanner import parse_supermarket_receipt
 from backend.pantry.inventory_manager import (
     get_all_pantry_items, add_or_update_pantry_item, delete_pantry_item,
@@ -373,6 +373,23 @@ async def scan_barcode_endpoint(req: BarcodeRequest):
     return result
 
 
+@app.get("/api/products")
+async def get_products_endpoint(query: Optional[str] = None):
+    prods = list(DEMO_BARCODES.values())
+    if query:
+        q = query.lower().strip()
+        prods = [p for p in prods if q in p.get("name", "").lower() or q in p.get("brand", "").lower()]
+    return prods
+
+
+@app.post("/api/products")
+async def save_product_endpoint(prod: Dict[str, Any]):
+    bcode = prod.get("barcode")
+    if bcode:
+        DEMO_BARCODES[bcode] = prod
+    return {"success": True, "product": prod}
+
+
 class ReceiptScanRequest(BaseModel):
     receipt_text: str
 
@@ -380,6 +397,33 @@ class ReceiptScanRequest(BaseModel):
 @app.post("/api/scanners/receipt", response_model=ReceiptScanResult)
 def scan_receipt_endpoint(req: ReceiptScanRequest):
     return parse_supermarket_receipt(req.receipt_text)
+
+
+# -----------------------------------------------------------
+# WIEDERKEHRENDE KAUF-ROUTINEN (ABOS / BEDARFE)
+# -----------------------------------------------------------
+
+RECURRING_RULES_STORE: Dict[str, Dict[str, Any]] = {}
+
+
+@app.get("/api/recurring")
+def get_recurring_rules_endpoint():
+    return list(RECURRING_RULES_STORE.values())
+
+
+@app.post("/api/recurring")
+def save_recurring_rule_endpoint(rule: Dict[str, Any]):
+    rule_id = rule.get("id") or f"rec_{int(time.time() * 1000)}"
+    rule["id"] = rule_id
+    RECURRING_RULES_STORE[rule_id] = rule
+    return {"success": True, "rule": rule}
+
+
+@app.delete("/api/recurring/{rule_id}")
+def delete_recurring_rule_endpoint(rule_id: str):
+    if rule_id in RECURRING_RULES_STORE:
+        del RECURRING_RULES_STORE[rule_id]
+    return {"success": True, "deleted": rule_id}
 
 
 # -----------------------------------------------------------

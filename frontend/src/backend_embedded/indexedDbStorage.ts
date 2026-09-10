@@ -4,7 +4,7 @@
  */
 
 const DB_NAME = 'fitplaner_local_db';
-const DB_VERSION = 3;
+const DB_VERSION = 5;
 
 export const STORES = {
   SETTINGS: 'settings',
@@ -19,6 +19,8 @@ export const STORES = {
   CUSTOM_ITEMS: 'custom_items',
   TIMELINE: 'timeline',
   HEALTH: 'health_dossiers',
+  PRODUCTS: 'products',
+  RECURRING: 'recurring_purchases',
 } as const;
 
 type StoreName = typeof STORES[keyof typeof STORES];

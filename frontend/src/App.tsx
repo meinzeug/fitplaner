@@ -22,10 +22,12 @@ import { ServerConnectionModal } from './components/ServerConnectionModal';
 import { OnboardingModal } from './components/OnboardingModal';
 import { NettoOnlineBrowserModal } from './components/NettoOnlineBrowserModal';
 import { PdfLeafletScannerModal } from './components/PdfLeafletScannerModal';
+import { CookingModeModal } from './components/CookingModeModal';
+import { BarcodeScannerModal } from './components/BarcodeScannerModal';
 import {
   Users, Calendar, ShoppingBag, Tag, Archive, BookOpen,
   HeartPulse, Sparkles, X, Compass, ChevronRight, CheckCircle2, Smartphone, Download,
-  Heart, Star, Radio, Settings, Wifi, WifiOff, Server
+  Heart, Star, Radio, Settings, Wifi, WifiOff, Server, Camera, ChefHat, Droplets, Utensils, Plus
 } from 'lucide-react';
 
 export function App() {
@@ -46,6 +48,11 @@ export function App() {
     mealType: 'breakfast' | 'lunch' | 'dinner';
     recipe: Recipe;
   } | null>(null);
+
+  // 2026 Interactive Cooking Assist & Global Scanner State
+  const [isCookingModalOpen, setIsCookingModalOpen] = useState(false);
+  const [cookingRecipe, setCookingRecipe] = useState<Recipe | null>(null);
+  const [isGlobalScannerOpen, setIsGlobalScannerOpen] = useState(false);
 
   // Data Stores
   const [dailyHub, setDailyHub] = useState<DailyHubResponse | null>(null);
@@ -499,6 +506,59 @@ export function App() {
     }
   };
 
+  const handleOpenCooking = (recipe?: Recipe) => {
+    let target: Recipe | null = recipe || null;
+    if (!target && dailyHub) {
+      target = dailyHub.dinner_recipe || dailyHub.lunch_recipe || dailyHub.breakfast_recipe || null;
+    }
+    if (!target && allRecipes.length > 0) {
+      target = allRecipes[0];
+    }
+    if (target) {
+      setCookingRecipe(target);
+      setIsCookingModalOpen(true);
+    }
+  };
+
+  const handleFinishCooking = async (recipe: Recipe, memberIds: string[]) => {
+    try {
+      await apiFetch('/api/pantry/cook-meal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          day_index: dailyHub?.day_index || 0,
+          meal_type: 'dinner',
+          recipe_id: recipe.id,
+          week_offset: selectedWeekOffset,
+        }),
+      });
+      await handleDailyHubAction('cook_dinner');
+      await fetchPantry();
+      await fetchShoppingList(selectedWeekOffset);
+      await fetchPlan(selectedWeekOffset);
+      await fetchDailyHub();
+      await fetchProfiles();
+    } catch (e) {
+      console.error('Error finishing cooking:', e);
+    }
+  };
+
+  const handleAddWater = async (memberId: string, amountMl: number = 250) => {
+    try {
+      const res = await apiFetch(`/api/family/members/${memberId}/water`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount_ml: amountMl }),
+      });
+      if (res.ok) {
+        await fetchProfiles();
+        await fetchDailyHub();
+      }
+    } catch (e) {
+      console.error('Error adding water:', e);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* Top Navigation Bar (Material 3 Mobile App Bar & Desktop Nav) */}
@@ -657,6 +717,16 @@ export function App() {
                 <span className="hidden lg:inline">P2P-Mesh</span>
               </button>
 
+              {/* Global Barcode Scanner Button */}
+              <button
+                onClick={() => setIsGlobalScannerOpen(true)}
+                className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-black transition shadow-2xs"
+                title="Barcode scannen (Kamera & Schnell-Erfassung für Lebensmittel, Drogerie & Haushalt)"
+              >
+                <Camera className="w-3.5 h-3.5 text-amber-600" />
+                <span className="hidden sm:inline">Scan</span>
+              </button>
+
               {/* Desktop Only Actions */}
               <a
                 href="/FitPlaner.apk"
@@ -716,6 +786,10 @@ export function App() {
             onUpdateAction={handleDailyHubAction}
             onNavigateTab={setActiveTab}
             onOpenRecipe={handleOpenRecipe}
+            onStartCooking={handleOpenCooking}
+            onOpenBarcodeScanner={() => setIsGlobalScannerOpen(true)}
+            familyMembers={members}
+            onAddWater={handleAddWater}
           />
         )}
 
@@ -1022,6 +1096,94 @@ export function App() {
           onClose={() => setRecipeModalData(null)}
         />
       )}
+
+      {/* 2026 Interactive Cooking Assist Modal */}
+      {isCookingModalOpen && cookingRecipe && (
+        <CookingModeModal
+          isOpen={isCookingModalOpen}
+          onClose={() => setIsCookingModalOpen(false)}
+          recipe={cookingRecipe}
+          familyMembers={members}
+          pantryItems={pantryItems}
+          onFinishCooking={handleFinishCooking}
+        />
+      )}
+
+      {/* Global Barcode Scanner Modal (Camera & Direct Multi-Category Recognition) */}
+      {isGlobalScannerOpen && (
+        <BarcodeScannerModal
+          isOpen={isGlobalScannerOpen}
+          onClose={() => setIsGlobalScannerOpen(false)}
+          onAddToList={async (item) => {
+            await handleAddCustomItem({
+              name: item.name,
+              quantity: item.quantity,
+              unit: item.unit,
+              category: item.category,
+              retailer: item.retailer,
+              recurring_rule: item.recurring_rule,
+            });
+            if (item.recurring_rule) {
+              try {
+                await apiFetch('/api/recurring', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(item.recurring_rule),
+                });
+              } catch (e) {
+                console.error('Failed to save recurring rule:', e);
+              }
+            }
+            await fetchShoppingList(selectedWeekOffset);
+            setIsGlobalScannerOpen(false);
+          }}
+        />
+      )}
+
+      {/* 🌟 2026 FLOATING DYNAMIC ACTION ISLAND */}
+      <div className="fixed bottom-16 md:bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-[95vw] pointer-events-auto transition-all duration-300">
+        <div className="bg-slate-900/90 hover:bg-slate-900 text-white backdrop-blur-xl border border-slate-700/80 rounded-full px-3 py-1.5 sm:px-4 sm:py-2 shadow-[0_8px_32px_rgba(0,0,0,0.35)] flex items-center gap-1.5 sm:gap-2.5 select-none">
+          {/* 📷 1-Tap Barcode Scanner */}
+          <button
+            onClick={() => setIsGlobalScannerOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md transition active:scale-95 cursor-pointer"
+            title="Barcode scannen (Kamera & Schnell-Erfassung)"
+          >
+            <Camera className="w-3.5 h-3.5 text-slate-950" />
+            <span className="hidden xs:inline">Scan</span>
+          </button>
+
+          {/* 👨‍🍳 1-Tap Live Kochen */}
+          <button
+            onClick={() => handleOpenCooking()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25 text-white font-bold text-xs transition active:scale-95 cursor-pointer"
+            title="Interaktiver Kochmodus für die heutige Mahlzeit"
+          >
+            <ChefHat className="w-3.5 h-3.5 text-amber-300" />
+            <span className="hidden sm:inline">Kochen</span>
+          </button>
+
+          {/* 💧 1-Tap Quick Wasser (+250ml) */}
+          <button
+            onClick={() => members[0] && handleAddWater(members[0].id, 250)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 font-bold text-xs border border-cyan-400/30 transition active:scale-95 cursor-pointer"
+            title="Schnell 250ml Wasser trinken (+250ml)"
+          >
+            <Droplets className="w-3.5 h-3.5 text-cyan-300" />
+            <span className="text-[11px]">+250ml</span>
+          </button>
+
+          {/* 🛒 1-Tap Einkauf */}
+          <button
+            onClick={() => setActiveTab('einkauf')}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 font-semibold text-xs transition active:scale-95 cursor-pointer"
+            title="Zur Einkaufsliste springen"
+          >
+            <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden md:inline">Einkauf</span>
+          </button>
+        </div>
+      </div>
 
       {/* Mobile Bottom Tab Bar (Material 3 Dock) */}
       <nav aria-label="Hauptnavigation" className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 px-1 pt-1.5 pb-[env(safe-area-inset-bottom,8px)] shadow-[0_-4px_24px_rgba(0,0,0,0.06)] flex items-center justify-around select-none">

@@ -7,6 +7,12 @@ export type Retailer =
   | 'Rewe'
   | 'Kaufland'
   | 'Edeka'
+  | 'dm'
+  | 'Rossmann'
+  | 'Müller'
+  | 'Apotheke'
+  | 'Tierbedarf'
+  | 'Baumarkt'
   | 'Vorratskammer'
   | 'Sonstiges';
 
@@ -200,6 +206,26 @@ export interface PantryItem {
   added_date: string;
 }
 
+export type RecurringFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly';
+
+export interface RecurringPurchaseRule {
+  id: string;
+  name: string;
+  barcode?: string;
+  brand?: string;
+  category: string;
+  retailer: Retailer;
+  quantity: number;
+  unit: string;
+  price?: number;
+  frequency: RecurringFrequency;
+  count_per_cycle: number;
+  active: boolean;
+  created_at: string;
+  last_purchased_at?: string;
+  next_due_date?: string;
+}
+
 export interface CustomShoppingItem {
   id: string;
   name: string;
@@ -212,6 +238,24 @@ export interface CustomShoppingItem {
   exact_product_name?: string;
   brand?: string;
   barcode?: string;
+  price?: number;
+  recurring_rule?: RecurringPurchaseRule;
+}
+
+export interface ProductCatalogItem {
+  barcode: string;
+  name: string;
+  brand?: string;
+  category?: string;
+  quantity?: number;
+  unit?: string;
+  retailer?: Retailer;
+  price?: number;
+  nutri_score?: string;
+  image_url?: string;
+  source?: string;
+  last_scanned_at?: string;
+  recurring_rule?: RecurringPurchaseRule;
 }
 
 export interface ShoppingItem {
@@ -240,6 +284,21 @@ export interface ShoppingItem {
   original_price?: number;
   discount_percent?: number;
   leaflet_title?: string;
+  custom_quantity?: number;
+  is_excluded?: boolean;
+  recurring_rule?: RecurringPurchaseRule;
+  original_name?: string;
+  is_substituted?: boolean;
+}
+
+export interface ShoppingItemOverride {
+  packs_to_buy?: number;
+  custom_quantity?: number;
+  unit?: string;
+  is_excluded?: boolean;
+  replacement_name?: string;
+  replacement_brand?: string;
+  custom_note?: string;
 }
 
 export interface FreshPickItem {

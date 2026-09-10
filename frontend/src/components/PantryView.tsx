@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PantryItem } from '../types';
 import { apiFetch } from '../api/client';
 import { Archive, Plus, Barcode, FileText, Trash2, AlertTriangle, CheckCircle, Clock, Calendar, Sparkles, Search, ChevronRight, Pencil } from 'lucide-react';
+import { BarcodeScannerModal } from './BarcodeScannerModal';
 
 interface Props {
   pantryItems: PantryItem[];
@@ -345,63 +346,42 @@ export const PantryView: React.FC<Props> = ({
       </div>
 
       {/* Barcode Scanner Modal */}
-      {isBarcodeModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-100">
-            <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
-              <Barcode className="w-5 h-5 text-emerald-600" />
-              Barcode (EAN) Scannen & erfassen
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Gib einen Barcode ein oder nutze Demo-Barcodes von Netto/NP (z.B. Haferflocken: 4014400900010, Skyr: 4311501683226, Hähnchen: 4311501742916).
-            </p>
-
-            <div className="flex gap-2 mb-4">
-              <input
-                type="text"
-                placeholder="EAN Barcode (z.B. 4014400900010)"
-                value={barcodeInput}
-                onChange={(e) => setBarcodeInput(e.target.value)}
-                className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-              />
-              <button
-                onClick={handleBarcodeLookup}
-                disabled={barcodeLoading}
-                className="px-4 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold shadow disabled:opacity-50"
-              >
-                {barcodeLoading ? 'Sucht...' : 'Abfragen'}
-              </button>
-            </div>
-
-            {barcodeResult && (
-              <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl mb-4 text-xs space-y-1.5">
-                <span className="font-bold text-emerald-900 block text-sm">{barcodeResult.name}</span>
-                <span className="text-slate-600 block">Marke: {barcodeResult.brand || 'Handelsmarke'}</span>
-                <span className="text-slate-600 block font-mono font-bold">
-                  Menge: {barcodeResult.quantity} {barcodeResult.unit}
-                </span>
-                <span className="text-slate-500 block text-[11px]">Quelle: {barcodeResult.source}</span>
-                <button
-                  onClick={handleAcceptBarcode}
-                  className="w-full mt-2 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow"
-                >
-                  ✅ Direkt ins Lager einbuchen
-                </button>
-              </div>
-            )}
-
-            <button
-              onClick={() => {
-                setIsBarcodeModalOpen(false);
-                setBarcodeResult(null);
-              }}
-              className="w-full py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50"
-            >
-              Schließen
-            </button>
-          </div>
-        </div>
-      )}
+      <BarcodeScannerModal
+        isOpen={isBarcodeModalOpen}
+        onClose={() => setIsBarcodeModalOpen(false)}
+        onAddToList={async (p) => {
+          try {
+            await apiFetch('/api/custom-shopping-items', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: p.name,
+                quantity: p.quantity,
+                unit: p.unit,
+                category: p.category,
+                retailer: p.retailer,
+                barcode: p.barcode,
+                price: p.price,
+              }),
+            });
+          } catch (e) {
+            console.warn(e);
+          }
+        }}
+        onAddToPantry={async (p) => {
+          await onSaveItem({
+            id: `pnt-${Date.now()}`,
+            name: p.name,
+            current_quantity: p.quantity,
+            unit: p.unit,
+            category: p.category,
+            source: 'Barcode',
+            ean_barcode: p.barcode,
+            added_date: new Date().toISOString(),
+            shelf_life_status: 'fresh',
+          });
+        }}
+      />
 
       {/* Receipt Scanner Modal */}
       {isReceiptModalOpen && (
