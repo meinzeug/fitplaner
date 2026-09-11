@@ -32,3 +32,4 @@ frontend/android/local.properties
 *.log
 .DS_Store
 Thumbs.db
+backend/data/auth_sessions.json

@@ -9,6 +9,7 @@ import json
 from typing import List, Dict, Optional, Any
 from backend.models import (
     FamilyMember,
+    FamilyHousehold,
     PantryItem,
     WeeklyPlan,
     CustomShoppingItem,
@@ -90,6 +91,18 @@ def get_recurring_rules_file() -> str:
     return os.path.join(get_data_dir(), "recurring_rules.json")
 
 
+def get_household_file() -> str:
+    return os.path.join(get_data_dir(), "household.json")
+
+
+def get_user_credentials_file() -> str:
+    return os.path.join(get_data_dir(), "user_credentials.json")
+
+
+def get_auth_sessions_file() -> str:
+    return os.path.join(get_data_dir(), "auth_sessions.json")
+
+
 # Backward compatibility properties/references
 DATA_DIR = get_data_dir()
 FAMILY_PROFILES_FILE = get_family_profiles_file()
@@ -101,6 +114,10 @@ DAILY_HUB_FILE = get_daily_hub_file()
 SCHEDULE_SETTINGS_FILE = get_schedule_settings_file()
 TASK_COMPLETIONS_FILE = get_task_completions_file()
 RECURRING_RULES_FILE = get_recurring_rules_file()
+HOUSEHOLD_FILE = get_household_file()
+USER_CREDENTIALS_FILE = get_user_credentials_file()
+AUTH_SESSIONS_FILE = get_auth_sessions_file()
+
 
 
 def _safe_json_save(file_path: str, data: Any) -> None:
@@ -383,4 +400,54 @@ def load_recurring_rules() -> List[Dict[str, Any]]:
 
 def save_recurring_rules(rules: List[Dict[str, Any]]) -> None:
     _safe_json_save(get_recurring_rules_file(), rules)
+
+
+# -------------------------------------------------------------
+# 9. HOUSEHOLD, CREDENTIALS & SESSIONS PERSISTENCE
+# -------------------------------------------------------------
+
+def load_household() -> Optional[FamilyHousehold]:
+    filepath = get_household_file()
+    if not os.path.exists(filepath):
+        return None
+    raw = _safe_json_load(filepath)
+    if raw is not None and isinstance(raw, dict):
+        try:
+            return FamilyHousehold(**raw)
+        except Exception as e:
+            print(f"Error deserializing household: {e}")
+    return None
+
+
+def save_household(household: FamilyHousehold) -> None:
+    data = household.model_dump() if hasattr(household, "model_dump") else household
+    _safe_json_save(get_household_file(), data)
+
+
+def load_user_credentials() -> Dict[str, Dict[str, Any]]:
+    filepath = get_user_credentials_file()
+    if not os.path.exists(filepath):
+        return {}
+    raw = _safe_json_load(filepath)
+    if raw is not None and isinstance(raw, dict):
+        return raw
+    return {}
+
+
+def save_user_credentials(credentials: Dict[str, Dict[str, Any]]) -> None:
+    _safe_json_save(get_user_credentials_file(), credentials)
+
+
+def load_auth_sessions() -> Dict[str, Dict[str, Any]]:
+    filepath = get_auth_sessions_file()
+    if not os.path.exists(filepath):
+        return {}
+    raw = _safe_json_load(filepath)
+    if raw is not None and isinstance(raw, dict):
+        return raw
+    return {}
+
+
+def save_auth_sessions(sessions: Dict[str, Dict[str, Any]]) -> None:
+    _safe_json_save(get_auth_sessions_file(), sessions)
 

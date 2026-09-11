@@ -69,6 +69,14 @@ class FamilyMember(BaseModel):
     badges: List[str] = Field(default_factory=list)
     water_intake_ml: int = 0
     daily_water_target_ml: int = 2000
+    # Role-based Access Control (RBAC) & Authentication
+    username: Optional[str] = None
+    role: Literal["admin", "adult", "kid"] = "adult"
+    password_hash: Optional[str] = None
+    password_salt: Optional[str] = None
+    pin_hash: Optional[str] = None
+    is_admin: bool = False
+
 
 
 class RecipeIngredient(BaseModel):
@@ -704,6 +712,10 @@ class BidirectionalSyncPacket(BaseModel):
     daily_hub_state: Optional[Dict[str, Any]] = None
     health_dossiers: Optional[Union[Dict[str, Any], List[Any]]] = None
     recurring_rules: Optional[List[Any]] = None
+    # Household Security & Pairing
+    household_id: Optional[str] = None
+    household_passkey: Optional[str] = None
+    auth_token: Optional[str] = None
 
 
 class BidirectionalSyncResponse(BaseModel):
@@ -712,6 +724,71 @@ class BidirectionalSyncResponse(BaseModel):
     server_timestamp: str
     merged_data: BidirectionalSyncPacket
     summary: Dict[str, Any] = Field(default_factory=dict)
+
+
+# -------------------------------------------------------------
+# HAUSHALTS-SICHERHEIT & AUTHENTIFIZIERUNG (RBAC)
+# -------------------------------------------------------------
+
+class FamilyHousehold(BaseModel):
+    id: str
+    name: str
+    household_passkey: str
+    admin_member_id: str
+    created_at: str
+    paired_devices: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class CreateHouseholdRequest(BaseModel):
+    family_name: str
+    admin_name: str
+    username: str
+    password: str
+    pin: Optional[str] = None
+    device_id: str
+    device_name: str
+    demographics: Optional[Dict[str, Any]] = None
+
+
+class JoinHouseholdRequest(BaseModel):
+    household_passkey: str
+    username: str
+    password: Optional[str] = None
+    pin: Optional[str] = None
+    device_id: str
+    device_name: str
+
+
+class LoginRequest(BaseModel):
+    family_id: Optional[str] = None
+    username: str
+    password: Optional[str] = None
+    pin: Optional[str] = None
+    device_id: Optional[str] = None
+    device_name: Optional[str] = None
+
+
+class LoginResponse(BaseModel):
+    success: bool
+    token: str
+    member: FamilyMember
+    household: Dict[str, Any]
+    expires_at: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: Optional[str] = None
+    current_pin: Optional[str] = None
+    new_password: Optional[str] = None
+    new_pin: Optional[str] = None
+
+
+class ResetMemberPasswordRequest(BaseModel):
+    member_id: str
+    new_password: Optional[str] = None
+    new_pin: Optional[str] = None
+    new_role: Optional[Literal["admin", "adult", "kid"]] = None
+
 
 
 

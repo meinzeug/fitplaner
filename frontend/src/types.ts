@@ -77,6 +77,12 @@ export interface FamilyMember {
   badges?: string[];
   water_intake_ml?: number;
   daily_water_target_ml?: number;
+  username?: string;
+  role?: 'admin' | 'adult' | 'kid';
+  is_admin?: boolean;
+  has_password?: boolean;
+  has_pin?: boolean;
+  avatar?: string;
 }
 
 export interface RecipeIngredient {
@@ -729,4 +735,65 @@ export interface PdfExtractedDeal {
   x_percent: number;
   y_percent: number;
   raw_text: string;
+}
+
+// -------------------------------------------------------------
+// HAUSHALTS-SICHERHEIT & AUTHENTIFIZIERUNG (RBAC)
+// -------------------------------------------------------------
+
+export interface FamilyHousehold {
+  id: string;
+  name: string;
+  household_passkey: string;
+  admin_member_id: string;
+  created_at: string;
+  paired_devices?: Array<{
+    device_id: string;
+    device_name: string;
+    paired_at: string;
+    member_id?: string | null;
+    is_admin?: boolean;
+  }>;
+}
+
+export interface HouseholdStatus {
+  is_initialized: boolean;
+  household_id?: string | null;
+  household_name?: string | null;
+  member_count: number;
+  has_admin: boolean;
+}
+
+export interface PairingInfoResponse {
+  household_id: string;
+  household_name: string;
+  household_passkey: string;
+  server_url: string;
+  pairing_qr: string;
+  paired_devices: Array<{
+    device_id: string;
+    device_name: string;
+    paired_at: string;
+    member_id?: string | null;
+    is_admin?: boolean;
+  }>;
+}
+
+export interface PublicMemberInfo {
+  id: string;
+  name: string;
+  username: string;
+  role: 'admin' | 'adult' | 'kid';
+  is_admin: boolean;
+  has_password: boolean;
+  has_pin: boolean;
+  avatar?: string;
+}
+
+export interface LoginResponse {
+  success: boolean;
+  token: string;
+  expires_at: string;
+  member: FamilyMember;
+  household: FamilyHousehold;
 }

@@ -26,7 +26,13 @@
     "chore_points": 40,
     "badges": [],
     "water_intake_ml": 1500,
-    "daily_water_target_ml": 2240
+    "daily_water_target_ml": 2240,
+    "username": null,
+    "role": "adult",
+    "password_hash": "8dde628120cf974b97e7fb0a6cba350219e15309a40e7d50a13f045ead947eb6",
+    "password_salt": "12eeb4d061f08f679a3f5772f8906095",
+    "pin_hash": null,
+    "is_admin": false
   },
   {
     "id": "mem-3",
@@ -51,7 +57,13 @@
     "chore_points": 25,
     "badges": [],
     "water_intake_ml": 1250,
-    "daily_water_target_ml": 1800
+    "daily_water_target_ml": 1800,
+    "username": null,
+    "role": "kid",
+    "password_hash": null,
+    "password_salt": null,
+    "pin_hash": "1027fd37cc0b14dd0128c1e158857e93cbd872f8ac3fdb3e9e1e393cc900ad92",
+    "is_admin": false
   },
   {
     "id": "mem-1",
@@ -76,7 +88,13 @@
     "chore_points": 35,
     "badges": [],
     "water_intake_ml": 1750,
-    "daily_water_target_ml": 2975
+    "daily_water_target_ml": 2975,
+    "username": null,
+    "role": "admin",
+    "password_hash": "ab28ef13f09f9196b37c1163e767c5bee97d2bac61e57a0e2491904c2a152395",
+    "password_salt": "d94cc58ac3d5f690dfb4a7754a0d3028",
+    "pin_hash": null,
+    "is_admin": true
   },
   {
     "id": "mem-4",
@@ -101,6 +119,12 @@
     "chore_points": 20,
     "badges": [],
     "water_intake_ml": 1000,
-    "daily_water_target_ml": 1500
+    "daily_water_target_ml": 1500,
+    "username": null,
+    "role": "kid",
+    "password_hash": null,
+    "password_salt": null,
+    "pin_hash": "5e53dba3ed3c0163ce3076d7df62fc17477af1ddb5b055beb772f1056c255a4e",
+    "is_admin": false
   }
 ]

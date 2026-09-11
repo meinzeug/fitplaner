@@ -11,10 +11,63 @@ import { discoverFitPlanerServer, DiscoveredServer } from './discovery';
 const DEFAULT_LAN_HOST = 'http://192.168.178.57:8090';
 const STORAGE_KEY = 'fitplaner_server_url';
 const MODE_KEY = 'fitplaner_app_mode';
+const AUTH_TOKEN_KEY = 'fitplaner_auth_token';
+const PASSKEY_KEY = 'fitplaner_household_passkey';
+const ACTIVE_MEMBER_KEY = 'fitplaner_active_member';
 
 export type AppMode = 'server' | 'standalone';
 
 let isAutoDiscovering = false;
+
+export function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+export function setAuthToken(token: string | null): void {
+  if (typeof window === 'undefined') return;
+  if (!token) {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+  } else {
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+  }
+}
+
+export function getHouseholdPasskey(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(PASSKEY_KEY);
+}
+
+export function setHouseholdPasskey(passkey: string | null): void {
+  if (typeof window === 'undefined') return;
+  if (!passkey) {
+    localStorage.removeItem(PASSKEY_KEY);
+  } else {
+    localStorage.setItem(PASSKEY_KEY, passkey.trim().toUpperCase());
+  }
+  window.dispatchEvent(new CustomEvent('fitplaner_passkey_changed', { detail: { passkey } }));
+}
+
+export function getActiveMember(): any | null {
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem(ACTIVE_MEMBER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+export function setActiveMember(member: any | null): void {
+  if (typeof window === 'undefined') return;
+  if (!member) {
+    localStorage.removeItem(ACTIVE_MEMBER_KEY);
+  } else {
+    localStorage.setItem(ACTIVE_MEMBER_KEY, JSON.stringify(member));
+  }
+  window.dispatchEvent(new CustomEvent('fitplaner_member_changed', { detail: { member } }));
+}
 
 export function isCapacitorNative(): boolean {
   if (typeof window === 'undefined') return false;
@@ -145,9 +198,25 @@ export async function triggerBackgroundDiscovery(): Promise<DiscoveredServer | n
 export async function apiFetch(path: string, options?: RequestInit): Promise<Response> {
   const mode = getAppMode();
 
+  const token = getAuthToken();
+  const passkey = getHouseholdPasskey();
+
+  const reqHeaders = new Headers(options?.headers || {});
+  if (token && !reqHeaders.has('Authorization')) {
+    reqHeaders.set('Authorization', `Bearer ${token}`);
+  }
+  if (passkey && !reqHeaders.has('X-Household-Passkey')) {
+    reqHeaders.set('X-Household-Passkey', passkey);
+  }
+
+  const enrichedOptions: RequestInit = {
+    ...options,
+    headers: reqHeaders,
+  };
+
   // 1. Explicit Standalone Mode (Kein-Server-Betrieb auf dem Smartphone)
   if (mode === 'standalone') {
-    return embeddedBackend.handleRequest(path, options);
+    return embeddedBackend.handleRequest(path, enrichedOptions);
   }
 
   // 2. Server Mode
@@ -161,7 +230,7 @@ export async function apiFetch(path: string, options?: RequestInit): Promise<Res
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   const mergedOptions: RequestInit = {
-    ...options,
+    ...enrichedOptions,
     signal: options?.signal || controller.signal,
   };
 
@@ -169,13 +238,18 @@ export async function apiFetch(path: string, options?: RequestInit): Promise<Res
     const response = await fetch(fullUrl, mergedOptions);
     clearTimeout(timeoutId);
 
+    // If 401/403, household or member is unauthorized - return response to trigger login/passkey prompt
+    if (response.status === 401 || response.status === 403) {
+      return response;
+    }
+
     if (response.ok) {
       return response;
     }
 
     // If server responded with 404/500, fallback to embedded backend
     console.warn(`[FitPlaner API] Server returned ${response.status} for ${cleanPath}, falling back to local engine.`);
-    return embeddedBackend.handleRequest(path, options);
+    return embeddedBackend.handleRequest(path, enrichedOptions);
   } catch (err) {
     clearTimeout(timeoutId);
     console.warn(`[FitPlaner API] Network connection failed for ${fullUrl}:`, err);
@@ -184,7 +258,7 @@ export async function apiFetch(path: string, options?: RequestInit): Promise<Res
     triggerBackgroundDiscovery().catch(() => {});
 
     // Seamless failover: serve request directly from phone's embedded backend!
-    return embeddedBackend.handleRequest(path, options);
+    return embeddedBackend.handleRequest(path, enrichedOptions);
   }
 }
 
@@ -198,4 +272,153 @@ export async function syncDataWithServer(): Promise<{ ok: boolean; message: stri
   } catch (err: any) {
     return { ok: false, message: err?.message || 'Synchronisationsfehler' };
   }
+}
+
+// -------------------------------------------------------------
+// AUTH & HOUSEHOLD API METHODS
+// -------------------------------------------------------------
+
+export async function fetchHouseholdStatus(): Promise<{
+  is_initialized: boolean;
+  household_id?: string | null;
+  household_name?: string | null;
+  member_count: number;
+  has_admin: boolean;
+}> {
+  const res = await apiFetch('/api/auth/household/status');
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+
+export async function createHouseholdApi(payload: {
+  family_name: string;
+  admin_name: string;
+  username: string;
+  password: string;
+  pin?: string;
+  device_id: string;
+  device_name: string;
+  demographics?: any;
+}): Promise<any> {
+  const res = await apiFetch('/api/auth/household/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Fehler beim Erstellen des Haushalts');
+  }
+  const data = await res.json();
+  if (data.token) setAuthToken(data.token);
+  if (data.household_passkey) setHouseholdPasskey(data.household_passkey);
+  if (data.member) setActiveMember(data.member);
+  return data;
+}
+
+export async function joinHouseholdApi(payload: {
+  household_passkey: string;
+  username: string;
+  password?: string;
+  pin?: string;
+  device_id: string;
+  device_name: string;
+}): Promise<any> {
+  const res = await apiFetch('/api/auth/household/join', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Fehler beim Beitreten des Haushalts');
+  }
+  const data = await res.json();
+  if (payload.household_passkey) setHouseholdPasskey(payload.household_passkey);
+  return data;
+}
+
+export async function loginApi(payload: {
+  username: string;
+  password?: string;
+  pin?: string;
+  device_id?: string;
+  device_name?: string;
+}): Promise<any> {
+  const res = await apiFetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Anmeldung fehlgeschlagen');
+  }
+  const data = await res.json();
+  if (data.token) setAuthToken(data.token);
+  if (data.member) setActiveMember(data.member);
+  if (data.household?.household_passkey) setHouseholdPasskey(data.household.household_passkey);
+  return data;
+}
+
+export async function fetchMeApi(): Promise<any> {
+  const res = await apiFetch('/api/auth/me');
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+
+export async function logoutApi(): Promise<void> {
+  try {
+    await apiFetch('/api/auth/logout', { method: 'POST' });
+  } catch {}
+  setAuthToken(null);
+  setActiveMember(null);
+}
+
+export async function fetchPublicMembersApi(): Promise<any[]> {
+  const res = await apiFetch('/api/auth/household/members-list');
+  if (!res.ok) return [];
+  return await res.json();
+}
+
+export async function fetchPairingInfoApi(): Promise<any> {
+  const res = await apiFetch('/api/auth/household/pairing-info');
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+
+export async function adminResetMemberPasswordApi(payload: {
+  member_id: string;
+  new_password?: string;
+  new_pin?: string;
+  new_role?: string;
+}): Promise<any> {
+  const res = await apiFetch('/api/auth/admin/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Fehler beim Zurücksetzen');
+  }
+  return await res.json();
+}
+
+export async function changeOwnPasswordApi(payload: {
+  current_password?: string;
+  current_pin?: string;
+  new_password?: string;
+  new_pin?: string;
+}): Promise<any> {
+  const res = await apiFetch('/api/auth/change-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Fehler beim Ändern');
+  }
+  return await res.json();
 }

@@ -70,6 +70,10 @@ const DEFAULT_MEMBERS_RAW: Partial<FamilyMember>[] = [
   {
     id: 'mem-1',
     name: 'Dennis',
+    username: 'dennis',
+    role: 'admin',
+    is_admin: true,
+    has_password: true,
     gender: 'male',
     age: 32,
     height_cm: 184,
@@ -85,6 +89,10 @@ const DEFAULT_MEMBERS_RAW: Partial<FamilyMember>[] = [
   {
     id: 'mem-2',
     name: 'Sarah',
+    username: 'sarah',
+    role: 'adult',
+    is_admin: false,
+    has_password: true,
     gender: 'female',
     age: 30,
     height_cm: 168,
@@ -100,6 +108,10 @@ const DEFAULT_MEMBERS_RAW: Partial<FamilyMember>[] = [
   {
     id: 'mem-3',
     name: 'Lea',
+    username: 'lea',
+    role: 'kid',
+    is_admin: false,
+    has_pin: true,
     gender: 'female',
     age: 12,
     height_cm: 150,
@@ -115,6 +127,10 @@ const DEFAULT_MEMBERS_RAW: Partial<FamilyMember>[] = [
   {
     id: 'mem-4',
     name: 'Felix',
+    username: 'felix',
+    role: 'kid',
+    is_admin: false,
+    has_pin: true,
     gender: 'male',
     age: 8,
     height_cm: 130,
@@ -333,6 +349,12 @@ export function enrichFamilyMember(m: Partial<FamilyMember>): FamilyMember {
     chore_points: m.chore_points ?? 0,
     water_intake_ml: m.water_intake_ml ?? 0,
     daily_water_target_ml: m.daily_water_target_ml || waterTarget,
+    username: (m.username || m.name?.toLowerCase() || 'user').trim(),
+    role: m.role || ((m.id === 'mem-1' || m.name?.trim().toLowerCase() === 'dennis' || m.is_admin) ? 'admin' : (age < 16 ? 'kid' : 'adult')),
+    is_admin: m.is_admin ?? (m.id === 'mem-1' || m.name?.trim().toLowerCase() === 'dennis' || m.role === 'admin'),
+    has_password: m.has_password ?? true,
+    has_pin: m.has_pin ?? (age < 16),
+    avatar: m.avatar,
   };
 }
 
@@ -1124,6 +1146,182 @@ class EmbeddedBackend {
     }
 
     try {
+      // 0. AUTH & HOUSEHOLD (OFFLINE / AUTARK)
+      if (pathname === '/api/auth/household/status') {
+        const household = await localDbGet<any>(STORES.SETTINGS, 'household');
+        const profiles = await localDbGetAll<FamilyMember>(STORES.PROFILES);
+        return this.json({
+          is_initialized: !!household,
+          household_id: household?.id || 'hh-default',
+          household_name: household?.name || 'Familie',
+          member_count: profiles.length,
+          has_admin: profiles.some((p) => p.role === 'admin' || p.is_admin),
+        });
+      }
+
+      if (pathname === '/api/auth/household/create') {
+        const hhId = `hh-${Date.now()}`;
+        const passkey = `FP-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+        const adminId = `mem-admin-${Date.now()}`;
+        const adminMember: FamilyMember = enrichFamilyMember({
+          id: adminId,
+          name: bodyData.admin_name,
+          username: bodyData.username?.toLowerCase() || 'admin',
+          role: 'admin',
+          is_admin: true,
+          has_password: true,
+          ...(bodyData.demographics || {}),
+        });
+        const household = {
+          id: hhId,
+          name: bodyData.family_name,
+          household_passkey: passkey,
+          admin_member_id: adminId,
+          created_at: new Date().toISOString(),
+          paired_devices: [
+            {
+              device_id: bodyData.device_id || 'phone-1',
+              device_name: bodyData.device_name || 'Smartphone',
+              paired_at: new Date().toISOString(),
+              member_id: adminId,
+              is_admin: true,
+            },
+          ],
+        };
+        await localDbSet(STORES.SETTINGS, 'household', household);
+        await localDbSet(STORES.PROFILES, adminId, adminMember);
+        const token = `token-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+        return this.json({
+          success: true,
+          token,
+          expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+          household,
+          member: adminMember,
+          household_passkey: passkey,
+          pairing_qr: 'data:image/png;base64,placeholder',
+        });
+      }
+
+      if (pathname === '/api/auth/household/join') {
+        const household = (await localDbGet<any>(STORES.SETTINGS, 'household')) || {
+          id: 'hh-default',
+          name: 'Familie',
+          household_passkey: 'FP-FITP-2026',
+        };
+        if (
+          bodyData.household_passkey &&
+          bodyData.household_passkey.trim().toUpperCase() !== household.household_passkey?.trim().toUpperCase()
+        ) {
+          return new Response(JSON.stringify({ detail: 'Ungültiger Haushalts-Sicherheitsschlüssel' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        const profiles = await localDbGetAll<FamilyMember>(STORES.PROFILES);
+        return this.json({
+          success: true,
+          household_id: household.id,
+          household_name: household.name,
+          members: profiles.map((p) => ({
+            id: p.id,
+            name: p.name,
+            username: p.username || p.name.toLowerCase(),
+            role: p.role,
+            is_admin: p.is_admin,
+            has_password: p.has_password,
+            has_pin: p.has_pin,
+          })),
+        });
+      }
+
+      if (pathname === '/api/auth/login') {
+        const profiles = await localDbGetAll<FamilyMember>(STORES.PROFILES);
+        const uname = bodyData.username?.trim().toLowerCase();
+        const target = profiles.find(
+          (p) =>
+            p.username?.trim().toLowerCase() === uname ||
+            p.name?.trim().toLowerCase() === uname ||
+            p.id === bodyData.username
+        );
+        if (!target) {
+          return new Response(JSON.stringify({ detail: 'Familienmitglied nicht gefunden' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        const household = (await localDbGet<any>(STORES.SETTINGS, 'household')) || {
+          id: 'hh-default',
+          name: 'Familie',
+          household_passkey: 'FP-FITP-2026',
+        };
+        const enrichedTarget = enrichFamilyMember(target);
+        const token = `token-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+        return this.json({
+          success: true,
+          token,
+          expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+          member: enrichedTarget,
+          household,
+        });
+      }
+
+      if (pathname === '/api/auth/me') {
+        const profiles = await localDbGetAll<FamilyMember>(STORES.PROFILES);
+        const household = (await localDbGet<any>(STORES.SETTINGS, 'household')) || {
+          id: 'hh-default',
+          name: 'Familie',
+          household_passkey: 'FP-FITP-2026',
+        };
+        const active = enrichFamilyMember(profiles[0] || DEFAULT_MEMBERS_RAW[0]);
+        return this.json({
+          member: active,
+          household,
+          role: active.role || 'admin',
+          is_admin: active.is_admin ?? true,
+        });
+      }
+
+      if (pathname === '/api/auth/logout') {
+        return this.json({ status: 'logged_out' });
+      }
+
+      if (pathname === '/api/auth/household/members-list') {
+        const profiles = await localDbGetAll<FamilyMember>(STORES.PROFILES);
+        const effProfiles = profiles.length > 0 ? profiles : DEFAULT_MEMBERS_RAW.map(enrichFamilyMember);
+        return this.json(
+          effProfiles.map((p) => {
+            const ep = enrichFamilyMember(p);
+            return {
+              id: ep.id,
+              name: ep.name,
+              username: ep.username,
+              role: ep.role,
+              is_admin: ep.is_admin,
+              has_password: ep.has_password,
+              has_pin: ep.has_pin,
+              avatar: ep.avatar,
+            };
+          })
+        );
+      }
+
+      if (pathname === '/api/auth/household/pairing-info') {
+        const household = (await localDbGet<any>(STORES.SETTINGS, 'household')) || {
+          id: 'hh-default',
+          name: 'Familie',
+          household_passkey: 'FP-FITP-2026',
+          paired_devices: [],
+        };
+        return this.json({
+          household_id: household.id,
+          household_name: household.name,
+          household_passkey: household.household_passkey,
+          server_url: 'http://192.168.178.57:8090',
+          pairing_qr: 'data:image/png;base64,placeholder',
+          paired_devices: household.paired_devices || [],
+        });
+      }
+
       // 1. SETTINGS
       if (pathname === '/api/settings') {
         if (method === 'GET') {

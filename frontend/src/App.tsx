@@ -24,6 +24,9 @@ import { NettoOnlineBrowserModal } from './components/NettoOnlineBrowserModal';
 import { PdfLeafletScannerModal } from './components/PdfLeafletScannerModal';
 import { CookingModeModal } from './components/CookingModeModal';
 import { BarcodeScannerModal } from './components/BarcodeScannerModal';
+import { HouseholdSecurityModal } from './components/HouseholdSecurityModal';
+import { LoginView } from './components/LoginView';
+import { useAuth } from './context/AuthContext';
 import {
   startAutoSyncWatcher,
   subscribeSyncStatus,
@@ -33,7 +36,8 @@ import {
 import {
   Users, Calendar, ShoppingBag, Tag, Archive, BookOpen,
   HeartPulse, Sparkles, X, Compass, ChevronRight, CheckCircle2, Smartphone, Download,
-  Heart, Star, Radio, Settings, Wifi, WifiOff, Server, Camera, ChefHat, Droplets, Utensils, Plus, RefreshCw
+  Heart, Star, Radio, Settings, Wifi, WifiOff, Server, Camera, ChefHat, Droplets, Utensils, Plus, RefreshCw,
+  Shield, Lock, LogOut, KeyRound
 } from 'lucide-react';
 
 export function App() {
@@ -98,6 +102,17 @@ export function App() {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(() => {
     return !localStorage.getItem('fitplaner_onboarded');
   });
+
+  const {
+    currentMember,
+    isAuthenticated,
+    isAdmin,
+    isKid,
+    household,
+    householdStatus,
+    logout,
+  } = useAuth();
+  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
 
   const loadAllData = () => {
     fetchSettings();
@@ -625,6 +640,27 @@ export function App() {
     }
   };
 
+  // -------------------------------------------------------------
+  // ROLE-BASED ACCESS CONTROL (RBAC) LOGIN GUARD
+  // -------------------------------------------------------------
+  if (!isAuthenticated) {
+    return (
+      <>
+        <LoginView onOpenOnboarding={() => setIsOnboardingOpen(true)} />
+        {isOnboardingOpen && (
+          <OnboardingModal
+            isOpen={isOnboardingOpen}
+            onComplete={() => {
+              setIsOnboardingOpen(false);
+              setAppModeState(getAppMode());
+              loadAllData();
+            }}
+          />
+        )}
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row font-sans text-slate-900">
       {/* DESKTOP PERMANENT SIDEBAR (>= 1024px / lg) */}
@@ -644,6 +680,51 @@ export function App() {
             </div>
           </div>
         </div>
+
+        {/* Active Logged-in Member & Role Card (RBAC) */}
+        {currentMember && (
+          <div className="p-3 mx-3 mt-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between shadow-2xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-slate-800 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
+                {currentMember.name.slice(0, 2).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <span className="font-extrabold text-xs text-slate-900 block truncate">{currentMember.name}</span>
+                <span
+                  className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-full inline-block ${
+                    isAdmin
+                      ? 'bg-amber-100 text-amber-800'
+                      : isKid
+                      ? 'bg-purple-100 text-purple-800'
+                      : 'bg-emerald-100 text-emerald-800'
+                  }`}
+                >
+                  {isAdmin ? '👑 Admin' : isKid ? '🧒 Kind' : '🧑 Erwachsener'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setIsSecurityModalOpen(true)}
+                  className="p-1 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition"
+                  title="Haushalts-Sicherheit & Kopplung"
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={logout}
+                className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                title="Profil wechseln / Sperren"
+              >
+                <Lock className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* P2P Live Sync Status Card */}
         <div className="p-3.5 border-b border-slate-100">
@@ -830,6 +911,16 @@ export function App() {
             <Settings className="w-4 h-4 text-slate-500" />
             <span>⚙️ Einstellungen</span>
           </button>
+
+          {isAdmin && (
+            <button
+              onClick={() => setIsSecurityModalOpen(true)}
+              className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-bold text-amber-700 hover:text-amber-900 bg-amber-50/60 hover:bg-amber-100/80 transition border border-amber-300/60"
+            >
+              <Shield className="w-4 h-4 text-amber-600" />
+              <span>🛡️ Haushalts-Sicherheit</span>
+            </button>
+          )}
         </nav>
 
         {/* Sidebar Footer */}
@@ -946,6 +1037,45 @@ export function App() {
 
             {/* Quick Actions (Responsive & Non-Overflowing) */}
             <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+              {/* Active Member Badge & Lock / Security buttons */}
+              {currentMember && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-slate-100 border border-slate-200">
+                    <div className="w-5 h-5 rounded-lg bg-slate-800 text-white font-black text-[9px] flex items-center justify-center">
+                      {currentMember.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-800 hidden xs:inline">{currentMember.name}</span>
+                    <span
+                      className={`text-[8px] font-black px-1 rounded-full ${
+                        isAdmin
+                          ? 'bg-amber-100 text-amber-800'
+                          : isKid
+                          ? 'bg-purple-100 text-purple-800'
+                          : 'bg-emerald-100 text-emerald-800'
+                      }`}
+                    >
+                      {isAdmin ? '👑' : isKid ? '🧒' : '🧑'}
+                    </span>
+                  </div>
+                  {isAdmin && (
+                    <button
+                      onClick={() => setIsSecurityModalOpen(true)}
+                      className="p-1.5 rounded-xl text-amber-600 hover:bg-amber-50 border border-amber-200 transition"
+                      title="Haushalts-Sicherheit & Kopplung"
+                    >
+                      <Shield className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <button
+                    onClick={logout}
+                    className="p-1.5 rounded-xl text-slate-500 hover:bg-slate-100 border border-slate-200 transition"
+                    title="Profil wechseln / Sperren"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
               {/* Connection Status Pill (Server vs Standalone Mode) */}
               <button
                 onClick={() => setIsServerModalOpen(true)}
@@ -1116,6 +1246,49 @@ export function App() {
             <Users className="w-3.5 h-3.5 text-emerald-600" />
             <span>{members.length} Profile</span>
           </button>
+
+          {/* Active Logged-in User Badge */}
+          {currentMember && (
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200">
+                <div className="w-6 h-6 rounded-lg bg-slate-800 text-white font-black text-xs flex items-center justify-center">
+                  {currentMember.name.slice(0, 2).toUpperCase()}
+                </div>
+                <span className="font-extrabold text-xs text-slate-900">{currentMember.name}</span>
+                <span
+                  className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-full inline-block ${
+                    isAdmin
+                      ? 'bg-amber-100 text-amber-800'
+                      : isKid
+                      ? 'bg-purple-100 text-purple-800'
+                      : 'bg-emerald-100 text-emerald-800'
+                  }`}
+                >
+                  {isAdmin ? '👑 Admin' : isKid ? '🧒 Kind' : '🧑 Erwachsener'}
+                </span>
+              </div>
+
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setIsSecurityModalOpen(true)}
+                  className="p-2 text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-xl transition border border-amber-300"
+                  title="Haushalts-Sicherheit & Kopplung"
+                >
+                  <Shield className="w-4 h-4" />
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={logout}
+                className="p-2 text-slate-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition border border-slate-200"
+                title="Profil wechseln / Sperren"
+              >
+                <Lock className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -1405,6 +1578,12 @@ export function App() {
         isOpen={isServerModalOpen}
         onClose={() => setIsServerModalOpen(false)}
         onConnected={loadAllData}
+      />
+
+      {/* Household Security & Device Pairing Modal (Admin only) */}
+      <HouseholdSecurityModal
+        isOpen={isSecurityModalOpen}
+        onClose={() => setIsSecurityModalOpen(false)}
       />
 
       {/* Onboarding Wizard (First-Run Setup: Mode Selection & Quick Config) */}

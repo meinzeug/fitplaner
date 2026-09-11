@@ -41,7 +41,8 @@ from backend.persistence import (
     load_health_dossiers,
     save_health_dossier,
     load_recurring_rules,
-    save_recurring_rules
+    save_recurring_rules,
+    load_household
 )
 from backend.nutrition.recipe_universe import (
     get_all_universe_recipes,
@@ -216,6 +217,24 @@ def merge_bidirectional_sync_packet(
     """
     global _last_sync_timestamp
     _last_sync_timestamp = datetime.now().strftime("%d.%m.%Y, %H:%M Uhr")
+
+    # 0. Household Security Check (Role-based / Passkey protection)
+    # Rejects unauthorized Wi-Fi guests or unknown devices
+    household = load_household()
+    if household is not None:
+        authorized = False
+        if packet.household_passkey and packet.household_passkey.strip().upper() == household.household_passkey.strip().upper():
+            authorized = True
+        elif packet.household_id and packet.household_id == household.id:
+            authorized = True
+
+        if not authorized:
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=401,
+                detail="Zugriff verweigert: Ungültiger oder fehlender Haushalts-Sicherheitsschlüssel (Passkey)."
+            )
+
     summary = {
         "settings_merged": 0,
         "schedule_settings_merged": 0,
@@ -327,6 +346,18 @@ def merge_bidirectional_sync_packet(
                     m.bmr = p.bmr
                 if p.tdee:
                     m.tdee = p.tdee
+                if p.username:
+                    m.username = p.username
+                if p.role:
+                    m.role = p.role
+                if p.is_admin is not None:
+                    m.is_admin = p.is_admin
+                if p.pin_hash:
+                    m.pin_hash = p.pin_hash
+                if p.password_hash:
+                    m.password_hash = p.password_hash
+                if p.password_salt:
+                    m.password_salt = p.password_salt
                 summary["profiles_merged"] += 1
             else:
                 server_profiles.append(p)
@@ -424,6 +455,8 @@ def merge_bidirectional_sync_packet(
     consolidated_packet = BidirectionalSyncPacket(
         device_id="fitplaner-pc-node",
         device_name=server_device_name,
+        household_id=household.id if household else None,
+        household_passkey=household.household_passkey if household else None,
         timestamp=datetime.now().isoformat(),
         settings=get_app_settings(),
         schedule_settings=get_schedule_settings(),

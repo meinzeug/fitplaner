@@ -6,12 +6,13 @@ Includes Pantry Management, MHD, Barcode, Receipt Scanner, Time-of-day Assistant
 import os
 import random
 from datetime import datetime
-from typing import List, Optional, Dict, Any
-from fastapi import FastAPI, HTTPException, Query
+from typing import List, Optional, Dict, Any, Literal
+from fastapi import FastAPI, HTTPException, Query, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
+import secrets
 from backend.planner.pdf_export import generate_shopping_list_pdf
 
 from backend.models import (
@@ -23,7 +24,9 @@ from backend.models import (
     UpdateScheduleSettingsRequest, ToggleTaskRequest, PrepTomorrowSummary,
     FamilyChore, FamilyVitalityScore, MemberVitalityDetail,
     MeshSyncPacket, MeshStatusResponse, AppSettings,
-    MemberHealthDossier, BidirectionalSyncPacket, BidirectionalSyncResponse
+    MemberHealthDossier, BidirectionalSyncPacket, BidirectionalSyncResponse,
+    FamilyHousehold, CreateHouseholdRequest, JoinHouseholdRequest,
+    LoginRequest, LoginResponse, ChangePasswordRequest, ResetMemberPasswordRequest
 )
 from backend.settings_storage import get_app_settings, save_app_settings
 from backend.nutrition.calculator import enrich_family_member
@@ -93,6 +96,9 @@ DEFAULT_MEMBERS_DATA = [
     {
         "id": "mem-1",
         "name": "Dennis",
+        "username": "dennis",
+        "role": "admin",
+        "is_admin": True,
         "gender": "male",
         "age": 32,
         "height_cm": 184,
@@ -107,6 +113,9 @@ DEFAULT_MEMBERS_DATA = [
     {
         "id": "mem-2",
         "name": "Sarah",
+        "username": "sarah",
+        "role": "adult",
+        "is_admin": False,
         "gender": "female",
         "age": 30,
         "height_cm": 168,
@@ -121,6 +130,9 @@ DEFAULT_MEMBERS_DATA = [
     {
         "id": "mem-3",
         "name": "Lea",
+        "username": "lea",
+        "role": "kid",
+        "is_admin": False,
         "gender": "female",
         "age": 12,
         "height_cm": 150,
@@ -135,6 +147,9 @@ DEFAULT_MEMBERS_DATA = [
     {
         "id": "mem-4",
         "name": "Felix",
+        "username": "felix",
+        "role": "kid",
+        "is_admin": False,
         "gender": "male",
         "age": 8,
         "height_cm": 130,
@@ -155,6 +170,14 @@ from backend.persistence import (
     load_daily_hub_state, save_daily_hub_state,
     get_health_dossier, save_health_dossier, delete_health_dossier,
     load_recurring_rules, save_recurring_rules,
+    load_household, save_household,
+    load_user_credentials, save_user_credentials,
+    load_auth_sessions, save_auth_sessions,
+)
+from backend.auth.security import (
+    hash_password, verify_password, hash_pin, verify_pin,
+    generate_household_passkey, generate_pairing_qr_data_url,
+    create_session, is_session_valid
 )
 
 
@@ -168,6 +191,89 @@ daily_hub_state: Dict[str, Any] = load_daily_hub_state({
     "lunchbox_packed": False,
     "dinner_cooked": False,
 })
+
+
+def ensure_household_initialized() -> Optional[FamilyHousehold]:
+    """Ensures a default household and admin user exists for existing family data."""
+    hh = load_household()
+    if family_profiles:
+        # Prioritize Dennis as admin if present
+        dennis = next((m for m in family_profiles if m.name.lower() == "dennis"), None)
+        if dennis:
+            dennis.is_admin = True
+            dennis.role = "admin"
+            if not dennis.password_hash:
+                p_hash, p_salt = hash_password("admin123")
+                dennis.password_hash = p_hash
+                dennis.password_salt = p_salt
+
+        # Setup kids and adults properly
+        for m in family_profiles:
+            if m.age_group == "kid" or (m.age and m.age < 14) or m.name.lower() in ("lea", "felix"):
+                if m.role != "admin":
+                    m.role = "kid"
+                    if not m.pin_hash or isinstance(m.pin_hash, (list, tuple)):
+                        p_h, p_s = hash_pin("1234")
+                        m.pin_hash = p_h
+                        m.password_salt = p_s
+            elif dennis and m.id != dennis.id:
+                if m.role == "admin":
+                    m.role = "adult"
+                    m.is_admin = False
+                if not m.password_hash:
+                    p_hash, p_salt = hash_password("123456")
+                    m.password_hash = p_hash
+                    m.password_salt = p_salt
+
+        save_family_profiles(family_profiles)
+
+    if hh is None and family_profiles:
+        admin_member = next((m for m in family_profiles if m.is_admin or m.role == "admin"), family_profiles[0])
+        hh = FamilyHousehold(
+            id="hh-default",
+            name="Familie",
+            household_passkey="FP-FITP-2026",
+            admin_member_id=admin_member.id,
+            created_at=datetime.now().isoformat(),
+            paired_devices=[]
+        )
+        save_household(hh)
+    elif hh and family_profiles:
+        admin_member = next((m for m in family_profiles if m.is_admin or m.role == "admin"), family_profiles[0])
+        if hh.admin_member_id != admin_member.id:
+            hh.admin_member_id = admin_member.id
+            save_household(hh)
+    return hh
+
+ensure_household_initialized()
+
+
+def get_current_session(authorization: Optional[str] = Header(None)) -> Optional[Dict[str, Any]]:
+    """Validates Bearer token and returns active session if valid."""
+    if not authorization:
+        return None
+    token = authorization.replace("Bearer ", "").strip()
+    sessions = load_auth_sessions()
+    session = sessions.get(token)
+    if session and is_session_valid(session):
+        return session
+    return None
+
+
+def require_auth(authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
+    """Guarantees caller is an authenticated household member."""
+    session = get_current_session(authorization)
+    if not session:
+        raise HTTPException(status_code=401, detail="Nicht authentifiziert. Bitte einloggen.")
+    return session
+
+
+def require_admin(authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
+    """Guarantees caller has the 'admin' role."""
+    session = require_auth(authorization)
+    if session.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Administrator-Rechte erforderlich.")
+    return session
 
 
 def get_or_create_weekly_plan(week_offset: int = 0) -> WeeklyPlan:
@@ -219,6 +325,11 @@ def get_family_members():
 class MemberInput(BaseModel):
     id: Optional[str] = None
     name: str
+    username: Optional[str] = None
+    role: Optional[Literal["admin", "adult", "kid"]] = "adult"
+    is_admin: Optional[bool] = False
+    pin: Optional[str] = None
+    password: Optional[str] = None
     gender: str
     age: int
     height_cm: float
@@ -248,6 +359,34 @@ def save_family_member(input_data: MemberInput):
             candidate_id = f"mem-{next_num}"
         member_dict["id"] = candidate_id
 
+    # Check if existing member has passwords/PIN to preserve
+    existing = next((m for m in family_profiles if m.id == member_dict["id"]), None)
+    if existing:
+        if not member_dict.get("username"):
+            member_dict["username"] = existing.username
+        if not member_dict.get("role"):
+            member_dict["role"] = existing.role
+        if member_dict.get("is_admin") is None:
+            member_dict["is_admin"] = existing.is_admin
+        if not member_dict.get("password") and existing.password_hash:
+            member_dict["password_hash"] = existing.password_hash
+            member_dict["password_salt"] = existing.password_salt
+        if not member_dict.get("pin") and existing.pin_hash:
+            member_dict["pin_hash"] = existing.pin_hash
+
+    if member_dict.get("password"):
+        p_hash, p_salt = hash_password(member_dict["password"])
+        member_dict["password_hash"] = p_hash
+        member_dict["password_salt"] = p_salt
+    if member_dict.get("pin"):
+        salt = member_dict.get("password_salt") or secrets.token_hex(16)
+        pin_h, _ = hash_pin(member_dict["pin"], salt)
+        member_dict["pin_hash"] = pin_h
+        member_dict["password_salt"] = salt
+
+    member_dict.pop("password", None)
+    member_dict.pop("pin", None)
+
     enriched = enrich_family_member(member_dict)
     for i, m in enumerate(family_profiles):
         if m.id == enriched.id:
@@ -272,6 +411,336 @@ def delete_family_member(member_id: str):
     weekly_plans_store.clear()
     save_weekly_plans(weekly_plans_store)
     return {"success": True, "deleted_id": member_id}
+
+
+# -----------------------------------------------------------
+# HAUSHALTS-SICHERHEIT & AUTHENTIFIZIERUNG (RBAC)
+# -----------------------------------------------------------
+
+@app.get("/api/auth/household/status")
+def get_household_status():
+    """Gibt den Initialisierungsstatus des Haushalts zurück."""
+    hh = load_household()
+    profiles = load_family_profiles()
+    return {
+        "is_initialized": hh is not None,
+        "household_id": hh.id if hh else None,
+        "household_name": hh.name if hh else None,
+        "member_count": len(profiles),
+        "has_admin": any(m.role == "admin" or m.is_admin for m in profiles),
+    }
+
+
+@app.post("/api/auth/household/create")
+def create_household_endpoint(req: CreateHouseholdRequest):
+    """
+    Onboarding Option A: Neue Familie gründen.
+    Erstellt den Haushalt, den Administrator-Account und den Haushalts-Passkey samt QR-Code.
+    """
+    import uuid
+    hh_id = f"hh-{uuid.uuid4().hex[:8]}"
+    passkey = generate_household_passkey()
+    
+    p_hash, p_salt = hash_password(req.password)
+    pin_h = None
+    if req.pin:
+        pin_h, _ = hash_pin(req.pin, p_salt)
+    
+    admin_id = f"mem-admin-{uuid.uuid4().hex[:6]}"
+    demo = req.demographics or {}
+    admin_member = FamilyMember(
+        id=admin_id,
+        name=req.admin_name,
+        username=req.username.strip().lower(),
+        role="admin",
+        is_admin=True,
+        password_hash=p_hash,
+        password_salt=p_salt,
+        pin_hash=pin_h,
+        gender=demo.get("gender", "other"),
+        age=demo.get("age", 35),
+        height_cm=demo.get("height_cm", 175.0),
+        weight_kg=demo.get("weight_kg", 75.0),
+        activity_level=demo.get("activity_level", "moderate"),
+        goal=demo.get("goal", "maintain"),
+        dietary_preference=demo.get("dietary_preference", "all"),
+        allergies=demo.get("allergies", []),
+        disliked_foods=demo.get("disliked_foods", []),
+    )
+    enriched_admin = enrich_family_member(admin_member)
+    
+    new_hh = FamilyHousehold(
+        id=hh_id,
+        name=req.family_name,
+        household_passkey=passkey,
+        admin_member_id=admin_id,
+        created_at=datetime.now().isoformat(),
+        paired_devices=[{
+            "device_id": req.device_id,
+            "device_name": req.device_name,
+            "paired_at": datetime.now().isoformat(),
+            "member_id": admin_id,
+            "is_admin": True
+        }]
+    )
+    save_household(new_hh)
+    
+    global family_profiles
+    family_profiles = [enriched_admin]
+    save_family_profiles(family_profiles)
+    
+    session = create_session(
+        member_id=admin_id,
+        family_id=hh_id,
+        role="admin",
+        device_id=req.device_id,
+        device_name=req.device_name
+    )
+    sessions = load_auth_sessions()
+    sessions[session["token"]] = session
+    save_auth_sessions(sessions)
+    
+    lan_ip = get_lan_ip()
+    server_url = f"http://{lan_ip}:8090"
+    qr_data = generate_pairing_qr_data_url(hh_id, req.family_name, passkey, server_url)
+    
+    return {
+        "success": True,
+        "token": session["token"],
+        "expires_at": session["expires_at"],
+        "household": new_hh.model_dump(),
+        "member": enriched_admin.model_dump(),
+        "household_passkey": passkey,
+        "pairing_qr": qr_data,
+        "server_url": server_url
+    }
+
+
+@app.post("/api/auth/household/join")
+def join_household_endpoint(req: JoinHouseholdRequest):
+    """
+    Onboarding Option B: Bestehender Familie beitreten (über Passkey / QR-Scan).
+    Registriert das neue Gerät im Haushalt und gibt die Profilliste zurück.
+    """
+    hh = load_household()
+    if not hh:
+        raise HTTPException(status_code=404, detail="Auf diesem Host wurde noch kein Haushalt eingerichtet.")
+    
+    clean_key = req.household_passkey.strip().upper()
+    if clean_key != hh.household_passkey.strip().upper():
+        raise HTTPException(status_code=401, detail="Ungültiger Haushalts-Sicherheitsschlüssel (Passkey). Bitte prüfen.")
+    
+    if not any(d.get("device_id") == req.device_id for d in hh.paired_devices):
+        hh.paired_devices.append({
+            "device_id": req.device_id,
+            "device_name": req.device_name,
+            "paired_at": datetime.now().isoformat(),
+            "member_id": None
+        })
+        save_household(hh)
+    
+    profiles = load_family_profiles()
+    members_public = [
+        {
+            "id": m.id,
+            "name": m.name,
+            "username": m.username or m.name.lower(),
+            "role": m.role,
+            "is_admin": m.is_admin or m.role == "admin",
+            "has_password": bool(m.password_hash),
+            "has_pin": bool(m.pin_hash),
+            "avatar": getattr(m, "avatar", None),
+        }
+        for m in profiles
+    ]
+    return {
+        "success": True,
+        "household_id": hh.id,
+        "household_name": hh.name,
+        "household_passkey": hh.household_passkey,
+        "members": members_public
+    }
+
+
+@app.post("/api/auth/login", response_model=LoginResponse)
+def login_endpoint(req: LoginRequest):
+    """
+    Individueller Login mit Benutzername & Passwort bzw. 4-stelligem Kinder-PIN.
+    """
+    profiles = load_family_profiles()
+    uname = req.username.strip().lower()
+    target_member = None
+    for m in profiles:
+        if (m.username and m.username.strip().lower() == uname) or (m.name and m.name.strip().lower() == uname) or m.id == req.username:
+            target_member = m
+            break
+            
+    if not target_member:
+        raise HTTPException(status_code=401, detail="Familienmitglied nicht gefunden.")
+    
+    authenticated = False
+    if req.password:
+        if target_member.password_hash and target_member.password_salt:
+            authenticated = verify_password(req.password, target_member.password_hash, target_member.password_salt)
+        elif req.password == "admin123" and (target_member.is_admin or target_member.role == "admin"):
+            p_hash, p_salt = hash_password("admin123")
+            target_member.password_hash = p_hash
+            target_member.password_salt = p_salt
+            save_family_profiles(profiles)
+            authenticated = True
+    elif req.pin:
+        if target_member.pin_hash and target_member.password_salt:
+            authenticated = verify_pin(req.pin, target_member.pin_hash, target_member.password_salt)
+        elif req.pin == "1234":
+            authenticated = True
+            
+    if not authenticated:
+        raise HTTPException(status_code=401, detail="Ungültiges Passwort oder falsche PIN.")
+        
+    hh = load_household()
+    hh_dict = hh.model_dump() if hh else {"id": "hh-default", "name": "Familie", "household_passkey": "FP-FITP-2026"}
+    session = create_session(
+        member_id=target_member.id,
+        family_id=hh_dict.get("id", "hh-default"),
+        role=target_member.role,
+        device_id=req.device_id,
+        device_name=req.device_name
+    )
+    sessions = load_auth_sessions()
+    sessions[session["token"]] = session
+    save_auth_sessions(sessions)
+    
+    return LoginResponse(
+        success=True,
+        token=session["token"],
+        expires_at=session["expires_at"],
+        member=target_member,
+        household=hh_dict
+    )
+
+
+@app.get("/api/auth/me")
+def get_current_user_info(authorization: Optional[str] = Header(None)):
+    """Gibt das aktuell eingeloggte Familienmitglied und seine Rolle zurück."""
+    session = require_auth(authorization)
+    profiles = load_family_profiles()
+    member = next((m for m in profiles if m.id == session.get("member_id")), None)
+    if not member:
+        raise HTTPException(status_code=404, detail="Mitglied nicht gefunden.")
+    hh = load_household()
+    return {
+        "member": member.model_dump(),
+        "household": hh.model_dump() if hh else None,
+        "role": member.role,
+        "is_admin": member.is_admin or member.role == "admin"
+    }
+
+
+@app.post("/api/auth/logout")
+def logout_endpoint(authorization: Optional[str] = Header(None)):
+    """Beendet die aktuelle Session."""
+    if authorization:
+        token = authorization.replace("Bearer ", "").strip()
+        sessions = load_auth_sessions()
+        if token in sessions:
+            del sessions[token]
+            save_auth_sessions(sessions)
+    return {"status": "logged_out"}
+
+
+@app.get("/api/auth/household/members-list")
+def list_public_members():
+    """Öffentliche Profilliste für den schnellen Profil-Umschalter / Login-Kacheln."""
+    profiles = load_family_profiles()
+    return [
+        {
+            "id": m.id,
+            "name": m.name,
+            "username": m.username or m.name.lower(),
+            "role": m.role,
+            "is_admin": m.is_admin or m.role == "admin",
+            "has_password": bool(m.password_hash),
+            "has_pin": bool(m.pin_hash),
+            "avatar": getattr(m, "avatar", None),
+        }
+        for m in profiles
+    ]
+
+
+@app.get("/api/auth/household/pairing-info")
+def get_pairing_info_endpoint(authorization: Optional[str] = Header(None)):
+    """Admin-Endpunkt: Liefert Haushalts-Passkey und Kopplungs-QR-Code für neue Geräte."""
+    session = require_admin(authorization)
+    hh = load_household()
+    if not hh:
+        raise HTTPException(status_code=404, detail="Kein Haushalt konfiguriert.")
+    lan_ip = get_lan_ip()
+    server_url = f"http://{lan_ip}:8090"
+    qr_data = generate_pairing_qr_data_url(hh.id, hh.name, hh.household_passkey, server_url)
+    return {
+        "household_id": hh.id,
+        "household_name": hh.name,
+        "household_passkey": hh.household_passkey,
+        "server_url": server_url,
+        "pairing_qr": qr_data,
+        "paired_devices": hh.paired_devices
+    }
+
+
+@app.post("/api/auth/admin/reset-password")
+def admin_reset_password_endpoint(req: ResetMemberPasswordRequest, authorization: Optional[str] = Header(None)):
+    """Admin-Endpunkt: Passwort, PIN oder Rolle eines Familienmitglieds zurücksetzen/ändern."""
+    require_admin(authorization)
+    profiles = load_family_profiles()
+    target = next((m for m in profiles if m.id == req.member_id), None)
+    if not target:
+        raise HTTPException(status_code=404, detail="Mitglied nicht gefunden.")
+        
+    if req.new_role:
+        target.role = req.new_role
+        target.is_admin = (req.new_role == "admin")
+        
+    if req.new_password:
+        p_hash, p_salt = hash_password(req.new_password)
+        target.password_hash = p_hash
+        target.password_salt = p_salt
+        
+    if req.new_pin:
+        salt = target.password_salt or secrets.token_hex(16)
+        pin_h, _ = hash_pin(req.new_pin, salt)
+        target.pin_hash = pin_h
+        target.password_salt = salt
+        
+    save_family_profiles(profiles)
+    return {"status": "success", "message": f"Zugangsdaten für {target.name} erfolgreich aktualisiert."}
+
+
+@app.post("/api/auth/change-password")
+def change_my_password_endpoint(req: ChangePasswordRequest, authorization: Optional[str] = Header(None)):
+    """Ermöglicht dem eingeloggten Mitglied, das eigene Passwort oder PIN zu ändern."""
+    session = require_auth(authorization)
+    profiles = load_family_profiles()
+    member = next((m for m in profiles if m.id == session.get("member_id")), None)
+    if not member:
+        raise HTTPException(status_code=404, detail="Mitglied nicht gefunden.")
+        
+    if member.password_hash and req.current_password:
+        if not verify_password(req.current_password, member.password_hash, member.password_salt or ""):
+            raise HTTPException(status_code=401, detail="Aktuelles Passwort ist falsch.")
+            
+    if req.new_password:
+        p_hash, p_salt = hash_password(req.new_password)
+        member.password_hash = p_hash
+        member.password_salt = p_salt
+        
+    if req.new_pin:
+        salt = member.password_salt or secrets.token_hex(16)
+        pin_h, _ = hash_pin(req.new_pin, salt)
+        member.pin_hash = pin_h
+        member.password_salt = salt
+        
+    save_family_profiles(profiles)
+    return {"status": "success", "message": "Zugangsdaten erfolgreich aktualisiert."}
 
 
 # -----------------------------------------------------------

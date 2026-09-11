@@ -7,7 +7,15 @@
  */
 
 import { localDbGet, localDbSet, localDbGetAll, STORES } from '../backend_embedded/indexedDbStorage';
-import { getServerUrl, getAppMode, setAppMode, isCapacitorNative } from './client';
+import {
+  getServerUrl,
+  getAppMode,
+  setAppMode,
+  isCapacitorNative,
+  getHouseholdPasskey,
+  setHouseholdPasskey,
+  getAuthToken,
+} from './client';
 
 export type SyncState = 'synced' | 'syncing' | 'autark' | 'error';
 
@@ -23,6 +31,9 @@ export interface SyncStatusInfo {
 export interface BidirectionalSyncPacket {
   device_id: string;
   device_name: string;
+  household_id?: string;
+  household_passkey?: string;
+  auth_token?: string;
   timestamp: string;
   settings?: Record<string, any> | null;
   schedule_settings?: Record<string, any> | null;
@@ -189,6 +200,8 @@ export async function buildLocalSyncPacket(): Promise<BidirectionalSyncPacket> {
   return {
     device_id: getDeviceId(),
     device_name: getDeviceName(),
+    household_passkey: getHouseholdPasskey() || undefined,
+    auth_token: getAuthToken() || undefined,
     timestamp: new Date().toISOString(),
     settings,
     schedule_settings: scheduleSettings,
@@ -209,6 +222,10 @@ export async function buildLocalSyncPacket(): Promise<BidirectionalSyncPacket> {
  * Applies merged sync packet data back into device's IndexedDB and localStorage.
  */
 export async function applyMergedPacket(merged: BidirectionalSyncPacket): Promise<void> {
+  if (merged.household_passkey && !getHouseholdPasskey()) {
+    setHouseholdPasskey(merged.household_passkey);
+  }
+
   if (merged.settings) {
     await localDbSet(STORES.SETTINGS, 'current', merged.settings);
   }

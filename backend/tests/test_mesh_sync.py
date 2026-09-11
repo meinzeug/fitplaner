@@ -78,6 +78,7 @@ class TestMeshSync(unittest.TestCase):
         packet = BidirectionalSyncPacket(
             device_id="phone-dennis",
             device_name="Dennis Smartphone (Autark)",
+            household_passkey="FP-FITP-2026",
             timestamp="2026-09-11T12:00:00",
             checked_shopping_items=["Netto-Bananen", "NP-Skyr"],
             custom_shopping_items=[
@@ -129,6 +130,7 @@ class TestMeshSync(unittest.TestCase):
         packet = BidirectionalSyncPacket(
             device_id="phone-dennis",
             device_name="Dennis Smartphone",
+            household_passkey="FP-FITP-2026",
             timestamp="2026-09-11T12:30:00",
             settings=AppSettings(primary_retailer="NP", default_weekly_budget=175.0),
             schedule_settings=ScheduleTimeSettings(wake_up_time="06:30", dinner_time="19:00"),
@@ -171,6 +173,27 @@ class TestMeshSync(unittest.TestCase):
         self.assertEqual(resp.merged_data.settings.primary_retailer, "NP")
         self.assertEqual(resp.merged_data.settings.default_weekly_budget, 175.0)
         self.assertEqual(resp.merged_data.schedule_settings.wake_up_time, "06:30")
+
+    def test_unauthorized_sync_rejection(self):
+        from fastapi import HTTPException
+        from backend.models import BidirectionalSyncPacket
+        from backend.sync.mesh_sync import merge_bidirectional_sync_packet
+
+        # Packet without passkey or with invalid passkey (e.g. unknown guest in WiFi)
+        bad_packet = BidirectionalSyncPacket(
+            device_id="guest-phone-xyz",
+            device_name="Gast im WLAN",
+            household_passkey="WRONG-PASSKEY-1234",
+            timestamp="2026-09-11T12:00:00"
+        )
+
+        with self.assertRaises(HTTPException) as ctx:
+            merge_bidirectional_sync_packet(
+                packet=bad_packet,
+                server_device_name="FitPlaner PC-Server (Zuhause)"
+            )
+        self.assertEqual(ctx.exception.status_code, 401)
+        self.assertIn("Zugriff verweigert", ctx.exception.detail)
 
 
 if __name__ == "__main__":
