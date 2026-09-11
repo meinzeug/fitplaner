@@ -1040,7 +1040,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
       )}
 
       {/* 🔐 Krypto-Vault Status Bar */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border-2 border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div
             className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
@@ -1077,7 +1077,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
                 onChange={(e) => setPinInput(e.target.value)}
                 placeholder="PIN"
                 maxLength={8}
-                className="w-24 px-3 py-1.5 text-xs font-mono border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                className="w-24 px-3 py-1.5 text-xs font-mono border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               />
               <button
                 onClick={handleUnlock}
@@ -1107,11 +1107,11 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
       </div>
 
       {/* 🧭 Tabs */}
-      <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-1.5 bg-slate-100/90 p-1.5 rounded-2xl border-2 border-slate-200/90 shadow-sm overflow-x-auto scrollbar-none">
         <button
           onClick={() => setActiveTab('notfall')}
           className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition shrink-0 ${
-            activeTab === 'notfall' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            activeTab === 'notfall' ? 'bg-white text-slate-900 shadow-sm border border-slate-300' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
@@ -1121,7 +1121,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
         <button
           onClick={() => setActiveTab('diagnosen')}
           className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition shrink-0 ${
-            activeTab === 'diagnosen' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            activeTab === 'diagnosen' ? 'bg-white text-slate-900 shadow-sm border border-slate-300' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <Activity className="w-3.5 h-3.5 text-blue-600" />
@@ -1131,7 +1131,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
         <button
           onClick={() => setActiveTab('medikamente')}
           className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition shrink-0 ${
-            activeTab === 'medikamente' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            activeTab === 'medikamente' ? 'bg-white text-slate-900 shadow-sm border border-slate-300' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <Pill className="w-3.5 h-3.5 text-purple-600" />
@@ -1141,7 +1141,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
         <button
           onClick={() => setActiveTab('allergien')}
           className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition shrink-0 ${
-            activeTab === 'allergien' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            activeTab === 'allergien' ? 'bg-white text-slate-900 shadow-sm border border-slate-300' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <Heart className="w-3.5 h-3.5 text-rose-500" />
@@ -1151,7 +1151,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
         <button
           onClick={() => setActiveTab('impfungen')}
           className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition shrink-0 ${
-            activeTab === 'impfungen' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            activeTab === 'impfungen' ? 'bg-white text-slate-900 shadow-sm border border-slate-300' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <Syringe className="w-3.5 h-3.5 text-emerald-600" />
@@ -1161,7 +1161,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
         <button
           onClick={() => setActiveTab('befunde')}
           className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition shrink-0 ${
-            activeTab === 'befunde' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            activeTab === 'befunde' ? 'bg-white text-slate-900 shadow-sm border border-slate-300' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <FileText className="w-3.5 h-3.5 text-amber-600" />
@@ -1174,7 +1174,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Blutgruppe & Rhesus */}
-            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm relative group">
+            <div className="bg-white rounded-2xl p-4 sm:p-5 border-2 border-slate-200/90 shadow-sm relative group">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Blutgruppe & Rhesus</span>
                 <button
@@ -1195,7 +1195,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
             </div>
 
             {/* Organspende */}
-            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm relative group">
+            <div className="bg-white rounded-2xl p-4 sm:p-5 border-2 border-slate-200/90 shadow-sm relative group">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Organspende-Status</span>
                 <button
@@ -1222,7 +1222,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
             </div>
 
             {/* Hausarzt / Betreuender Arzt */}
-            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm relative group">
+            <div className="bg-white rounded-2xl p-4 sm:p-5 border-2 border-slate-200/90 shadow-sm relative group">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Hausarzt / Behandler</span>
                 <button
@@ -1249,7 +1249,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
             </div>
 
             {/* Krankenkasse & Versicherung */}
-            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm relative group">
+            <div className="bg-white rounded-2xl p-4 sm:p-5 border-2 border-slate-200/90 shadow-sm relative group">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Krankenkasse</span>
                 <button
@@ -1270,7 +1270,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
           </div>
 
           {/* Notfallkontakte (ICE) */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-white rounded-3xl p-5 border-2 border-slate-200/90 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-extrabold text-slate-800 flex items-center gap-2">
@@ -1283,7 +1283,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
               </div>
               <button
                 onClick={openAddContact}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-sm"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-sm"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Kontakt hinzufügen</span>
@@ -1295,8 +1295,8 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
                 dossier.emergency_contacts.map((c) => (
                   <div
                     key={c.id}
-                    className={`p-4 rounded-xl border flex items-center justify-between transition ${
-                      c.is_primary ? 'bg-emerald-50/70 border-emerald-300' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                    className={`p-4 rounded-2xl border-2 flex items-center justify-between transition shadow-2xs ${
+                      c.is_primary ? 'bg-emerald-50/70 border-emerald-400' : 'bg-slate-50/90 border-slate-200/90 hover:border-slate-300'
                     }`}
                   >
                     <div className="space-y-0.5 min-w-0 pr-2">
@@ -1336,7 +1336,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
                   </div>
                 ))
               ) : (
-                <div className="col-span-full p-4 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500">
+                <div className="col-span-full p-6 rounded-2xl border-2 border-dashed border-slate-300 text-center text-xs text-slate-500">
                   Noch keine Notfallkontakte hinterlegt. Klicke auf "Kontakt hinzufügen".
                 </div>
               )}
@@ -1396,7 +1396,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
 
       {/* TAB 2: DIAGNOSEN */}
       {activeTab === 'diagnosen' && dossier && (
-        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+        <div className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-slate-200/90 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-base font-extrabold text-slate-800">Vorerkrankungen & Klinische Diagnosen</h3>
@@ -1416,7 +1416,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
               dossier.conditions.map((c) => (
                 <div
                   key={c.id}
-                  className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition bg-slate-50/80 flex flex-col md:flex-row md:items-center justify-between gap-3"
+                  className="p-4 rounded-2xl border-2 border-slate-200/90 shadow-2xs hover:border-blue-400 transition bg-slate-50/90 flex flex-col md:flex-row md:items-center justify-between gap-3"
                 >
                   <div className="space-y-1.5 flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -1480,7 +1480,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
 
       {/* TAB 3: MEDIKAMENTE (BMP) */}
       {activeTab === 'medikamente' && dossier && (
-        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+        <div className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-slate-200/90 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-base font-extrabold text-slate-800">Bundeseinheitlicher Medikationsplan (BMP)</h3>
@@ -1500,8 +1500,8 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
               dossier.medications.map((m) => (
                 <div
                   key={m.id}
-                  className={`p-4 rounded-2xl border transition ${
-                    m.is_essential ? 'bg-rose-50/50 border-rose-200' : 'bg-slate-50/80 border-slate-200 hover:border-slate-300'
+                  className={`p-4 rounded-2xl border-2 transition shadow-2xs ${
+                    m.is_essential ? 'bg-rose-50/80 border-rose-300 shadow-sm' : 'bg-slate-50/90 border-slate-200/90 hover:border-purple-300'
                   }`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1541,21 +1541,21 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
                     </div>
                   </div>
 
-                  <div className="mt-3 pt-3 border-t border-slate-200/70 flex flex-wrap items-center justify-between gap-2">
+                  <div className="mt-3 pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5">
-                      <div className="flex items-center gap-1 bg-white border border-slate-200 px-2 py-1 rounded-lg text-xs">
+                      <div className="flex items-center gap-1 bg-white border border-slate-300 px-2 py-1 rounded-lg text-xs shadow-2xs">
                         <span className="text-slate-400 text-[10px]">Morgens:</span>
                         <strong className="text-slate-800 font-mono">{m.schedule_morning}</strong>
                       </div>
-                      <div className="flex items-center gap-1 bg-white border border-slate-200 px-2 py-1 rounded-lg text-xs">
+                      <div className="flex items-center gap-1 bg-white border border-slate-300 px-2 py-1 rounded-lg text-xs shadow-2xs">
                         <span className="text-slate-400 text-[10px]">Mittags:</span>
                         <strong className="text-slate-800 font-mono">{m.schedule_noon}</strong>
                       </div>
-                      <div className="flex items-center gap-1 bg-white border border-slate-200 px-2 py-1 rounded-lg text-xs">
+                      <div className="flex items-center gap-1 bg-white border border-slate-300 px-2 py-1 rounded-lg text-xs shadow-2xs">
                         <span className="text-slate-400 text-[10px]">Abends:</span>
                         <strong className="text-slate-800 font-mono">{m.schedule_evening}</strong>
                       </div>
-                      <div className="flex items-center gap-1 bg-white border border-slate-200 px-2 py-1 rounded-lg text-xs">
+                      <div className="flex items-center gap-1 bg-white border border-slate-300 px-2 py-1 rounded-lg text-xs shadow-2xs">
                         <span className="text-slate-400 text-[10px]">Nachts:</span>
                         <strong className="text-slate-800 font-mono">{m.schedule_night}</strong>
                       </div>
@@ -1571,7 +1571,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
                 </div>
               ))
             ) : (
-              <div className="p-8 text-center border border-dashed border-slate-200 rounded-2xl text-slate-400 text-xs">
+              <div className="p-8 text-center border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 text-xs">
                 Keine Medikamente im BMP eingetragen. Klicke auf "Medikament hinzufügen".
               </div>
             )}
@@ -1581,7 +1581,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
 
       {/* TAB 4: ALLERGIEN & RISIKEN */}
       {activeTab === 'allergien' && dossier && (
-        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+        <div className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-slate-200/90 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-base font-extrabold text-slate-800">Allergien & Unverträglichkeiten</h3>
@@ -1603,10 +1603,10 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
               dossier.allergies.map((a) => (
                 <div
                   key={a.id}
-                  className={`p-4 rounded-2xl border transition relative space-y-2.5 ${
+                  className={`p-4 rounded-2xl border-2 transition relative space-y-2.5 shadow-2xs ${
                     a.criticality === 'life_threatening' || a.criticality === 'severe'
-                      ? 'bg-rose-50/60 border-rose-300'
-                      : 'bg-slate-50/80 border-slate-200 hover:border-slate-300'
+                      ? 'bg-rose-50/80 border-rose-300 shadow-sm'
+                      : 'bg-slate-50/90 border-slate-200/90 hover:border-amber-300'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -1663,7 +1663,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
                 </div>
               ))
             ) : (
-              <div className="col-span-full p-8 text-center border border-dashed border-slate-200 rounded-2xl text-slate-400 text-xs">
+              <div className="col-span-full p-8 text-center border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 text-xs">
                 Keine Allergien eingetragen. Klicke auf "Allergie erfassen".
               </div>
             )}
@@ -1671,9 +1671,9 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
         </div>
       )}
 
-      {/* TAB 5: IMPFAUSWEIS */}
+      {/* TAB 5: IMPFUNGEN */}
       {activeTab === 'impfungen' && dossier && (
-        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+        <div className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-slate-200/90 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-base font-extrabold text-slate-800">Digitaler Impfausweis (WHO Standard)</h3>
@@ -1693,7 +1693,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
               dossier.vaccinations.map((v) => (
                 <div
                   key={v.id}
-                  className="p-4 rounded-xl border border-slate-200 bg-slate-50/80 flex flex-col md:flex-row md:items-center justify-between gap-3"
+                  className="p-4 rounded-2xl border-2 border-slate-200/90 shadow-2xs hover:border-emerald-300 transition bg-slate-50/90 flex flex-col md:flex-row md:items-center justify-between gap-3"
                 >
                   <div className="space-y-1 flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -1741,7 +1741,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
                 </div>
               ))
             ) : (
-              <div className="p-8 text-center border border-dashed border-slate-200 rounded-2xl text-slate-400 text-xs">
+              <div className="p-8 text-center border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 text-xs">
                 Keine Impfungen erfasst. Klicke auf "Impfung eintragen".
               </div>
             )}
@@ -1751,7 +1751,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
 
       {/* TAB 6: BEFUNDE & LABOR */}
       {activeTab === 'befunde' && dossier && (
-        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+        <div className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-slate-200/90 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-base font-extrabold text-slate-800">Klinische Befunde & Laborberichte</h3>
@@ -1769,7 +1769,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
           <div className="space-y-3 pt-2">
             {dossier.findings && dossier.findings.length > 0 ? (
               dossier.findings.map((f) => (
-                <div key={f.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/80 space-y-2">
+                <div key={f.id} className="p-4 rounded-2xl border-2 border-slate-200/90 shadow-2xs hover:border-amber-300 transition bg-slate-50/90 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="font-extrabold text-slate-900 text-sm">{f.title}</span>
@@ -1805,7 +1805,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
                   {f.key_values && (
                     <div className="flex flex-wrap gap-2 pt-1">
                       {Object.entries(f.key_values).map(([k, val]) => (
-                        <span key={k} className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-800">
+                        <span key={k} className="px-2.5 py-1 rounded-lg bg-white border border-slate-300 text-xs font-semibold text-slate-800 shadow-2xs">
                           {k}: <strong className="text-emerald-700">{val}</strong>
                         </span>
                       ))}
@@ -1814,7 +1814,7 @@ export const HealthDossierView: React.FC<Props> = ({ members, initialMemberId })
                 </div>
               ))
             ) : (
-              <div className="p-8 text-center border border-dashed border-slate-200 rounded-2xl text-slate-400 text-xs">
+              <div className="p-8 text-center border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 text-xs">
                 Keine Befunde hinterlegt. Klicke auf "Befund erfassen".
               </div>
             )}

@@ -292,7 +292,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
   return (
     <div className="space-y-4 sm:space-y-6 animate-fadeIn">
       {/* 1. UNIFIED PAGE HEADER & ACTIONS */}
-      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border-2 border-slate-200/90 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         {/* Title & Week Navigation */}
         <div className="flex items-center justify-between lg:justify-start gap-3 flex-wrap">
           <div className="flex items-center gap-2.5">
@@ -309,19 +309,19 @@ export const WeeklyPlanView: React.FC<Props> = ({
                     Aktuell
                   </span>
                 ) : (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-600">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-700 border border-slate-300">
                     {selectedWeekOffset > 0 ? `+${selectedWeekOffset} Wo.` : `${selectedWeekOffset} Wo.`}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 font-medium">
+              <p className="text-xs text-slate-600 font-semibold">
                 {plan.week_label} • Netto & NP Angebote
               </p>
             </div>
           </div>
 
           {/* Week offset stepper */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200/60 ml-auto lg:ml-4">
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border-2 border-slate-200 ml-auto lg:ml-4">
             <button
               onClick={() => onChangeWeek(selectedWeekOffset - 1)}
               className="p-1.5 rounded-xl hover:bg-white text-slate-600 hover:text-slate-900 transition active:scale-95"
@@ -329,7 +329,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-xs font-bold text-slate-700 px-2 min-w-[75px] text-center">
+            <span className="text-xs font-bold text-slate-800 px-2 min-w-[75px] text-center">
               {selectedWeekOffset === 0 ? 'Diese Woche' : selectedWeekOffset > 0 ? `+${selectedWeekOffset} Wo.` : `${selectedWeekOffset} Wo.`}
             </span>
             <button
@@ -355,7 +355,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
           {onNavigateTab && (
             <button
               onClick={() => onNavigateTab('einkauf')}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition active:scale-95"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 rounded-2xl text-xs font-bold transition active:scale-95 shadow-2xs"
               title="Einkaufsliste mit aktuellen Zutaten öffnen"
             >
               <ShoppingBag className="w-3.5 h-3.5 text-emerald-600" />
@@ -385,11 +385,11 @@ export const WeeklyPlanView: React.FC<Props> = ({
       </div>
 
       {/* 2. COMPACT INTEGRATED BUDGET & STATS STRIP */}
-      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs space-y-3">
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border-2 border-slate-200/90 shadow-sm space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Wallet className="w-4 h-4 text-emerald-600" />
-            <span className="text-xs font-black uppercase tracking-wider text-slate-700">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-800">
               Wochenbudget & Spar-Check
             </span>
             <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
@@ -407,7 +407,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowBudgetEditor(!showBudgetEditor)}
-              className="text-xs text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1"
+              className="text-xs text-emerald-700 hover:text-emerald-800 font-black flex items-center gap-1"
             >
               <span>Budget anpassen ({budgetLimit.toFixed(0)} €)</span>
               {showBudgetEditor ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -415,7 +415,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
             <span className="text-slate-300">•</span>
             <button
               onClick={() => setShowDetailedCockpit(!showDetailedCockpit)}
-              className="text-xs text-slate-500 hover:text-slate-900 font-semibold flex items-center gap-1"
+              className="text-xs text-slate-600 hover:text-slate-900 font-bold flex items-center gap-1"
             >
               <span>{showDetailedCockpit ? 'Cockpit einklappen' : 'Details anzeigen'}</span>
             </button>
@@ -424,25 +424,25 @@ export const WeeklyPlanView: React.FC<Props> = ({
 
         {/* 4 Quick Stat Pills */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-          <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200/60">
-            <span className="text-[10px] font-bold text-slate-400 uppercase block">Budget</span>
+          <div className="bg-slate-50 p-2.5 rounded-2xl border-2 border-slate-200/90 shadow-2xs">
+            <span className="text-[10px] font-bold text-slate-500 uppercase block">Budget</span>
             <span className="text-sm sm:text-base font-black text-slate-900">{budgetLimit.toFixed(2)} €</span>
           </div>
-          <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200/60">
-            <span className="text-[10px] font-bold text-slate-400 uppercase block">Geplant</span>
+          <div className="bg-slate-50 p-2.5 rounded-2xl border-2 border-slate-200/90 shadow-2xs">
+            <span className="text-[10px] font-bold text-slate-500 uppercase block">Geplant</span>
             <span className="text-sm sm:text-base font-black text-slate-900">{budgetUsed.toFixed(2)} €</span>
           </div>
-          <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200/60">
-            <span className="text-[10px] font-bold text-slate-400 uppercase block">Rest</span>
+          <div className="bg-slate-50 p-2.5 rounded-2xl border-2 border-slate-200/90 shadow-2xs">
+            <span className="text-[10px] font-bold text-slate-500 uppercase block">Rest</span>
             <span className={`text-sm sm:text-base font-black ${
               (plan.budget_difference || 0) < 0 ? 'text-red-600' : 'text-emerald-600'
             }`}>
               {(plan.budget_difference || 0) > 0 ? '+' : ''}{(plan.budget_difference || 0).toFixed(2)} €
             </span>
           </div>
-          <div className="bg-emerald-50/70 p-2.5 rounded-2xl border border-emerald-200/60">
-            <span className="text-[10px] font-bold text-emerald-700 uppercase block">Ersparnis</span>
-            <span className="text-sm sm:text-base font-black text-emerald-800">~{(plan.total_savings || 0).toFixed(2)} €</span>
+          <div className="bg-emerald-50/80 p-2.5 rounded-2xl border-2 border-emerald-300/80 shadow-2xs">
+            <span className="text-[10px] font-bold text-emerald-800 uppercase block">Ersparnis</span>
+            <span className="text-sm sm:text-base font-black text-emerald-900">~{(plan.total_savings || 0).toFixed(2)} €</span>
           </div>
         </div>
 
@@ -521,8 +521,8 @@ export const WeeklyPlanView: React.FC<Props> = ({
       </div>
 
       {/* 3. HORIZONTAL DAY-SELECTOR TABS (NO ENDLESS SCROLLING) */}
-      <div className="bg-white rounded-3xl p-2 border border-slate-200/80 shadow-xs">
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+      <div className="bg-white rounded-3xl p-2 sm:p-2.5 border-2 border-slate-200/90 shadow-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
           {plan.days.map((day, idx) => {
             const isToday = selectedWeekOffset === 0 && idx === currentWeekdayIndex;
             const isSelected = activeDayIndex === idx;
@@ -532,12 +532,12 @@ export const WeeklyPlanView: React.FC<Props> = ({
               <button
                 key={idx}
                 onClick={() => setActiveDayIndex(idx)}
-                className={`flex-1 min-w-[72px] sm:min-w-[90px] py-2 px-2 rounded-2xl text-center transition-all flex flex-col items-center justify-center gap-0.5 ${
+                className={`flex-1 min-w-[74px] sm:min-w-[90px] py-2 px-2 rounded-2xl text-center transition-all flex flex-col items-center justify-center gap-0.5 ${
                   isSelected
-                    ? 'bg-slate-900 text-white shadow-md'
+                    ? 'bg-slate-900 text-white shadow-md ring-2 ring-slate-900'
                     : isToday
-                    ? 'bg-emerald-50 text-emerald-900 border border-emerald-200 hover:bg-emerald-100'
-                    : 'bg-slate-50/80 text-slate-700 hover:bg-slate-100 border border-slate-200/60'
+                    ? 'bg-emerald-50 text-emerald-950 border-2 border-emerald-300 hover:bg-emerald-100 font-black'
+                    : 'bg-slate-50 text-slate-800 hover:bg-slate-100 border-2 border-slate-200 font-bold'
                 }`}
               >
                 <div className="flex items-center gap-1">
@@ -545,13 +545,13 @@ export const WeeklyPlanView: React.FC<Props> = ({
                     {day.day_name.slice(0, 2)}
                   </span>
                   {isToday && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" title="Heute" />
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 shadow-2xs" title="Heute" />
                   )}
                   {isUnplanned && (
                     <span className="text-[10px]">🏖️</span>
                   )}
                 </div>
-                <span className={`text-[10px] font-medium truncate ${isSelected ? 'text-slate-300' : 'text-slate-400'}`}>
+                <span className={`text-[10px] font-bold truncate ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>
                   {day.date.split('.')[0]}.{day.date.split('.')[1]}
                 </span>
               </button>
@@ -562,12 +562,12 @@ export const WeeklyPlanView: React.FC<Props> = ({
             onClick={() => setActiveDayIndex('all')}
             className={`min-w-[85px] sm:min-w-[105px] py-2 px-3 rounded-2xl text-center transition-all flex flex-col items-center justify-center gap-0.5 ${
               activeDayIndex === 'all'
-                ? 'bg-emerald-600 text-white shadow-md'
-                : 'bg-slate-50/80 text-slate-700 hover:bg-slate-100 border border-slate-200/60'
+                ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-600'
+                : 'bg-slate-50 text-slate-800 hover:bg-slate-100 border-2 border-slate-200 font-bold'
             }`}
           >
             <span className="text-xs font-black uppercase">7 Tage</span>
-            <span className={`text-[10px] font-medium ${activeDayIndex === 'all' ? 'text-emerald-100' : 'text-slate-400'}`}>
+            <span className={`text-[10px] font-bold ${activeDayIndex === 'all' ? 'text-emerald-100' : 'text-slate-500'}`}>
               Übersicht
             </span>
           </button>
@@ -577,13 +577,13 @@ export const WeeklyPlanView: React.FC<Props> = ({
       {/* 4. FAMILY MEMBER PORTION SELECTOR */}
       <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar py-1">
         <div className="flex items-center gap-1.5">
-          <span className="text-[11px] font-bold text-slate-400 uppercase mr-1">Portionen:</span>
+          <span className="text-[11px] font-black text-slate-500 uppercase mr-1">Portionen:</span>
           <button
             onClick={() => setSelectedMemberId('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-2xs ${
               selectedMemberId === 'all'
                 ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                : 'bg-white text-slate-800 border-2 border-slate-200 hover:bg-slate-50'
             }`}
           >
             <span>👨‍👩‍👧‍👦 Alle ({members.length})</span>
@@ -592,10 +592,10 @@ export const WeeklyPlanView: React.FC<Props> = ({
             <button
               key={m.id}
               onClick={() => setSelectedMemberId(m.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition whitespace-nowrap shadow-2xs ${
                 selectedMemberId === m.id
                   ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                  : 'bg-white text-slate-800 border-2 border-slate-200 hover:bg-slate-50'
               }`}
             >
               {m.name}
@@ -636,15 +636,15 @@ export const WeeklyPlanView: React.FC<Props> = ({
             return (
               <div
                 key={dayIndex}
-                className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden"
+                className="bg-slate-100/60 p-3 sm:p-4 rounded-3xl border-2 border-slate-200/90 shadow-sm space-y-3"
               >
                 {/* Day Header Bar */}
-                <div className="bg-slate-900 text-white px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="bg-slate-900 text-white px-4 sm:px-5 py-3 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
                   <div className="flex items-center gap-2.5">
                     <span className="text-sm sm:text-base font-black uppercase tracking-wider text-emerald-400">
                       {day.day_name}
                     </span>
-                    <span className="text-xs text-slate-400 font-medium">({day.date})</span>
+                    <span className="text-xs text-slate-300 font-bold">({day.date})</span>
                     {day.is_planned === false && (
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/30">
                         🏖️ Planungsfrei
@@ -653,8 +653,8 @@ export const WeeklyPlanView: React.FC<Props> = ({
                   </div>
 
                   {day.is_planned !== false ? (
-                    <div className="flex items-center gap-2.5 text-xs text-slate-300">
-                      <span>{plannedCals} / {targetCals} kcal</span>
+                    <div className="flex items-center gap-2.5 text-xs text-slate-200 font-medium">
+                      <span className="font-bold">{plannedCals} / {targetCals} kcal</span>
                       <div className="w-20 sm:w-24 bg-slate-700 h-2 rounded-full overflow-hidden">
                         <div
                           className="bg-emerald-400 h-full rounded-full transition-all"
@@ -666,7 +666,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
                 </div>
 
                 {day.is_planned === false ? (
-                  <div className="p-8 text-center bg-amber-50/30 space-y-2">
+                  <div className="p-8 text-center bg-white rounded-2xl border-2 border-dashed border-amber-200 space-y-2">
                     <div className="text-3xl">🏖️</div>
                     <h4 className="text-sm sm:text-base font-black text-slate-800">
                       Planungsfreier Tag (Kein Kochen nötig)
@@ -676,14 +676,13 @@ export const WeeklyPlanView: React.FC<Props> = ({
                     </p>
                   </div>
                 ) : (
-                  /* 3 MEALS: FRÜHSTÜCK, MITTAGESSEN, ABENDESSEN */
-                  <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
+                  /* 3 MEALS: FRÜHSTÜCK, MITTAGESSEN, ABENDESSEN - DISTINCT CARDS */
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
                     {/* MEAL 1: FRÜHSTÜCK */}
                     <MealCard
                       mealType="breakfast"
                       mealLabel="Frühstück (Brotdose)"
-                      icon={<Box className="w-3.5 h-3.5 text-amber-600" />}
-                      badgeColor="bg-amber-50 text-amber-800 border-amber-200"
+                      icon={<Box className="w-4 h-4 text-amber-700" />}
                       recipe={currentBfRecipe}
                       portion={bfPortion}
                       isCooked={!!day.is_breakfast_cooked}
@@ -701,8 +700,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
                     <MealCard
                       mealType="lunch"
                       mealLabel="Mittag (Brotdose To-Go)"
-                      icon={<Box className="w-3.5 h-3.5 text-blue-600" />}
-                      badgeColor="bg-blue-50 text-blue-800 border-blue-200"
+                      icon={<Box className="w-4 h-4 text-sky-700" />}
                       recipe={currentLuRecipe}
                       portion={luPortion}
                       isCooked={!!day.is_lunch_cooked}
@@ -720,8 +718,7 @@ export const WeeklyPlanView: React.FC<Props> = ({
                     <MealCard
                       mealType="dinner"
                       mealLabel="Abendessen (Warm daheim)"
-                      icon={<Utensils className="w-3.5 h-3.5 text-rose-600" />}
-                      badgeColor="bg-rose-50 text-rose-800 border-rose-200"
+                      icon={<Utensils className="w-4 h-4 text-indigo-700" />}
                       recipe={currentDiRecipe}
                       portion={diPortion}
                       isCooked={!!day.is_dinner_cooked}
@@ -880,7 +877,7 @@ interface MealCardProps {
   mealType: 'breakfast' | 'lunch' | 'dinner';
   mealLabel: string;
   icon: React.ReactNode;
-  badgeColor: string;
+  badgeColor?: string;
   recipe: Recipe;
   portion?: PersonMealPortion;
   isCooked: boolean;
@@ -895,9 +892,9 @@ interface MealCardProps {
 }
 
 const MealCard: React.FC<MealCardProps> = ({
+  mealType,
   mealLabel,
   icon,
-  badgeColor,
   recipe,
   portion,
   isCooked,
@@ -911,23 +908,46 @@ const MealCard: React.FC<MealCardProps> = ({
   const glycemic = getRecipeGlycemicBadge(recipe);
   const totalIngredients = portion?.scaled_ingredients.length || recipe.ingredients.length;
 
+  // Distinct slot styles for maximum visual clarity on mobile
+  const slotConfig = {
+    breakfast: {
+      cardBorder: 'border-2 border-amber-200/90 hover:border-amber-400 border-t-4 border-t-amber-500',
+      bgGrad: 'bg-gradient-to-b from-amber-50/40 via-white to-white',
+      badge: 'bg-amber-100 text-amber-950 border border-amber-300',
+    },
+    lunch: {
+      cardBorder: 'border-2 border-sky-200/90 hover:border-sky-400 border-t-4 border-t-sky-500',
+      bgGrad: 'bg-gradient-to-b from-sky-50/40 via-white to-white',
+      badge: 'bg-sky-100 text-sky-950 border border-sky-300',
+    },
+    dinner: {
+      cardBorder: 'border-2 border-indigo-200/90 hover:border-indigo-400 border-t-4 border-t-indigo-500',
+      bgGrad: 'bg-gradient-to-b from-indigo-50/40 via-white to-white',
+      badge: 'bg-indigo-100 text-indigo-950 border border-indigo-300',
+    },
+  }[mealType] || {
+    cardBorder: 'border-2 border-slate-200 hover:border-slate-300 border-t-4 border-t-slate-500',
+    bgGrad: 'bg-white',
+    badge: 'bg-slate-100 text-slate-900 border border-slate-300',
+  };
+
   return (
-    <div className="p-4 sm:p-5 flex flex-col justify-between space-y-3 hover:bg-slate-50/50 transition">
-      <div className="space-y-2.5">
+    <div className={`rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-3.5 shadow-sm hover:shadow-md transition duration-150 relative ${slotConfig.cardBorder} ${slotConfig.bgGrad}`}>
+      <div className="space-y-3">
         {/* Top Badges & Actions */}
-        <div className="flex items-center justify-between gap-1">
-          <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-xl border ${badgeColor}`}>
+        <div className="flex items-center justify-between gap-1.5">
+          <span className={`inline-flex items-center gap-1.5 text-xs font-black px-2.5 py-1 rounded-xl shadow-2xs ${slotConfig.badge}`}>
             {icon}
             <span>{mealLabel}</span>
             {isCooked && (
-              <span className="text-emerald-700 font-black ml-1">✓ Gekocht</span>
+              <span className="text-emerald-700 font-black ml-1 bg-white/80 px-1 rounded">✓ Gekocht</span>
             )}
           </span>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={onSwap}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition"
+              className="p-1.5 rounded-xl text-slate-600 hover:text-emerald-700 bg-white hover:bg-slate-100 border border-slate-200 shadow-2xs transition active:scale-95"
               title="Mahlzeit tauschen"
             >
               <ArrowRightLeft className="w-3.5 h-3.5" />
@@ -935,7 +955,7 @@ const MealCard: React.FC<MealCardProps> = ({
             {!isCooked && (
               <button
                 onClick={onCook}
-                className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-black transition"
+                className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-2xs transition active:scale-95"
                 title="Als gekocht markieren"
               >
                 🍳 Kochen
@@ -949,25 +969,25 @@ const MealCard: React.FC<MealCardProps> = ({
           onClick={onOpenRecipe}
           className="cursor-pointer group"
         >
-          <h4 className="font-black text-slate-900 text-sm sm:text-base group-hover:text-emerald-700 transition flex items-center gap-1.5 line-clamp-1">
+          <h4 className="font-black text-slate-900 text-sm sm:text-base group-hover:text-emerald-700 transition flex items-center gap-1.5 leading-snug line-clamp-2">
             <span>{recipe.title}</span>
-            <ChefHat className="w-3.5 h-3.5 text-slate-300 group-hover:text-emerald-600 transition shrink-0" />
+            <ChefHat className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 transition shrink-0" />
           </h4>
         </div>
 
-        {/* Metrics Row: Time, Calories, Protein, Glycemic */}
-        <div className="flex items-center gap-2.5 text-xs text-slate-500 flex-wrap">
-          <span className="flex items-center gap-1">
-            <Clock className="w-3 h-3 text-slate-400" /> {recipe.prep_time_minutes}m
+        {/* Metrics Row: Time, Calories, Protein, Glycemic with High-Contrast Badges */}
+        <div className="flex items-center gap-1.5 text-xs flex-wrap">
+          <span className="flex items-center gap-1 bg-white border border-slate-200/90 text-slate-800 font-bold px-2 py-0.5 rounded-lg shadow-2xs">
+            <Clock className="w-3 h-3 text-slate-500" /> {recipe.prep_time_minutes}m
           </span>
-          <span className="flex items-center gap-1 font-semibold text-emerald-700">
-            <Flame className="w-3 h-3 text-orange-500" /> {portion?.scaled_calories || recipe.base_calories} kcal
+          <span className="flex items-center gap-1 font-black bg-orange-50 text-orange-950 border border-orange-200 px-2 py-0.5 rounded-lg shadow-2xs">
+            <Flame className="w-3 h-3 text-orange-600 fill-orange-500" /> {portion?.scaled_calories || recipe.base_calories} kcal
           </span>
-          <span className="font-bold text-blue-700">
+          <span className="font-black bg-blue-50 text-blue-950 border border-blue-200 px-2 py-0.5 rounded-lg shadow-2xs">
             {portion?.scaled_protein_g || recipe.base_protein_g}g Protein
           </span>
           <span
-            className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600"
+            className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 shadow-2xs"
             title={glycemic.explanation}
           >
             {glycemic.label}
@@ -975,28 +995,28 @@ const MealCard: React.FC<MealCardProps> = ({
         </div>
 
         {/* Accordion: Collapsible Ingredients List */}
-        <div className="pt-1">
+        <div className="pt-0.5">
           <button
             onClick={onToggleIngredients}
-            className="w-full flex items-center justify-between text-[11px] font-bold text-slate-500 hover:text-slate-900 py-1 px-2 rounded-lg bg-slate-50 hover:bg-slate-100 transition"
+            className="w-full flex items-center justify-between text-xs font-black text-slate-700 hover:text-slate-900 py-1.5 px-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-200/90 shadow-2xs transition"
           >
             <span className="flex items-center gap-1">
               <span>{isExpanded ? 'Zutaten ausblenden' : `Zutaten anzeigen (${totalIngredients})`}</span>
             </span>
-            {isExpanded ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-slate-400" />}
+            {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-slate-500" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-500" />}
           </button>
 
           {isExpanded && (
-            <div className="mt-2 bg-slate-50 p-2.5 rounded-2xl border border-slate-100 space-y-1 text-xs animate-fadeIn">
+            <div className="mt-2 bg-white p-3 rounded-2xl border-2 border-slate-200 shadow-xs space-y-1.5 text-xs animate-fadeIn">
               {(portion?.scaled_ingredients || recipe.ingredients).map((ing, idx) => {
                 const amount = 'amount' in ing ? ing.amount : (ing as any).base_amount;
                 const h = formatHumanQuantity(typeof amount === 'number' ? amount : parseFloat(String(amount)), ing.unit);
                 const retailer = 'matched_retailer' in ing ? ing.matched_retailer : (ing as any).matched_offer_retailer;
 
                 return (
-                  <div key={idx} className="flex items-center justify-between text-slate-600 text-[11px]">
-                    <span className="truncate pr-2">• {ing.name}</span>
-                    <span className="font-mono font-semibold text-slate-800 flex items-center shrink-0">
+                  <div key={idx} className="flex items-center justify-between text-[11px] py-0.5 border-b border-slate-100 last:border-0">
+                    <span className="truncate pr-2 font-medium text-slate-800">• {ing.name}</span>
+                    <span className="font-mono font-bold text-slate-900 flex items-center shrink-0">
                       {h.amount} {h.unit}
                       {retailer && (
                         <span className={`ml-1.5 text-[9px] px-1.5 py-0.2 rounded font-black ${getRetailerBadgeClass(resolveDisplayRetailer(retailer, activeRetailers))}`}>
@@ -1012,13 +1032,14 @@ const MealCard: React.FC<MealCardProps> = ({
         </div>
       </div>
 
-      {/* Action Footer */}
-      <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+      {/* Action Footer with Tangible Button */}
+      <div className="pt-3 border-t-2 border-slate-100 flex items-center justify-between">
         <button
           onClick={onOpenRecipe}
-          className="text-xs font-bold text-emerald-700 hover:text-emerald-800 transition"
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs border border-slate-200/90 shadow-2xs transition active:scale-95"
         >
-          Rezept ansehen →
+          <span>Rezept ansehen</span>
+          <span className="text-emerald-700 font-black">→</span>
         </button>
       </div>
     </div>

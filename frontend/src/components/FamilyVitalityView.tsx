@@ -139,7 +139,7 @@ export const FamilyVitalityView: React.FC<Props> = ({
   return (
     <div className="space-y-4 sm:space-y-6 max-w-5xl mx-auto animate-fadeIn pb-16">
       {/* 1. UNIFIED PAGE HEADER */}
-      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border-2 border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-700 flex items-center justify-center border border-emerald-500/20 shrink-0">
             <Heart className="w-5 h-5 text-rose-500 fill-rose-500/20" />
@@ -149,11 +149,11 @@ export const FamilyVitalityView: React.FC<Props> = ({
               <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
                 Gesundheit & Vitalität
               </h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
                 Score {vitality.overall_score}/100
               </span>
             </div>
-            <p className="text-xs text-slate-500 font-medium">
+            <p className="text-xs text-slate-600 font-semibold">
               30-Pflanzen Mikrobiom • Nährstoff-Radar • Private Krankenakte (ePA)
             </p>
           </div>
@@ -164,7 +164,7 @@ export const FamilyVitalityView: React.FC<Props> = ({
           {onNavigateTab && (
             <button
               onClick={() => onNavigateTab('woche')}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition active:scale-95"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 rounded-2xl text-xs font-bold transition active:scale-95 shadow-2xs"
             >
               <Calendar className="w-3.5 h-3.5 text-emerald-600" />
               <span>Wochenplan</span>
@@ -184,16 +184,16 @@ export const FamilyVitalityView: React.FC<Props> = ({
       </div>
 
       {/* 🏥 Sub-Navigation: Radar vs 30-Pflanzen Mikrobiom vs ePA */}
-      <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 bg-white p-2 rounded-2xl border-2 border-slate-200/90 shadow-sm">
         <button
           onClick={() => setHealthSubTab('radar')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-black transition ${
             healthSubTab === 'radar'
-              ? 'bg-white text-emerald-800 shadow-sm'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+              ? 'bg-slate-900 text-white shadow-md'
+              : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
-          <Sparkles className="w-4 h-4 text-emerald-600" />
+          <Sparkles className="w-4 h-4 text-emerald-400" />
           <span>🌟 Vitalitäts-Radar</span>
         </button>
 
@@ -202,7 +202,7 @@ export const FamilyVitalityView: React.FC<Props> = ({
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-black transition ${
             healthSubTab === 'microbiome'
               ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+              : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
           <Leaf className="w-4 h-4 text-amber-300" />
@@ -214,7 +214,7 @@ export const FamilyVitalityView: React.FC<Props> = ({
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-black transition ${
             healthSubTab === 'epa'
               ? 'bg-slate-900 text-white shadow-md'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+              : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
           <ShieldCheck className="w-4 h-4 text-emerald-400" />
@@ -291,19 +291,19 @@ export const FamilyVitalityView: React.FC<Props> = ({
               };
 
               return (
-                <div key={grpKey} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
+                <div key={grpKey} className="bg-white rounded-2xl p-5 border-2 border-slate-200/90 shadow-sm flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span className="text-2xl">{grp.icon}</span>
-                        <h3 className="font-bold text-sm text-slate-800">{grp.label}</h3>
+                        <h3 className="font-black text-sm text-slate-900">{grp.label}</h3>
                       </div>
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
                         {grp.count} Arten
                       </span>
                     </div>
 
-                    <p className="text-[11px] text-slate-500 leading-relaxed mb-3">
+                    <p className="text-[11px] text-slate-600 font-medium leading-relaxed mb-3">
                       {benefitTexts[grpKey] || 'Wichtige pflanzliche Sekundärstoffe für die Darmflora.'}
                     </p>
 
@@ -312,7 +312,7 @@ export const FamilyVitalityView: React.FC<Props> = ({
                         grp.items.map((item, i) => (
                           <span
                             key={i}
-                            className="px-2 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium"
+                            className="px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold shadow-2xs"
                           >
                             {item}
                           </span>

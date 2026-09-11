@@ -828,11 +828,11 @@ export const ShoppingListView: React.FC<Props> = ({
       <div
         key={uniqueKey}
         className={`rounded-2xl transition flex items-center justify-between select-none gap-2 sm:gap-3 ${
-          thumbMode || isLiveMode ? 'p-3 sm:p-3.5 my-1.5 min-h-[60px]' : 'p-2.5 sm:p-3 my-1 min-h-[48px]'
+          thumbMode || isLiveMode ? 'p-3 sm:p-3.5 my-1.5 min-h-[60px]' : 'p-2.5 sm:p-3 my-1 min-h-[50px]'
         } ${
           isChecked
-            ? 'bg-slate-100/70 opacity-40 line-through text-slate-400 border border-transparent'
-            : 'bg-white hover:bg-slate-50/80 border border-slate-200/80 shadow-xs'
+            ? 'bg-slate-100/80 opacity-40 line-through text-slate-400 border-2 border-transparent'
+            : 'bg-white hover:bg-slate-50/90 border-2 border-slate-200/90 shadow-2xs hover:border-slate-300'
         }`}
       >
         <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
@@ -843,7 +843,7 @@ export const ShoppingListView: React.FC<Props> = ({
             {isChecked ? (
               <CheckSquare className={thumbMode || isLiveMode ? 'w-6 h-6 text-emerald-600' : 'w-5 h-5 text-emerald-600'} />
             ) : (
-              <Square className={thumbMode || isLiveMode ? 'w-6 h-6 text-slate-300' : 'w-5 h-5 text-slate-300 hover:text-slate-400'} />
+              <div className={`${thumbMode || isLiveMode ? 'w-6 h-6' : 'w-5 h-5'} rounded-lg border-2 border-slate-400 hover:border-slate-600 bg-slate-50 flex items-center justify-center transition`} />
             )}
           </div>
 
@@ -858,10 +858,10 @@ export const ShoppingListView: React.FC<Props> = ({
 
               {item.storeTag && (
                 <span className={`text-[9px] px-1.5 py-0.2 rounded font-black ${
-                  item.storeTag === 'Netto' ? 'bg-amber-100 text-stone-900 border border-amber-300' :
-                  item.storeTag === 'NP' ? 'bg-red-100 text-red-700 border border-red-300' :
-                  item.storeTag === 'Lidl' ? 'bg-blue-100 text-blue-700 border border-blue-300' :
-                  'bg-slate-100 text-slate-700 border border-slate-200'
+                  item.storeTag === 'Netto' ? 'bg-amber-100 text-stone-900 border border-amber-400' :
+                  item.storeTag === 'NP' ? 'bg-red-100 text-red-900 border border-red-400' :
+                  item.storeTag === 'Lidl' ? 'bg-blue-100 text-blue-900 border border-blue-400' :
+                  'bg-slate-100 text-slate-800 border border-slate-300'
                 }`}>
                   {item.storeTag}
                 </span>
@@ -875,29 +875,29 @@ export const ShoppingListView: React.FC<Props> = ({
               )}
 
               {item.is_covered_by_stock ? (
-                <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
                   Vorrat (0 €)
                 </span>
               ) : (
                 item.packs_to_buy > 0 && item.pack_size && (
-                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-slate-100 text-slate-800 border border-slate-300">
                     {item.packs_to_buy}x {item.pack_size} {item.unit}
                   </span>
                 )
               )}
 
               {item.is_substituted && item.original_name && (
-                <span className="text-[9px] bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded font-bold">
+                <span className="text-[9px] bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded font-bold border border-amber-300">
                   🔄 Ersatz
                 </span>
               )}
             </div>
 
-            <div className="text-[11px] text-slate-400 font-medium flex items-center gap-2 mt-0.5">
+            <div className="text-[11px] text-slate-500 font-semibold flex items-center gap-2 mt-0.5">
               <span>Bedarf: {formatHumanQuantityText(item.total_quantity, item.unit)}</span>
               {item.brand && <span>• {item.brand}</span>}
               {item.leftover_after_purchase > 0 && !item.is_covered_by_stock && item.is_pantry_eligible && (
-                <span className="text-emerald-700 font-bold bg-emerald-50 px-1 rounded text-[10px]">
+                <span className="text-emerald-800 font-bold bg-emerald-50 border border-emerald-200 px-1 rounded text-[10px]">
                   📦 Rest {formatHumanQuantityText(item.leftover_after_purchase, item.unit)} → Vorrat
                 </span>
               )}
@@ -908,7 +908,7 @@ export const ShoppingListView: React.FC<Props> = ({
         {/* Right Section: Stepper / Edit & Price */}
         <div className="flex items-center gap-2 shrink-0">
           {!item.is_covered_by_stock && (thumbMode || isLiveMode) && (
-            <div className="flex items-center gap-1 bg-slate-50 p-0.5 rounded-xl border border-slate-200">
+            <div className="flex items-center gap-1 bg-slate-50 p-0.5 rounded-xl border-2 border-slate-200">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -946,7 +946,7 @@ export const ShoppingListView: React.FC<Props> = ({
                   tempUnit: item.unit || 'g',
                 });
               }}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200/60 transition"
               title="Menge / Einheit / Ersatz bearbeiten"
             >
               <Edit3 className="w-3.5 h-3.5" />
@@ -963,11 +963,11 @@ export const ShoppingListView: React.FC<Props> = ({
                 <span className={`font-black font-mono block text-xs sm:text-sm ${item.is_on_sale ? 'text-red-600' : 'text-slate-900'}`}>
                   ~{(item.total_price || 0).toFixed(2)} €
                 </span>
-                {item.savings && item.savings > 0 && (
-                  <span className="text-[9px] bg-red-100 text-red-700 px-1 py-0.2 rounded font-black block text-center mt-0.5">
-                    -{item.savings.toFixed(2)} €
+                {(item.savings ?? 0) > 0 ? (
+                  <span className="text-[9px] bg-red-100 text-red-700 px-1 py-0.2 rounded font-black block text-center mt-0.5 border border-red-200">
+                    -{(item.savings || 0).toFixed(2)} €
                   </span>
-                )}
+                ) : null}
               </>
             )}
           </div>
@@ -979,7 +979,7 @@ export const ShoppingListView: React.FC<Props> = ({
   return (
     <div className="space-y-4 sm:space-y-6 animate-fadeIn">
       {/* 1. UNIFIED PAGE HEADER */}
-      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border-2 border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-700 flex items-center justify-center border border-emerald-500/20 shrink-0">
             <ShoppingBag className="w-5 h-5" />
@@ -989,11 +989,11 @@ export const ShoppingListView: React.FC<Props> = ({
               <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
                 Einkaufsliste
               </h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
                 {totalActiveItemsCount} Artikel
               </span>
             </div>
-            <p className="text-xs text-slate-500 font-medium">
+            <p className="text-xs text-slate-600 font-semibold">
               {shoppingList?.week_label || 'Aktuelle Woche'} • Reale Supermarkt-Deals Netto & NP
             </p>
           </div>
@@ -1005,8 +1005,8 @@ export const ShoppingListView: React.FC<Props> = ({
             onClick={toggleLiveMode}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-black transition active:scale-95 shadow-xs ${
               isLiveMode
-                ? 'bg-emerald-600 text-white ring-2 ring-emerald-400'
-                : 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
+                ? 'bg-emerald-600 text-white ring-2 ring-emerald-500'
+                : 'bg-emerald-50 text-emerald-900 border-2 border-emerald-300 hover:bg-emerald-100'
             }`}
           >
             🛒 Live-Modus
@@ -1015,7 +1015,7 @@ export const ShoppingListView: React.FC<Props> = ({
           <button
             onClick={() => setShowFinishShoppingModal(true)}
             disabled={checkedItemsCount === 0}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-2xl text-xs font-bold transition active:scale-95 shadow-xs"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-2xl text-xs font-black transition active:scale-95 shadow-xs"
           >
             <Archive className="w-3.5 h-3.5 text-amber-400" />
             <span className="hidden sm:inline">In Vorrat buchen</span>
@@ -1025,14 +1025,14 @@ export const ShoppingListView: React.FC<Props> = ({
       </div>
 
       {/* Sub-Tab Switcher: Liste vs Routinen vs Vorratskammer */}
-      <div className="flex items-center justify-between bg-white rounded-3xl p-2 border border-slate-200 shadow-sm">
+      <div className="flex items-center justify-between bg-white rounded-3xl p-2 border-2 border-slate-200/90 shadow-sm">
         <div className="flex items-center gap-1">
           <button
             onClick={() => setSubTab('list')}
-            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition ${
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-black transition ${
               subTab === 'list'
                 ? 'bg-slate-900 text-white shadow-md'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <ShoppingBag className="w-4 h-4 text-emerald-400" />
@@ -1444,20 +1444,20 @@ export const ShoppingListView: React.FC<Props> = ({
                   const doneCount = items.filter((i) => checkedMap[`${i.storeTag}-${i.name}`]).length;
 
                   return (
-                    <div key={aisleName} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                      <div className="px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between">
+                    <div key={aisleName} className="bg-white rounded-3xl border-2 border-slate-200/90 shadow-sm overflow-hidden">
+                      <div className="px-5 sm:px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-sm tracking-wide">{aisleName}</span>
-                          <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-white/20 font-semibold backdrop-blur-sm">
+                          <span className="font-black text-sm tracking-wide">{aisleName}</span>
+                          <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-white/20 font-bold backdrop-blur-sm">
                             {items.length} Artikel
                           </span>
                         </div>
-                        <span className="text-xs font-bold text-emerald-400">
+                        <span className="text-xs font-black text-emerald-400">
                           {doneCount} / {items.length} erledigt
                         </span>
                       </div>
 
-                      <div className="p-3 divide-y divide-slate-100">
+                      <div className="p-3 sm:p-4 bg-slate-50/70 space-y-2">
                         {items.map((it, idx) => renderItemRow(it, `${it.storeTag}-${it.name}`))}
                       </div>
                     </div>
@@ -1470,7 +1470,7 @@ export const ShoppingListView: React.FC<Props> = ({
             <div className="space-y-6">
               {/* Netto */}
               {(selectedStoreFilter === 'all' || selectedStoreFilter === 'Netto') && shoppingList.items_netto.length > 0 && (
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-3xl border-2 border-amber-300 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 bg-amber-400 text-stone-900 flex items-center justify-between font-black">
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-extrabold">🟡 Netto Marken-Discount</h3>
@@ -1482,7 +1482,7 @@ export const ShoppingListView: React.FC<Props> = ({
                       {shoppingList.items_netto.filter((i) => checkedMap[`Netto-${i.name}`]).length} / {shoppingList.items_netto.length} erledigt
                     </span>
                   </div>
-                  <div className="p-3 divide-y divide-slate-100">
+                  <div className="p-3 sm:p-4 bg-amber-50/30 space-y-2">
                     {shoppingList.items_netto.map((it) => renderItemRow({ ...it, storeTag: 'Netto' }, `Netto-${it.name}`))}
                   </div>
                 </div>
@@ -1490,7 +1490,7 @@ export const ShoppingListView: React.FC<Props> = ({
 
               {/* NP */}
               {(selectedStoreFilter === 'all' || selectedStoreFilter === 'NP') && shoppingList.items_np.length > 0 && (
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-3xl border-2 border-red-300 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 bg-red-600 text-white flex items-center justify-between font-black">
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-extrabold">🔴 NP Discount</h3>
@@ -1502,7 +1502,7 @@ export const ShoppingListView: React.FC<Props> = ({
                       {shoppingList.items_np.filter((i) => checkedMap[`NP-${i.name}`]).length} / {shoppingList.items_np.length} erledigt
                     </span>
                   </div>
-                  <div className="p-3 divide-y divide-slate-100">
+                  <div className="p-3 sm:p-4 bg-red-50/30 space-y-2">
                     {shoppingList.items_np.map((it) => renderItemRow({ ...it, storeTag: 'NP' }, `NP-${it.name}`))}
                   </div>
                 </div>
@@ -1510,7 +1510,7 @@ export const ShoppingListView: React.FC<Props> = ({
 
               {/* Lidl */}
               {(selectedStoreFilter === 'all' || selectedStoreFilter === 'Lidl') && shoppingList.items_lidl && shoppingList.items_lidl.length > 0 && (
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-3xl border-2 border-blue-300 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 bg-blue-600 text-white flex items-center justify-between font-black">
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-extrabold">🔵 Lidl</h3>
@@ -1522,7 +1522,7 @@ export const ShoppingListView: React.FC<Props> = ({
                       {shoppingList.items_lidl.filter((i) => checkedMap[`Lidl-${i.name}`]).length} / {shoppingList.items_lidl.length} erledigt
                     </span>
                   </div>
-                  <div className="p-3 divide-y divide-slate-100">
+                  <div className="p-3 sm:p-4 bg-blue-50/30 space-y-2">
                     {shoppingList.items_lidl.map((it) => renderItemRow({ ...it, storeTag: 'Lidl' }, `Lidl-${it.name}`))}
                   </div>
                 </div>
@@ -1530,7 +1530,7 @@ export const ShoppingListView: React.FC<Props> = ({
 
               {/* Aldi */}
               {(selectedStoreFilter === 'all' || selectedStoreFilter === 'Aldi') && shoppingList.items_aldi && shoppingList.items_aldi.length > 0 && (
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-3xl border-2 border-sky-300 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 bg-sky-800 text-white flex items-center justify-between font-black">
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-extrabold">🔷 Aldi (Nord & Süd)</h3>
@@ -1542,7 +1542,7 @@ export const ShoppingListView: React.FC<Props> = ({
                       {shoppingList.items_aldi.filter((i) => checkedMap[`Aldi-${i.name}`]).length} / {shoppingList.items_aldi.length} erledigt
                     </span>
                   </div>
-                  <div className="p-3 divide-y divide-slate-100">
+                  <div className="p-3 sm:p-4 bg-sky-50/30 space-y-2">
                     {shoppingList.items_aldi.map((it) => renderItemRow({ ...it, storeTag: 'Aldi' }, `Aldi-${it.name}`))}
                   </div>
                 </div>
@@ -1550,7 +1550,7 @@ export const ShoppingListView: React.FC<Props> = ({
 
               {/* Rewe */}
               {(selectedStoreFilter === 'all' || selectedStoreFilter === 'Rewe') && shoppingList.items_rewe && shoppingList.items_rewe.length > 0 && (
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-3xl border-2 border-red-300 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 bg-red-700 text-white flex items-center justify-between font-black">
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-extrabold">🔴 Rewe Dein Markt</h3>
@@ -1562,7 +1562,7 @@ export const ShoppingListView: React.FC<Props> = ({
                       {shoppingList.items_rewe.filter((i) => checkedMap[`Rewe-${i.name}`]).length} / {shoppingList.items_rewe.length} erledigt
                     </span>
                   </div>
-                  <div className="p-3 divide-y divide-slate-100">
+                  <div className="p-3 sm:p-4 bg-red-50/30 space-y-2">
                     {shoppingList.items_rewe.map((it) => renderItemRow({ ...it, storeTag: 'Rewe' }, `Rewe-${it.name}`))}
                   </div>
                 </div>
@@ -1570,7 +1570,7 @@ export const ShoppingListView: React.FC<Props> = ({
 
               {/* Kaufland */}
               {(selectedStoreFilter === 'all' || selectedStoreFilter === 'Kaufland') && shoppingList.items_kaufland && shoppingList.items_kaufland.length > 0 && (
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-3xl border-2 border-red-300 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 bg-red-800 text-white flex items-center justify-between font-black">
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-extrabold">🔴 Kaufland</h3>
@@ -1582,7 +1582,7 @@ export const ShoppingListView: React.FC<Props> = ({
                       {shoppingList.items_kaufland.filter((i) => checkedMap[`Kaufland-${i.name}`]).length} / {shoppingList.items_kaufland.length} erledigt
                     </span>
                   </div>
-                  <div className="p-3 divide-y divide-slate-100">
+                  <div className="p-3 sm:p-4 bg-red-50/30 space-y-2">
                     {shoppingList.items_kaufland.map((it) => renderItemRow({ ...it, storeTag: 'Kaufland' }, `Kaufland-${it.name}`))}
                   </div>
                 </div>
@@ -1590,7 +1590,7 @@ export const ShoppingListView: React.FC<Props> = ({
 
               {/* Edeka */}
               {(selectedStoreFilter === 'all' || selectedStoreFilter === 'Edeka') && shoppingList.items_edeka && shoppingList.items_edeka.length > 0 && (
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-3xl border-2 border-yellow-300 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 bg-yellow-400 text-blue-950 flex items-center justify-between font-black">
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-extrabold">🟡 Edeka</h3>
@@ -1602,7 +1602,7 @@ export const ShoppingListView: React.FC<Props> = ({
                       {shoppingList.items_edeka.filter((i) => checkedMap[`Edeka-${i.name}`]).length} / {shoppingList.items_edeka.length} erledigt
                     </span>
                   </div>
-                  <div className="p-3 divide-y divide-slate-100">
+                  <div className="p-3 sm:p-4 bg-yellow-50/30 space-y-2">
                     {shoppingList.items_edeka.map((it) => renderItemRow({ ...it, storeTag: 'Edeka' }, `Edeka-${it.name}`))}
                   </div>
                 </div>
@@ -1610,7 +1610,7 @@ export const ShoppingListView: React.FC<Props> = ({
 
               {/* Vorratskammer */}
               {(selectedStoreFilter === 'all' || selectedStoreFilter === 'Vorratskammer') && shoppingList.items_pantry.length > 0 && (
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-3xl border-2 border-slate-200 shadow-sm overflow-hidden">
                   <div className="px-6 py-3.5 bg-slate-100 text-slate-800 flex items-center justify-between font-bold">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-extrabold">⚪ Vorratskammer & Basics</h3>
@@ -1622,7 +1622,7 @@ export const ShoppingListView: React.FC<Props> = ({
                       {shoppingList.items_pantry.filter((i) => checkedMap[`Vorratskammer-${i.name}`]).length} / {shoppingList.items_pantry.length}
                     </span>
                   </div>
-                  <div className="p-3 divide-y divide-slate-100">
+                  <div className="p-3 sm:p-4 bg-slate-50/70 space-y-2">
                     {shoppingList.items_pantry.map((it) => renderItemRow({ ...it, storeTag: 'Vorratskammer' }, `Vorratskammer-${it.name}`))}
                   </div>
                 </div>
@@ -1632,11 +1632,11 @@ export const ShoppingListView: React.FC<Props> = ({
 
           {/* Custom Items Section */}
           {shoppingList.custom_items && shoppingList.custom_items.length > 0 && (
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+            <div className="bg-white rounded-3xl border-2 border-slate-200/90 shadow-sm overflow-hidden mb-6">
               <div className="px-6 py-3.5 bg-slate-800 text-white flex items-center justify-between">
                 <h3 className="font-bold text-sm">📝 Eigene Zusatzartikel ({shoppingList.custom_items.length})</h3>
               </div>
-              <div className="p-4 divide-y divide-slate-100">
+              <div className="p-3 sm:p-4 bg-slate-50/70 space-y-2">
                 {shoppingList.custom_items.map((c) => (
                   <div key={c.id} className="py-2.5 px-2 flex items-center justify-between">
                     <div className="flex items-center gap-2">
