@@ -77,6 +77,10 @@ def get_task_completions_file() -> str:
     return os.path.join(get_data_dir(), "task_completions.json")
 
 
+def get_health_dossiers_file() -> str:
+    return os.path.join(get_data_dir(), "health_dossiers.json")
+
+
 # Backward compatibility properties/references
 DATA_DIR = get_data_dir()
 FAMILY_PROFILES_FILE = get_family_profiles_file()
@@ -300,3 +304,37 @@ def load_task_completions() -> Dict[str, bool]:
 
 def save_task_completions(completions: Dict[str, bool]) -> None:
     _safe_json_save(get_task_completions_file(), completions)
+
+
+# -------------------------------------------------------------
+# 7. HEALTH DOSSIERS (ePA / FHIR / IPS) PERSISTENCE
+# -------------------------------------------------------------
+
+def load_health_dossiers() -> Dict[str, Dict[str, Any]]:
+    filepath = get_health_dossiers_file()
+    if not os.path.exists(filepath):
+        return {}
+    raw = _safe_json_load(filepath)
+    if raw is not None and isinstance(raw, dict):
+        return raw
+    return {}
+
+
+def get_health_dossier(member_id: str) -> Optional[Dict[str, Any]]:
+    all_dossiers = load_health_dossiers()
+    return all_dossiers.get(member_id)
+
+
+def save_health_dossier(member_id: str, dossier_data: Dict[str, Any]) -> None:
+    all_dossiers = load_health_dossiers()
+    all_dossiers[member_id] = dossier_data
+    _safe_json_save(get_health_dossiers_file(), all_dossiers)
+
+
+def delete_health_dossier(member_id: str) -> bool:
+    all_dossiers = load_health_dossiers()
+    if member_id in all_dossiers:
+        del all_dossiers[member_id]
+        _safe_json_save(get_health_dossiers_file(), all_dossiers)
+        return True
+    return False

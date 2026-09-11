@@ -568,3 +568,115 @@ class AppSettings(BaseModel):
         default_factory=lambda: {"breakfast": "individual", "lunch": "individual", "dinner": "shared"}
     )
 
+
+# -------------------------------------------------------------
+# PRIVATE ELEKTRONISCHE KRANKENAKTE (ePA / IPS / FHIR)
+# -------------------------------------------------------------
+
+class EmergencyContact(BaseModel):
+    id: str
+    name: str
+    relationship: str
+    phone: str
+    alternative_phone: Optional[str] = None
+    is_primary: bool = False
+
+
+class MedicalCondition(BaseModel):
+    id: str
+    name: str
+    icd10: Optional[str] = None
+    snomed_ct: Optional[str] = None
+    onset_date: Optional[str] = None
+    status: Literal["active", "recurrence", "remission", "resolved"] = "active"
+    severity: Literal["mild", "moderate", "severe"] = "moderate"
+    doctor_notes: Optional[str] = None
+    dietary_implication: Optional[str] = None
+
+
+class AllergyRecord(BaseModel):
+    id: str
+    substance: str
+    category: Literal["medication", "food", "environmental", "biologic"] = "food"
+    criticality: Literal["life_threatening", "severe", "moderate", "mild"] = "severe"
+    reaction: str
+    verification_status: Literal["confirmed", "suspected", "refuted"] = "confirmed"
+    emergency_treatment: Optional[str] = None
+
+
+class MedicationRecord(BaseModel):
+    id: str
+    trade_name: str
+    active_substance: str
+    pzn: Optional[str] = None
+    dosage: str = "1 Tablette"
+    schedule_morning: int = 1
+    schedule_noon: int = 0
+    schedule_evening: int = 0
+    schedule_night: int = 0
+    instructions: Optional[str] = None
+    is_essential: bool = False
+    prescriber: Optional[str] = None
+
+
+class VaccinationRecord(BaseModel):
+    id: str
+    disease: str
+    vaccine_name: str
+    date_administered: str
+    batch_number: Optional[str] = None
+    administered_by: Optional[str] = None
+    next_booster_due: Optional[str] = None
+    is_up_to_date: bool = True
+
+
+class ClinicalFindingDocument(BaseModel):
+    id: str
+    title: str
+    doc_type: Literal["lab_report", "discharge_letter", "radiology", "ecg", "prescription", "other"] = "lab_report"
+    date: str
+    author_facility: Optional[str] = None
+    summary: Optional[str] = None
+    key_values: Dict[str, str] = Field(default_factory=dict)
+    attachment_name: Optional[str] = None
+    attachment_mime: Optional[str] = None
+    attachment_encrypted_data: Optional[str] = None
+
+
+class PrimaryPhysician(BaseModel):
+    name: str = ""
+    phone: str = ""
+    clinic_name: Optional[str] = None
+    address: Optional[str] = None
+
+
+class InsuranceInfo(BaseModel):
+    provider_name: str = ""
+    insurance_number: str = ""
+    card_expiry: Optional[str] = None
+    has_travel_insurance: bool = False
+    travel_insurance_policy: Optional[str] = None
+    emergency_hotline: Optional[str] = None
+
+
+class MemberHealthDossier(BaseModel):
+    member_id: str
+    member_name: str
+    blood_type: Literal["A+", "A-", "B+", "B-", "AB+", "AB-", "0+", "0-", "unknown"] = "unknown"
+    rhesus_factor: Literal["positive", "negative", "unknown"] = "unknown"
+    organ_donor_status: Literal["yes", "no", "undecided", "with_exceptions"] = "undecided"
+    organ_donor_notes: Optional[str] = None
+    emergency_contacts: List[EmergencyContact] = Field(default_factory=list)
+    primary_physician: Optional[PrimaryPhysician] = None
+    insurance_info: Optional[InsuranceInfo] = None
+    allergies: List[AllergyRecord] = Field(default_factory=list)
+    conditions: List[MedicalCondition] = Field(default_factory=list)
+    medications: List[MedicationRecord] = Field(default_factory=list)
+    vaccinations: List[VaccinationRecord] = Field(default_factory=list)
+    findings: List[ClinicalFindingDocument] = Field(default_factory=list)
+    last_updated: Optional[str] = None
+    is_encrypted: bool = False
+    encryption_salt: Optional[str] = None
+    integrity_hash: Optional[str] = None
+
+

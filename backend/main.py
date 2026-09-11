@@ -22,7 +22,8 @@ from backend.models import (
     ScheduleTimeSettings, TimelineTask, DailyTimelineResponse,
     UpdateScheduleSettingsRequest, ToggleTaskRequest, PrepTomorrowSummary,
     FamilyChore, FamilyVitalityScore, MemberVitalityDetail,
-    MeshSyncPacket, MeshStatusResponse, AppSettings
+    MeshSyncPacket, MeshStatusResponse, AppSettings,
+    MemberHealthDossier
 )
 from backend.settings_storage import get_app_settings, save_app_settings
 from backend.nutrition.calculator import enrich_family_member
@@ -151,6 +152,7 @@ from backend.persistence import (
     load_weekly_plans, save_weekly_plans,
     load_weekly_budgets, save_weekly_budgets,
     load_daily_hub_state, save_daily_hub_state,
+    get_health_dossier, save_health_dossier, delete_health_dossier,
 )
 
 DEFAULT_INITIAL_MEMBERS = [enrich_family_member(m) for m in DEFAULT_MEMBERS_DATA]
@@ -1207,6 +1209,36 @@ def toggle_family_chore(chore_id: str, req: ToggleChoreRequest):
         "points_delta": delta,
         "members": family_profiles
     }
+
+
+# -----------------------------------------------------------
+# PRIVATE ELEKTRONISCHE KRANKENAKTE (ePA / FHIR / IPS)
+# -----------------------------------------------------------
+
+@app.get("/api/health-dossier/{member_id}")
+def api_get_health_dossier(member_id: str):
+    """Returns the persistent health dossier for a family member, or a fresh initialized template."""
+    dossier = get_health_dossier(member_id)
+    if dossier:
+        return {"status": "ok", "dossier": dossier}
+    return {"status": "not_found", "member_id": member_id}
+
+
+@app.post("/api/health-dossier/{member_id}")
+def api_save_health_dossier(member_id: str, dossier: MemberHealthDossier):
+    """Saves or updates a member's clinical dossier with atomic file persistence."""
+    dossier_data = dossier.model_dump()
+    dossier_data["last_updated"] = datetime.now().isoformat()
+    save_health_dossier(member_id, dossier_data)
+    return {"status": "saved", "member_id": member_id, "dossier": dossier_data}
+
+
+@app.delete("/api/health-dossier/{member_id}")
+def api_delete_health_dossier(member_id: str):
+    """Deletes a member's health dossier from server persistence."""
+    success = delete_health_dossier(member_id)
+    return {"status": "deleted" if success else "not_found", "member_id": member_id}
+
 
 
 class WaterIntakeRequest(BaseModel):

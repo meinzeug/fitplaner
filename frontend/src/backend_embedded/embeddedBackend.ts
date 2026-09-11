@@ -2072,6 +2072,30 @@ class EmbeddedBackend {
         });
       }
 
+      // HEALTH DOSSIER (ePA / FHIR / IPS)
+      if (pathname.startsWith('/api/health-dossier/')) {
+        const memberId = pathname.replace('/api/health-dossier/', '');
+        if (method === 'GET') {
+          const dossier = await localDbGet<any>(STORES.HEALTH, memberId);
+          if (dossier) {
+            return this.json({ status: 'ok', dossier });
+          }
+          return this.json({ status: 'not_found', member_id: memberId });
+        }
+        if (method === 'POST') {
+          const dossierData = {
+            ...bodyData,
+            last_updated: new Date().toISOString()
+          };
+          await localDbSet(STORES.HEALTH, memberId, dossierData);
+          return this.json({ status: 'saved', member_id: memberId, dossier: dossierData });
+        }
+        if (method === 'DELETE') {
+          await localDbDelete(STORES.HEALTH, memberId);
+          return this.json({ status: 'deleted', member_id: memberId });
+        }
+      }
+
       // Fallback 404
       return new Response(JSON.stringify({ error: `Not Found: ${pathname}` }), {
         status: 404,
