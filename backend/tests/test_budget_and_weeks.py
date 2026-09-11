@@ -79,6 +79,17 @@ class TestBudgetAndWeeks(unittest.TestCase):
         self.assertIsNotNone(shopping.budget_status)
         self.assertEqual(shopping.budget_difference, round(150.0 - shopping.total_price, 2))
 
+    def test_save_custom_weekly_plan_endpoint(self):
+        from fastapi.testclient import TestClient
+        from backend.main import app
+        client = TestClient(app)
+        plan = generate_weekly_plan(self.members, week_offset=0, budget=120.0)
+        res = client.post("/api/plan/save", json={"week_offset": 0, "plan": plan.model_dump()})
+        self.assertEqual(res.status_code, 200)
+        saved = res.json()
+        self.assertEqual(saved["week_offset"], 0)
+        self.assertEqual(len(saved["days"]), 7)
+
 
 if __name__ == "__main__":
     unittest.main()

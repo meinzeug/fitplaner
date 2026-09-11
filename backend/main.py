@@ -654,6 +654,18 @@ class SwapMealRequest(BaseModel):
     week_offset: int = 0
 
 
+class SaveWeeklyPlanRequest(BaseModel):
+    week_offset: int = 0
+    plan: WeeklyPlan
+
+
+@app.post("/api/plan/save", response_model=WeeklyPlan)
+def save_custom_weekly_plan(req: SaveWeeklyPlanRequest):
+    weekly_plans_store[req.week_offset] = req.plan
+    save_weekly_plans(weekly_plans_store)
+    return req.plan
+
+
 @app.post("/api/plan/swap", response_model=WeeklyPlan)
 def swap_meal(req: SwapMealRequest):
     settings = get_app_settings()

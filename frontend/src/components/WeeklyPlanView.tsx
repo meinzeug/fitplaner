@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { WeeklyPlan, FamilyMember, Recipe, PantryItem, PersonMealPortion, ScaledIngredient, DayPlan } from '../types';
 import { RecipeModal } from './RecipeModal';
 import { SavingsVitalityCockpit } from './SavingsVitalityCockpit';
+import { ManualWeekPlannerModal } from './ManualWeekPlannerModal';
 import { getRecipeGlycemicBadge } from '../utils/plantDiversityTracker';
 import { formatHumanQuantity } from '../utils/humanQuantity';
 import { apiFetch } from '../api/client';
 import {
   Calendar, RefreshCw, Box, UtensilsCrossed, Clock, Flame, Sparkles,
   ArrowRightLeft, ChefHat, Sun, Moon, Coffee,
-  ChevronLeft, ChevronRight, Wallet, AlertTriangle, Users, BookOpen, ShieldCheck
+  ChevronLeft, ChevronRight, Wallet, AlertTriangle, Users, BookOpen, ShieldCheck,
+  CalendarDays
 } from 'lucide-react';
 import { isRecipeSafeForFamily, getRecipeFamilyConflicts } from '../backend_embedded/dietValidator';
 
@@ -175,6 +177,7 @@ interface Props {
   isGenerating: boolean;
   activeRetailers?: string[];
   onPlanOptimized?: (optimizedPlan: WeeklyPlan) => void;
+  onSaveWeeklyPlan?: (plan: WeeklyPlan) => Promise<boolean>;
 }
 
 export const WeeklyPlanView: React.FC<Props> = ({
@@ -191,9 +194,11 @@ export const WeeklyPlanView: React.FC<Props> = ({
   isGenerating,
   activeRetailers,
   onPlanOptimized,
+  onSaveWeeklyPlan,
 }) => {
   const [selectedMemberId, setSelectedMemberId] = useState<string>(members[0]?.id || 'all');
   const [activeSwap, setActiveSwap] = useState<{ dayIndex: number; mealType: 'breakfast' | 'lunch' | 'dinner' } | null>(null);
+  const [isManualPlannerOpen, setIsManualPlannerOpen] = useState(false);
   const [selectedRecipeModal, setSelectedRecipeModal] = useState<{
     recipe: Recipe;
     dayIndex: number;
@@ -348,6 +353,15 @@ export const WeeklyPlanView: React.FC<Props> = ({
               📍 Zu Heute
             </button>
           )}
+
+          <button
+            onClick={() => setIsManualPlannerOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition active:scale-95"
+            title="Woche Tag für Tag selbst planen und anpassen"
+          >
+            <CalendarDays className="w-3.5 h-3.5" />
+            <span>Woche planen</span>
+          </button>
 
           <button
             onClick={onGeneratePlan}
@@ -1229,6 +1243,24 @@ export const WeeklyPlanView: React.FC<Props> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* 5. INTERACTIVE MANUAL WEEK PLANNER MODAL */}
+      {isManualPlannerOpen && plan && (
+        <ManualWeekPlannerModal
+          plan={plan}
+          members={members}
+          allRecipes={allRecipes}
+          activeRetailers={activeRetailers}
+          onClose={() => setIsManualPlannerOpen(false)}
+          onSave={async (updatedPlan) => {
+            if (onSaveWeeklyPlan) {
+              const ok = await onSaveWeeklyPlan(updatedPlan);
+              return ok;
+            }
+            return false;
+          }}
+        />
       )}
     </div>
   );

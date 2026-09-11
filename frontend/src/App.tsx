@@ -322,7 +322,7 @@ export function App() {
   const handleGeneratePlan = async () => {
     setIsGeneratingPlan(true);
     try {
-      const res = await apiFetch(`/api/plan/generate?week_offset=${selectedWeekOffset}`, { method: 'POST' });
+      const res = await apiFetch(`/api/plan/generate?week_offset=${selectedWeekOffset}&shuffle=true&t=${Date.now()}`, { method: 'POST' });
       if (res.ok) {
         const newPlan = await res.json();
         setWeeklyPlan(newPlan);
@@ -334,6 +334,30 @@ export function App() {
     } finally {
       setIsGeneratingPlan(false);
     }
+  };
+
+  const handleSaveWeeklyPlan = async (updatedPlan: WeeklyPlan): Promise<boolean> => {
+    try {
+      const res = await apiFetch('/api/plan/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          week_offset: selectedWeekOffset,
+          plan: updatedPlan,
+        }),
+      });
+      if (res.ok) {
+        const savedPlan = await res.json();
+        setWeeklyPlan(savedPlan);
+        await fetchShoppingList(selectedWeekOffset);
+        await fetchDailyHub();
+        return true;
+      }
+    } catch (e) {
+      console.error('Error saving weekly plan:', e);
+      return false;
+    }
+    return false;
   };
 
   const handleSwapMeal = async (dayIndex: number, mealType: string, newRecipeId: string) => {
@@ -808,6 +832,7 @@ export function App() {
             isGenerating={isGeneratingPlan}
             activeRetailers={settings?.active_retailers}
             onPlanOptimized={handlePlanOptimized}
+            onSaveWeeklyPlan={handleSaveWeeklyPlan}
           />
         )}
 
