@@ -59,7 +59,7 @@
     "water_intake_ml": 1250,
     "daily_water_target_ml": 1800,
     "username": null,
-    "role": "kid",
+    "role": "adult",
     "password_hash": null,
     "password_salt": null,
     "pin_hash": "1027fd37cc0b14dd0128c1e158857e93cbd872f8ac3fdb3e9e1e393cc900ad92",
@@ -90,11 +90,11 @@
     "water_intake_ml": 1750,
     "daily_water_target_ml": 2975,
     "username": null,
-    "role": "admin",
-    "password_hash": "ab28ef13f09f9196b37c1163e767c5bee97d2bac61e57a0e2491904c2a152395",
-    "password_salt": "d94cc58ac3d5f690dfb4a7754a0d3028",
+    "role": "adult",
+    "password_hash": "fdc9cd5f1f38536fd8b90efabcd43eb4244a5000ebcccedbbf7503c4d491d079",
+    "password_salt": "20894d41a59afb760a1c6e84cff11d0b",
     "pin_hash": null,
-    "is_admin": true
+    "is_admin": false
   },
   {
     "id": "mem-4",
@@ -121,7 +121,7 @@
     "water_intake_ml": 1000,
     "daily_water_target_ml": 1500,
     "username": null,
-    "role": "kid",
+    "role": "adult",
     "password_hash": null,
     "password_salt": null,
     "pin_hash": "5e53dba3ed3c0163ce3076d7df62fc17477af1ddb5b055beb772f1056c255a4e",
