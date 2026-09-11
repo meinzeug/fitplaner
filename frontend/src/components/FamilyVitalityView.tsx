@@ -27,6 +27,8 @@ import {
   FileText,
   Apple,
   Wheat,
+  Calendar,
+  ShoppingBag,
 } from 'lucide-react';
 
 interface Props {
@@ -135,9 +137,54 @@ export const FamilyVitalityView: React.FC<Props> = ({
       };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto animate-fadeIn pb-16">
+    <div className="space-y-4 sm:space-y-6 max-w-5xl mx-auto animate-fadeIn pb-16">
+      {/* 1. UNIFIED PAGE HEADER */}
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-700 flex items-center justify-center border border-emerald-500/20 shrink-0">
+            <Heart className="w-5 h-5 text-rose-500 fill-rose-500/20" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                Gesundheit & Vitalität
+              </h2>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                Score {vitality.overall_score}/100
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 font-medium">
+              30-Pflanzen Mikrobiom • Nährstoff-Radar • Private Krankenakte (ePA)
+            </p>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {onNavigateTab && (
+            <button
+              onClick={() => onNavigateTab('woche')}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition active:scale-95"
+            >
+              <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Wochenplan</span>
+            </button>
+          )}
+
+          {onNavigateTab && (
+            <button
+              onClick={() => onNavigateTab('einkauf')}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-black transition active:scale-95 shadow-xs"
+            >
+              <ShoppingBag className="w-3.5 h-3.5 text-amber-300" />
+              <span>Einkaufsliste</span>
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* 🏥 Sub-Navigation: Radar vs 30-Pflanzen Mikrobiom vs ePA */}
-      <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 bg-slate-200/80 p-1.5 rounded-2xl border border-slate-300 shadow-2xs">
+      <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200/80 shadow-xs">
         <button
           onClick={() => setHealthSubTab('radar')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-black transition ${

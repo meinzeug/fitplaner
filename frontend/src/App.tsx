@@ -360,7 +360,7 @@ export function App() {
     return false;
   };
 
-  const handleSwapMeal = async (dayIndex: number, mealType: string, newRecipeId: string) => {
+  const handleSwapMeal = async (dayIndex: number, mealType: string, newRecipeId: string): Promise<boolean> => {
     try {
       const res = await apiFetch('/api/plan/swap', {
         method: 'POST',
@@ -377,10 +377,12 @@ export function App() {
         setWeeklyPlan(updated);
         await fetchShoppingList(selectedWeekOffset);
         await fetchDailyHub();
+        return true;
       }
     } catch (e) {
       console.error(e);
     }
+    return false;
   };
 
   const handleCookMeal = async (dayIndex: number, mealType: string) => {
@@ -833,6 +835,7 @@ export function App() {
             activeRetailers={settings?.active_retailers}
             onPlanOptimized={handlePlanOptimized}
             onSaveWeeklyPlan={handleSaveWeeklyPlan}
+            onNavigateTab={setActiveTab}
           />
         )}
 
@@ -840,6 +843,10 @@ export function App() {
           <RecipeManagerView
             recipes={allRecipes}
             onRefreshRecipes={fetchRecipes}
+            onAddToWeeklyPlan={async (recipe, dayIndex, mealType) => {
+              return await handleSwapMeal(dayIndex, mealType, recipe.id);
+            }}
+            onNavigateTab={setActiveTab}
           />
         )}
 

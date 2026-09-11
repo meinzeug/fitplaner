@@ -827,23 +827,23 @@ export const ShoppingListView: React.FC<Props> = ({
     return (
       <div
         key={uniqueKey}
-        className={`rounded-2xl transition flex flex-col sm:flex-row sm:items-center justify-between select-none gap-2 ${
-          thumbMode || isLiveMode ? 'p-3.5 sm:p-4 my-2 min-h-[72px]' : 'p-3 my-1.5'
+        className={`rounded-2xl transition flex items-center justify-between select-none gap-2 sm:gap-3 ${
+          thumbMode || isLiveMode ? 'p-3 sm:p-3.5 my-1.5 min-h-[60px]' : 'p-2.5 sm:p-3 my-1 min-h-[48px]'
         } ${
           isChecked
-            ? 'bg-slate-100/60 opacity-40 line-through text-slate-400 border border-transparent'
-            : 'bg-white hover:bg-slate-50 border border-slate-200/80 shadow-xs'
+            ? 'bg-slate-100/70 opacity-40 line-through text-slate-400 border border-transparent'
+            : 'bg-white hover:bg-slate-50/80 border border-slate-200/80 shadow-xs'
         }`}
       >
-        <div className="flex items-start gap-3 flex-1 min-w-0">
+        <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
           <div
             onClick={() => toggleCheck(uniqueKey)}
-            className="cursor-pointer shrink-0 pt-0.5"
+            className="cursor-pointer shrink-0"
           >
             {isChecked ? (
-              <CheckSquare className={thumbMode || isLiveMode ? 'w-7 h-7 text-emerald-600' : 'w-5 h-5 text-emerald-600'} />
+              <CheckSquare className={thumbMode || isLiveMode ? 'w-6 h-6 text-emerald-600' : 'w-5 h-5 text-emerald-600'} />
             ) : (
-              <Square className={thumbMode || isLiveMode ? 'w-7 h-7 text-slate-300' : 'w-5 h-5 text-slate-300 hover:text-slate-400'} />
+              <Square className={thumbMode || isLiveMode ? 'w-6 h-6 text-slate-300' : 'w-5 h-5 text-slate-300 hover:text-slate-400'} />
             )}
           </div>
 
@@ -851,126 +851,75 @@ export const ShoppingListView: React.FC<Props> = ({
             onClick={() => toggleCheck(uniqueKey)}
             className="min-w-0 flex-1 cursor-pointer"
           >
-            <div className={`font-black text-slate-900 leading-snug break-words ${thumbMode || isLiveMode ? 'text-base' : 'text-sm'}`}>
-              {item.exact_product_name || item.name}
-            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <span className={`font-black text-slate-900 leading-snug truncate ${thumbMode || isLiveMode ? 'text-sm sm:text-base' : 'text-xs sm:text-sm'}`}>
+                {item.exact_product_name || item.name}
+              </span>
 
-            {/* Substitution notice */}
-            {item.is_substituted && item.original_name && (
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-md font-bold inline-flex items-center gap-1">
-                  🔄 Ersatz für: {item.original_name}
-                </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRevertSubstitute(item);
-                  }}
-                  className="text-[10px] text-blue-600 hover:underline font-bold"
-                  title="Auf Originalzutat zurücksetzen"
-                >
-                  (Rückgängig)
-                </button>
-              </div>
-            )}
-
-            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-              {item.brand && (!item.storeTag || (!item.brand.toLowerCase().includes(item.storeTag.toLowerCase()) && !item.storeTag.toLowerCase().includes(item.brand.toLowerCase()))) && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-md font-extrabold bg-slate-100 text-slate-700 border border-slate-200">
-                  {item.brand}
-                </span>
-              )}
-              {item.storeTag && viewMode === 'aisle' && (
-                <span className={`text-[10px] px-2 py-0.5 rounded-md font-extrabold ${
-                  item.storeTag === 'Netto' ? 'bg-amber-100 text-stone-900' :
-                  item.storeTag === 'NP' ? 'bg-red-100 text-red-700' :
-                  item.storeTag === 'Lidl' ? 'bg-blue-100 text-blue-700' :
-                  'bg-slate-100 text-slate-600'
+              {item.storeTag && (
+                <span className={`text-[9px] px-1.5 py-0.2 rounded font-black ${
+                  item.storeTag === 'Netto' ? 'bg-amber-100 text-stone-900 border border-amber-300' :
+                  item.storeTag === 'NP' ? 'bg-red-100 text-red-700 border border-red-300' :
+                  item.storeTag === 'Lidl' ? 'bg-blue-100 text-blue-700 border border-blue-300' :
+                  'bg-slate-100 text-slate-700 border border-slate-200'
                 }`}>
                   {item.storeTag}
                 </span>
               )}
+
               {item.is_on_sale && !item.is_covered_by_stock && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-gradient-to-r from-red-600 to-amber-500 text-white shadow-xs">
-                  <Flame className="w-3 h-3 text-yellow-200 fill-yellow-200" />
-                  <span>PROSPEKT-DEAL</span>
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-black bg-gradient-to-r from-red-600 to-amber-500 text-white shadow-2xs">
+                  <Flame className="w-2.5 h-2.5 text-yellow-200 fill-yellow-200" />
+                  <span>DEAL</span>
                 </span>
               )}
-              {(() => {
-                const plant = identifyPlantInIngredient(item.name);
-                if (!plant) return null;
-                return (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    <span>{plant.icon} {plant.groupLabel}</span>
-                  </span>
-                );
-              })()}
-              {/hafer|linse|bohne|kichererbse|chia|leinsamen|vollkorn/.test(item.name.toLowerCase()) && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200">
-                  <span>🌾 Ballaststoff-Power</span>
-                </span>
-              )}
+
               {item.is_covered_by_stock ? (
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  Im Vorrat (0 €)
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  Vorrat (0 €)
                 </span>
               ) : (
                 item.packs_to_buy > 0 && item.pack_size && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
                     {item.packs_to_buy}x {item.pack_size} {item.unit}
                   </span>
                 )
               )}
-              {item.barcode && !item.is_covered_by_stock && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200" title="EAN-13 Barcode für Handscanner & Kasse">
-                  <Barcode className="w-3.5 h-3.5 text-amber-700" />
-                  <span>{item.barcode}</span>
-                </span>
-              )}
-              {item.recurring_rule && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 border border-purple-200 shadow-2xs">
-                  <Repeat className="w-3 h-3 text-purple-600" />
-                  <span>
-                    {item.recurring_rule.count_per_cycle}x {item.recurring_rule.frequency === 'daily' ? 'tägl.' : item.recurring_rule.frequency === 'weekly' ? 'wöchentl.' : item.recurring_rule.frequency === 'biweekly' ? '2-wöch.' : 'monatl.'}
-                  </span>
+
+              {item.is_substituted && item.original_name && (
+                <span className="text-[9px] bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded font-bold">
+                  🔄 Ersatz
                 </span>
               )}
             </div>
 
-            <div className="text-xs text-slate-500 font-medium mt-1 flex flex-wrap items-center gap-x-2">
+            <div className="text-[11px] text-slate-400 font-medium flex items-center gap-2 mt-0.5">
               <span>Bedarf: {formatHumanQuantityText(item.total_quantity, item.unit)}</span>
-              {item.leftover_after_purchase > 0 && !item.is_covered_by_stock && item.is_pantry_eligible ? (
-                <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded text-[10px] border border-emerald-200">
-                  📦 Rest {formatHumanQuantityText(item.leftover_after_purchase, item.unit)} wandert ins Vorratslager
+              {item.brand && <span>• {item.brand}</span>}
+              {item.leftover_after_purchase > 0 && !item.is_covered_by_stock && item.is_pantry_eligible && (
+                <span className="text-emerald-700 font-bold bg-emerald-50 px-1 rounded text-[10px]">
+                  📦 Rest {formatHumanQuantityText(item.leftover_after_purchase, item.unit)} → Vorrat
                 </span>
-              ) : (
-                !item.is_covered_by_stock && !item.is_pantry_eligible && (
-                  <span className="text-slate-400 text-[10px]">
-                    🌱 Frischeprodukt (frisch verbrauchen)
-                  </span>
-                )
               )}
             </div>
           </div>
         </div>
 
-        {/* Right Section: Controls + Price */}
-        <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-1.5 sm:pt-0 border-t border-slate-100 sm:border-t-0">
-          {/* Controls: Pack Stepper [-][+][edit][delete][substitute] */}
-          {!item.is_covered_by_stock && (
-            <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200/80">
-              {/* Pack Stepper */}
+        {/* Right Section: Stepper / Edit & Price */}
+        <div className="flex items-center gap-2 shrink-0">
+          {!item.is_covered_by_stock && (thumbMode || isLiveMode) && (
+            <div className="flex items-center gap-1 bg-slate-50 p-0.5 rounded-xl border border-slate-200">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleAdjustPacks(item, -1);
                 }}
-                className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 font-black flex items-center justify-center text-xs hover:bg-slate-100 active:scale-95 shadow-2xs transition"
-                title="Packung weniger kaufen"
+                className="w-6 h-6 rounded-lg bg-white border border-slate-200 text-slate-700 font-black flex items-center justify-center text-xs"
+                title="Packung weniger"
               >
                 -
               </button>
-              <span className="font-mono font-black text-xs px-1 text-slate-800 min-w-[24px] text-center">
+              <span className="font-mono font-black text-xs px-1 text-slate-800">
                 {item.packs_to_buy || 1}x
               </span>
               <button
@@ -978,78 +927,44 @@ export const ShoppingListView: React.FC<Props> = ({
                   e.stopPropagation();
                   handleAdjustPacks(item, 1);
                 }}
-                className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 font-black flex items-center justify-center text-xs hover:bg-slate-100 active:scale-95 shadow-2xs transition"
-                title="Packung mehr kaufen"
+                className="w-6 h-6 rounded-lg bg-white border border-slate-200 text-slate-700 font-black flex items-center justify-center text-xs"
+                title="Packung mehr"
               >
                 +
-              </button>
-
-              {/* Edit grams / quantity */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setEditItemModal({
-                    item,
-                    tempPacks: item.packs_to_buy || 1,
-                    tempQuantity: item.total_quantity || item.pack_size || 0,
-                    tempUnit: item.unit || 'g',
-                  });
-                }}
-                className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 flex items-center justify-center text-xs hover:bg-slate-100 active:scale-95 shadow-2xs transition"
-                title="Menge / Gramm anpassen"
-              >
-                ✏️
-              </button>
-
-              {/* Exclude / Strike out */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleExcludeItem(item);
-                }}
-                className="w-7 h-7 rounded-lg bg-white border border-red-200 text-red-500 hover:text-red-700 flex items-center justify-center text-xs hover:bg-red-50 active:scale-95 shadow-2xs transition"
-                title="Artikel von Liste streichen"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-
-              {/* Substitute Button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSubstituteItem({
-                    name: item.name,
-                    substitutes: item.substitutes && item.substitutes.length > 0 ? item.substitutes : ['Alternative suchen...'],
-                    storeTag: item.storeTag,
-                  });
-                }}
-                className="px-1.5 h-7 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-[10px] font-bold text-amber-800 flex items-center gap-1 active:scale-95 shadow-2xs transition"
-                title="Ausverkauft? Alternative / Ersatz wählen"
-              >
-                <span>🔄</span>
-                <span className="hidden sm:inline">Ersatz</span>
               </button>
             </div>
           )}
 
-          {/* Price */}
-          <div className="text-right min-w-[65px]">
+          {!item.is_covered_by_stock && !thumbMode && !isLiveMode && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditItemModal({
+                  item,
+                  tempPacks: item.packs_to_buy || 1,
+                  tempQuantity: item.total_quantity || item.pack_size || 0,
+                  tempUnit: item.unit || 'g',
+                });
+              }}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+              title="Menge / Einheit / Ersatz bearbeiten"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          <div className="text-right min-w-[55px]">
             {item.is_covered_by_stock ? (
-              <span className={`font-black font-mono block text-emerald-700 ${thumbMode || isLiveMode ? 'text-base' : 'text-sm'}`}>
+              <span className="font-black font-mono block text-emerald-700 text-xs sm:text-sm">
                 0,00 €
               </span>
             ) : (
               <>
-                {item.is_on_sale && item.original_price && item.original_price > (item.total_price || 0) && (
-                  <span className="text-[11px] text-slate-400 line-through block font-mono">
-                    {item.original_price.toFixed(2)} €
-                  </span>
-                )}
-                <span className={`font-black font-mono block ${item.is_on_sale ? 'text-red-600' : 'text-slate-900'} ${thumbMode || isLiveMode ? 'text-base' : 'text-sm'}`}>
+                <span className={`font-black font-mono block text-xs sm:text-sm ${item.is_on_sale ? 'text-red-600' : 'text-slate-900'}`}>
                   ~{(item.total_price || 0).toFixed(2)} €
                 </span>
                 {item.savings && item.savings > 0 && (
-                  <span className="text-[10px] bg-red-100 text-red-700 px-1 py-0.5 rounded font-black block text-center mt-0.5">
+                  <span className="text-[9px] bg-red-100 text-red-700 px-1 py-0.2 rounded font-black block text-center mt-0.5">
                     -{item.savings.toFixed(2)} €
                   </span>
                 )}
@@ -1062,8 +977,54 @@ export const ShoppingListView: React.FC<Props> = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Sub-Tab Switcher: Liste vs Vorratskammer */}
+    <div className="space-y-4 sm:space-y-6 animate-fadeIn">
+      {/* 1. UNIFIED PAGE HEADER */}
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-700 flex items-center justify-center border border-emerald-500/20 shrink-0">
+            <ShoppingBag className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                Einkaufsliste
+              </h2>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                {totalActiveItemsCount} Artikel
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 font-medium">
+              {shoppingList?.week_label || 'Aktuelle Woche'} • Reale Supermarkt-Deals Netto & NP
+            </p>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={toggleLiveMode}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-black transition active:scale-95 shadow-xs ${
+              isLiveMode
+                ? 'bg-emerald-600 text-white ring-2 ring-emerald-400'
+                : 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
+            }`}
+          >
+            🛒 Live-Modus
+          </button>
+
+          <button
+            onClick={() => setShowFinishShoppingModal(true)}
+            disabled={checkedItemsCount === 0}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-2xl text-xs font-bold transition active:scale-95 shadow-xs"
+          >
+            <Archive className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">In Vorrat buchen</span>
+            <span className="sm:hidden">Vorrat ({checkedItemsCount})</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Sub-Tab Switcher: Liste vs Routinen vs Vorratskammer */}
       <div className="flex items-center justify-between bg-white rounded-3xl p-2 border border-slate-200 shadow-sm">
         <div className="flex items-center gap-1">
           <button
