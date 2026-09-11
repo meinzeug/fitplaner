@@ -1901,6 +1901,69 @@ class EmbeddedBackend {
         };
         return this.json(exportData);
       }
+      if (pathname === '/api/sync/bidirectional' && method === 'POST') {
+        const incoming = bodyData || {};
+        if (incoming.settings) await localDbSet(STORES.SETTINGS, 'current', incoming.settings);
+        if (incoming.schedule_settings) await localDbSet(STORES.TIMELINE, 'settings', incoming.schedule_settings);
+        if (Array.isArray(incoming.profiles)) {
+          for (const p of incoming.profiles) await localDbSet(STORES.PROFILES, p.id, p);
+        }
+        if (Array.isArray(incoming.pantry)) {
+          for (const it of incoming.pantry) await localDbSet(STORES.PANTRY, it.id, it);
+        }
+        if (Array.isArray(incoming.recipes)) {
+          for (const r of incoming.recipes) await localDbSet(STORES.RECIPES, r.id, r);
+        }
+        if (Array.isArray(incoming.chores)) {
+          for (const c of incoming.chores) await localDbSet(STORES.CHORES, c.id, c);
+        }
+        if (Array.isArray(incoming.plans)) {
+          for (const pl of incoming.plans) await localDbSet(STORES.PLANS, `plan_${pl.week_offset}`, pl);
+        }
+        if (Array.isArray(incoming.custom_shopping_items)) {
+          for (const cit of incoming.custom_shopping_items) await localDbSet(STORES.CUSTOM_ITEMS, cit.id, cit);
+        }
+        if (Array.isArray(incoming.recurring_rules)) {
+          for (const rr of incoming.recurring_rules) if (rr?.id) await localDbSet(STORES.RECURRING, rr.id, rr);
+        }
+        if (incoming.health_dossiers) {
+          if (Array.isArray(incoming.health_dossiers)) {
+            for (const hd of incoming.health_dossiers) {
+              const k = hd?.profile_id || hd?.id || hd?.member_id;
+              if (k) await localDbSet(STORES.HEALTH, k, hd);
+            }
+          } else if (typeof incoming.health_dossiers === 'object') {
+            for (const [k, hd] of Object.entries(incoming.health_dossiers)) {
+              if (hd) await localDbSet(STORES.HEALTH, k, hd);
+            }
+          }
+        }
+
+        const consolidated = {
+          device_id: 'embedded-phone-node',
+          device_name: 'Smartphone (Autark)',
+          timestamp: new Date().toISOString(),
+          settings: await localDbGet(STORES.SETTINGS, 'current'),
+          schedule_settings: await localDbGet(STORES.TIMELINE, 'settings'),
+          profiles: await localDbGetAll(STORES.PROFILES),
+          pantry: await localDbGetAll(STORES.PANTRY),
+          recipes: await localDbGetAll(STORES.RECIPES),
+          chores: await localDbGetAll(STORES.CHORES),
+          plans: await localDbGetAll(STORES.PLANS),
+          custom_shopping_items: await localDbGetAll(STORES.CUSTOM_ITEMS),
+          checked_shopping_items: incoming.checked_shopping_items || [],
+          health_dossiers: await localDbGetAll(STORES.HEALTH),
+          recurring_rules: await localDbGetAll(STORES.RECURRING),
+        };
+
+        return this.json({
+          status: 'success',
+          server_device_name: 'Embedded Engine (Autark)',
+          server_timestamp: new Date().toISOString(),
+          merged_data: consolidated,
+          summary: { autark_saved: true }
+        });
+      }
       if (pathname === '/api/sync/mesh-push' && method === 'POST') {
         if (bodyData) {
           if (bodyData.settings) await localDbSet(STORES.SETTINGS, 'current', bodyData.settings);

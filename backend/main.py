@@ -23,7 +23,7 @@ from backend.models import (
     UpdateScheduleSettingsRequest, ToggleTaskRequest, PrepTomorrowSummary,
     FamilyChore, FamilyVitalityScore, MemberVitalityDetail,
     MeshSyncPacket, MeshStatusResponse, AppSettings,
-    MemberHealthDossier
+    MemberHealthDossier, BidirectionalSyncPacket, BidirectionalSyncResponse
 )
 from backend.settings_storage import get_app_settings, save_app_settings
 from backend.nutrition.calculator import enrich_family_member
@@ -34,7 +34,8 @@ from backend.family.chore_engine import (
     generate_daily_chores, toggle_chore, get_current_chores
 )
 from backend.sync.mesh_sync import (
-    get_mesh_status, create_local_sync_packet, merge_peer_sync_packet
+    get_mesh_status, create_local_sync_packet, merge_peer_sync_packet,
+    merge_bidirectional_sync_packet
 )
 from backend.nutrition.ingredient_analyzer import (
     fetch_open_food_facts_analysis, analyze_ingredient_locally
@@ -153,7 +154,9 @@ from backend.persistence import (
     load_weekly_budgets, save_weekly_budgets,
     load_daily_hub_state, save_daily_hub_state,
     get_health_dossier, save_health_dossier, delete_health_dossier,
+    load_recurring_rules, save_recurring_rules,
 )
+
 
 DEFAULT_INITIAL_MEMBERS = [enrich_family_member(m) for m in DEFAULT_MEMBERS_DATA]
 family_profiles: List[FamilyMember] = load_family_profiles(DEFAULT_INITIAL_MEMBERS)
@@ -405,7 +408,9 @@ def scan_receipt_endpoint(req: ReceiptScanRequest):
 # WIEDERKEHRENDE KAUF-ROUTINEN (ABOS / BEDARFE)
 # -----------------------------------------------------------
 
-RECURRING_RULES_STORE: Dict[str, Dict[str, Any]] = {}
+RECURRING_RULES_STORE: Dict[str, Dict[str, Any]] = {
+    r["id"]: r for r in load_recurring_rules() if isinstance(r, dict) and "id" in r
+}
 
 
 @app.get("/api/recurring")
@@ -415,9 +420,11 @@ def get_recurring_rules_endpoint():
 
 @app.post("/api/recurring")
 def save_recurring_rule_endpoint(rule: Dict[str, Any]):
+    import time
     rule_id = rule.get("id") or f"rec_{int(time.time() * 1000)}"
     rule["id"] = rule_id
     RECURRING_RULES_STORE[rule_id] = rule
+    save_recurring_rules(list(RECURRING_RULES_STORE.values()))
     return {"success": True, "rule": rule}
 
 
@@ -425,7 +432,9 @@ def save_recurring_rule_endpoint(rule: Dict[str, Any]):
 def delete_recurring_rule_endpoint(rule_id: str):
     if rule_id in RECURRING_RULES_STORE:
         del RECURRING_RULES_STORE[rule_id]
+        save_recurring_rules(list(RECURRING_RULES_STORE.values()))
     return {"success": True, "deleted": rule_id}
+
 
 
 # -----------------------------------------------------------
@@ -1309,6 +1318,37 @@ def pull_mesh_sync_packet():
         members=family_profiles,
         daily_hub_state=daily_hub_state
     )
+
+
+@app.get("/api/sync/health")
+def get_sync_health():
+    """Ultra-fast (2ms) lightweight health check for WiFi auto-detection and heartbeats."""
+    return {
+        "status": "ok",
+        "node": "fitplaner-pc-server",
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.post("/api/sync/bidirectional", response_model=BidirectionalSyncResponse)
+def bidirectional_sync_endpoint(packet: BidirectionalSyncPacket):
+    """
+    Gleichberechtigter 2-Wege-Sync (PC ↔ Smartphone):
+    Führt Smartphone-Daten (auch aus autarkem Offline-Betrieb) mit dem PC-Server zusammen
+    und liefert den konsolidierten Master-Stand zurück.
+    """
+    global family_profiles, daily_hub_state
+    response = merge_bidirectional_sync_packet(
+        packet=packet,
+        server_device_name="FitPlaner PC-Server",
+        current_settings=get_app_settings(),
+        current_chores=get_current_chores(),
+        current_members=family_profiles,
+        current_daily_hub=daily_hub_state
+    )
+    # Reload local in-memory profiles after merge
+    family_profiles = load_family_profiles(family_profiles)
+    return response
 
 
 # -----------------------------------------------------------

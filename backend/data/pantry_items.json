@@ -54,5 +54,47 @@
     "source": "Manuell",
     "ean_barcode": null,
     "added_date": "10.09.2026"
+  },
+  {
+    "id": "pnt-1",
+    "name": "Haferflocken zart",
+    "current_quantity": 500.0,
+    "unit": "g",
+    "category": "Vollkorn & Getreide",
+    "mhd_date": null,
+    "shelf_life_status": "fresh",
+    "days_left": 90,
+    "standard_pack_size": null,
+    "source": "Netto",
+    "ean_barcode": null,
+    "added_date": "2026-09-10T10:00:29.060Z"
+  },
+  {
+    "id": "pnt-2",
+    "name": "Bio Olivenöl nativ extra",
+    "current_quantity": 450.0,
+    "unit": "ml",
+    "category": "Gesunde Fette & Nüsse",
+    "mhd_date": null,
+    "shelf_life_status": "fresh",
+    "days_left": 180,
+    "standard_pack_size": null,
+    "source": "Rewe",
+    "ean_barcode": null,
+    "added_date": "2026-09-10T10:00:29.060Z"
+  },
+  {
+    "id": "pnt-3",
+    "name": "Basmati Reis",
+    "current_quantity": 800.0,
+    "unit": "g",
+    "category": "Vollkorn & Getreide",
+    "mhd_date": null,
+    "shelf_life_status": "fresh",
+    "days_left": 200,
+    "standard_pack_size": null,
+    "source": "Lidl",
+    "ean_barcode": null,
+    "added_date": "2026-09-10T10:00:29.060Z"
   }
 ]

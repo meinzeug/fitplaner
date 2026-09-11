@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   FamilyMember, ProductOffer, WeeklyPlan, ShoppingList, Recipe,
   PantryItem, LeafletBrochure, CustomShoppingItem, DailyHubResponse,
@@ -25,9 +25,15 @@ import { PdfLeafletScannerModal } from './components/PdfLeafletScannerModal';
 import { CookingModeModal } from './components/CookingModeModal';
 import { BarcodeScannerModal } from './components/BarcodeScannerModal';
 import {
+  startAutoSyncWatcher,
+  subscribeSyncStatus,
+  performBidirectionalSync,
+  SyncStatusInfo,
+} from './api/syncManager';
+import {
   Users, Calendar, ShoppingBag, Tag, Archive, BookOpen,
   HeartPulse, Sparkles, X, Compass, ChevronRight, CheckCircle2, Smartphone, Download,
-  Heart, Star, Radio, Settings, Wifi, WifiOff, Server, Camera, ChefHat, Droplets, Utensils, Plus
+  Heart, Star, Radio, Settings, Wifi, WifiOff, Server, Camera, ChefHat, Droplets, Utensils, Plus, RefreshCw
 } from 'lucide-react';
 
 export function App() {
@@ -60,6 +66,20 @@ export function App() {
   const [offers, setOffers] = useState<ProductOffer[]>([]);
   const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan | null>(null);
   const [shoppingList, setShoppingList] = useState<ShoppingList | null>(null);
+
+  const totalShoppingItemsCount = useMemo(() => {
+    if (!shoppingList) return 0;
+    return (
+      (shoppingList.items_netto?.length || 0) +
+      (shoppingList.items_np?.length || 0) +
+      (shoppingList.items_lidl?.length || 0) +
+      (shoppingList.items_aldi?.length || 0) +
+      (shoppingList.items_rewe?.length || 0) +
+      (shoppingList.items_kaufland?.length || 0) +
+      (shoppingList.items_edeka?.length || 0) +
+      (shoppingList.custom_items?.length || 0)
+    );
+  }, [shoppingList]);
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [pantryItems, setPantryItems] = useState<PantryItem[]>([]);
   const [leaflets, setLeaflets] = useState<LeafletBrochure[]>([]);
@@ -73,6 +93,8 @@ export function App() {
   const [isServerModalOpen, setIsServerModalOpen] = useState(false);
   const [isServerOnline, setIsServerOnline] = useState<boolean | null>(null);
   const [appMode, setAppModeState] = useState<AppMode>(getAppMode());
+  const [syncInfo, setSyncInfo] = useState<SyncStatusInfo | null>(null);
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(() => {
     return !localStorage.getItem('fitplaner_onboarded');
   });
@@ -89,29 +111,47 @@ export function App() {
     fetchLeaflets();
   };
 
+  const handleQuickSync = async () => {
+    setIsManualSyncing(true);
+    try {
+      await performBidirectionalSync();
+      loadAllData();
+    } finally {
+      setIsManualSyncing(false);
+    }
+  };
+
   useEffect(() => {
     loadAllData();
 
+    // Start background auto-sync watcher (every 15s checks health & syncs with peer)
+    const stopWatcher = startAutoSyncWatcher(15000);
+    const unsubscribeSync = subscribeSyncStatus((status) => {
+      setSyncInfo(status);
+      setIsServerOnline(status.state === 'synced');
+    });
+
     const handleServerChanged = () => {
       loadAllData();
-      checkServerHealth();
     };
     const handleModeChanged = (e: any) => {
       setAppModeState(e.detail?.mode || getAppMode());
       loadAllData();
-      checkServerHealth();
+    };
+    const handleSyncTriggered = () => {
+      loadAllData();
     };
 
     window.addEventListener('fitplaner_server_changed', handleServerChanged);
     window.addEventListener('fitplaner_mode_changed', handleModeChanged);
-
-    checkServerHealth();
-    const interval = setInterval(checkServerHealth, 20000);
+    window.addEventListener('fitplaner_synced', handleSyncTriggered);
 
     return () => {
+      stopWatcher();
+      unsubscribeSync();
       window.removeEventListener('fitplaner_server_changed', handleServerChanged);
       window.removeEventListener('fitplaner_mode_changed', handleModeChanged);
-      clearInterval(interval);
+      window.removeEventListener('fitplaner_synced', handleSyncTriggered);
     };
   }, []);
 
@@ -586,12 +626,226 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      {/* Top Navigation Bar (Material 3 Mobile App Bar & Desktop Nav) */}
-      <header
-        className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs"
-        style={{ paddingTop: 'max(env(safe-area-inset-top), 8px)' }}
-      >
+    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row font-sans text-slate-900">
+      {/* DESKTOP PERMANENT SIDEBAR (>= 1024px / lg) */}
+      <aside className="hidden lg:flex flex-col w-64 xl:w-72 bg-white border-r-2 border-slate-200/90 shrink-0 select-none min-h-screen sticky top-0 h-screen overflow-y-auto">
+        {/* Brand Header */}
+        <div className="p-5 border-b-2 border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('heute')}>
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/25 shrink-0">
+              <HeartPulse className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-1.5">
+                <span>FitPlaner</span>
+                <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold">Desktop</span>
+              </h1>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Multi-Markt Manager</p>
+            </div>
+          </div>
+        </div>
+
+        {/* P2P Live Sync Status Card */}
+        <div className="p-3.5 border-b border-slate-100">
+          <div
+            onClick={() => setIsServerModalOpen(true)}
+            className={`p-3 rounded-2xl border-2 transition-all cursor-pointer ${
+              syncInfo?.state === 'synced'
+                ? 'bg-emerald-50/70 border-emerald-200/90 hover:bg-emerald-100/70 text-emerald-950'
+                : syncInfo?.state === 'syncing'
+                ? 'bg-amber-50 border-amber-200 text-amber-950'
+                : 'bg-blue-50/70 border-blue-200/90 hover:bg-blue-100/70 text-blue-950'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5 shrink-0">
+                  {syncInfo?.state === 'synced' && (
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  )}
+                  <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                    syncInfo?.state === 'synced' ? 'bg-emerald-500' : syncInfo?.state === 'syncing' ? 'bg-amber-500' : 'bg-blue-500'
+                  }`} />
+                </span>
+                <span className="text-xs font-black">
+                  {syncInfo?.state === 'synced' ? 'P2P Synchron' : syncInfo?.state === 'syncing' ? 'Synchronisiere...' : 'Autarker Modus'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleQuickSync();
+                }}
+                disabled={isManualSyncing}
+                className="p-1 rounded-lg bg-white/80 hover:bg-white text-slate-700 shadow-2xs border border-slate-200/60"
+                title="Jetzt abgleichen"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isManualSyncing ? 'animate-spin text-emerald-600' : ''}`} />
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-500 font-medium mt-1 truncate">
+              {syncInfo?.state === 'synced' ? 'PC ⟷ Handy im WLAN synchron' : 'Lokal gespeichert (Unterwegs)'}
+            </p>
+          </div>
+        </div>
+
+        {/* Main Navigation Items */}
+        <nav className="p-3.5 space-y-1.5 flex-1">
+          <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-3 py-1">
+            Hauptmenü
+          </div>
+
+          <button
+            onClick={() => setActiveTab('heute')}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-black transition-all ${
+              activeTab === 'heute'
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20 translate-x-1'
+                : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <Sparkles className={`w-4 h-4 ${activeTab === 'heute' ? 'text-amber-300' : 'text-slate-500'}`} />
+            <span>🌟 Heute (Cockpit)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('woche')}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-black transition-all ${
+              activeTab === 'woche'
+                ? 'bg-slate-900 text-white shadow-md translate-x-1'
+                : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <Calendar className={`w-4 h-4 ${activeTab === 'woche' ? 'text-emerald-400' : 'text-slate-500'}`} />
+            <span>📅 Wochenplaner</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('rezepte')}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-black transition-all ${
+              activeTab === 'rezepte'
+                ? 'bg-slate-900 text-white shadow-md translate-x-1'
+                : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <BookOpen className={`w-4 h-4 ${activeTab === 'rezepte' ? 'text-emerald-400' : 'text-slate-500'}`} />
+            <span>📖 Rezepte ({allRecipes.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('einkauf')}
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-black transition-all ${
+              activeTab === 'einkauf'
+                ? 'bg-slate-900 text-white shadow-md translate-x-1'
+                : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <ShoppingBag className={`w-4 h-4 ${activeTab === 'einkauf' ? 'text-amber-400' : 'text-slate-500'}`} />
+              <span>🛒 Einkaufsliste</span>
+            </div>
+            {totalShoppingItemsCount > 0 && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black">
+                {totalShoppingItemsCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('vitalitaet')}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-black transition-all ${
+              activeTab === 'vitalitaet'
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20 translate-x-1'
+                : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <Heart className={`w-4 h-4 ${activeTab === 'vitalitaet' ? 'text-rose-400' : 'text-slate-500'}`} />
+            <span>🌿 Vitalität & EPA</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('aemtli')}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-black transition-all ${
+              activeTab === 'aemtli'
+                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20 translate-x-1'
+                : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <Star className={`w-4 h-4 ${activeTab === 'aemtli' ? 'text-amber-300 fill-amber-300' : 'text-slate-500'}`} />
+            <span>🤝 Ämtli & Aufgaben</span>
+          </button>
+
+          {/* Section Divider */}
+          <div className="pt-3 pb-1">
+            <div className="border-t border-slate-200/80 my-1" />
+            <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-3 py-1">
+              Zusatz & Werkzeuge
+            </div>
+          </div>
+
+          <button
+            onClick={() => setActiveModalView('profiles')}
+            className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
+          >
+            <Users className="w-4 h-4 text-emerald-600" />
+            <span>👨‍👩‍👧‍👦 Familie ({members.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveModalView('leaflets')}
+            className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
+          >
+            <BookOpen className="w-4 h-4 text-emerald-600" />
+            <span>📖 Prospekte (Netto & NP)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveModalView('offers')}
+            className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
+          >
+            <Tag className="w-4 h-4 text-amber-500" />
+            <span>🏷️ Supermarkt Angebote</span>
+          </button>
+
+          <button
+            onClick={() => setIsGlobalScannerOpen(true)}
+            className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
+          >
+            <Camera className="w-4 h-4 text-amber-600" />
+            <span>📷 Barcode scannen</span>
+          </button>
+
+          <button
+            onClick={() => setActiveModalView('installer')}
+            className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
+          >
+            <Smartphone className="w-4 h-4 text-emerald-600" />
+            <span>📱 Smartphone APK</span>
+          </button>
+
+          <button
+            onClick={() => setActiveModalView('settings')}
+            className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
+          >
+            <Settings className="w-4 h-4 text-slate-500" />
+            <span>⚙️ Einstellungen</span>
+          </button>
+        </nav>
+
+        {/* Sidebar Footer */}
+        <div className="p-3.5 border-t-2 border-slate-100 bg-slate-50/60 text-[11px] text-slate-400 flex items-center justify-between">
+          <span className="font-semibold text-slate-600">FitPlaner 2026</span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold">v2.4 P2P</span>
+        </div>
+      </aside>
+
+      {/* MAIN VIEWPORT */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        {/* Top Navigation Bar (Material 3 Mobile App Bar & Desktop Nav) */}
+        <header
+          className="lg:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs"
+          style={{ paddingTop: 'max(env(safe-area-inset-top), 8px)' }}
+        >
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
             {/* Logo & Brand */}
@@ -807,8 +1061,66 @@ export function App() {
         </div>
       </header>
 
+      {/* Desktop Top Toolbar (hidden on mobile, shown on lg:) */}
+      <header className="hidden lg:flex sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b-2 border-slate-200/90 px-8 py-3.5 items-center justify-between shadow-2xs">
+        <div className="flex items-center gap-3">
+          <div className="w-2.5 h-7 rounded-full bg-emerald-500" />
+          <div>
+            <h2 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+              {activeTab === 'heute' && '🌟 Tages-Cockpit & Mission'}
+              {activeTab === 'woche' && '📅 Wochenplaner & Menü-Board'}
+              {activeTab === 'rezepte' && '📖 Rezepte-Bibliothek & Nährwerte'}
+              {activeTab === 'einkauf' && '🛒 Smarte Einkaufsliste & Supermarkt-Cockpit'}
+              {activeTab === 'vitalitaet' && '🌿 Vitalität & Gesundheit (EPA-Radar)'}
+              {activeTab === 'aemtli' && '🤝 Familien-Aufgaben & Ämtli-Tracker'}
+            </h2>
+            <p className="text-xs text-slate-400 font-medium">FitPlaner Workspace • Synchron mit allen Geräten</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Quick Sync Status Pill */}
+          <button
+            onClick={() => setIsServerModalOpen(true)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-black transition ${
+              syncInfo?.state === 'synced'
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                : 'bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100'
+            }`}
+          >
+            <span className="relative flex h-2 w-2">
+              {syncInfo?.state === 'synced' && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              )}
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                syncInfo?.state === 'synced' ? 'bg-emerald-500' : 'bg-blue-500'
+              }`} />
+            </span>
+            <span>{syncInfo?.state === 'synced' ? '🟢 WLAN Sync' : '📱 Autark'}</span>
+          </button>
+
+          {/* Quick Barcode Scanner */}
+          <button
+            onClick={() => setIsGlobalScannerOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-black transition shadow-2xs"
+          >
+            <Camera className="w-3.5 h-3.5 text-amber-700" />
+            <span>Scan</span>
+          </button>
+
+          {/* Family Profile Switcher Quick Pill */}
+          <button
+            onClick={() => setActiveModalView('profiles')}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition border border-slate-200"
+          >
+            <Users className="w-3.5 h-3.5 text-emerald-600" />
+            <span>{members.length} Profile</span>
+          </button>
+        </div>
+      </header>
+
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-36 sm:pb-32 md:pb-16">
+      <main className="flex-1 max-w-[1650px] 2xl:max-w-[1850px] w-full mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6 pb-36 sm:pb-32 md:pb-16 lg:pb-12">
         {activeTab === 'heute' && (
           <DailyMissionView
             dailyHub={dailyHub}
@@ -1176,7 +1488,7 @@ export function App() {
       )}
 
       {/* 🌟 2026 FLOATING DYNAMIC ACTION ISLAND */}
-      <div className="fixed bottom-16 md:bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-[95vw] pointer-events-auto transition-all duration-300">
+      <div className="fixed bottom-16 md:bottom-6 lg:bottom-6 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-8 z-40 max-w-[95vw] pointer-events-auto transition-all duration-300">
         <div className="bg-slate-900/90 hover:bg-slate-900 text-white backdrop-blur-xl border border-slate-700/80 rounded-full px-3 py-1.5 sm:px-4 sm:py-2 shadow-[0_8px_32px_rgba(0,0,0,0.35)] flex items-center gap-1.5 sm:gap-2.5 select-none">
           {/* 📷 1-Tap Barcode Scanner */}
           <button
@@ -1220,8 +1532,8 @@ export function App() {
         </div>
       </div>
 
-      {/* Mobile Bottom Tab Bar (Material 3 Dock) */}
-      <nav aria-label="Hauptnavigation" className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 px-1 pt-1.5 pb-[env(safe-area-inset-bottom,8px)] shadow-[0_-4px_24px_rgba(0,0,0,0.06)] flex items-center justify-around select-none">
+      {/* Mobile Bottom Tab Bar (Material 3 Dock: hidden on >= lg) */}
+      <nav aria-label="Hauptnavigation" className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 px-1 pt-1.5 pb-[env(safe-area-inset-bottom,8px)] shadow-[0_-4px_24px_rgba(0,0,0,0.06)] flex items-center justify-around select-none">
         <button
           onClick={() => setActiveTab('heute')}
           className="flex-1 flex flex-col items-center py-1 group focus:outline-none"
@@ -1307,6 +1619,7 @@ export function App() {
           </span>
         </button>
       </nav>
+      </div>
     </div>
   );
 }

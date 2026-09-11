@@ -8,6 +8,7 @@ import { calculateMultiStoreSplit, MultiStoreSplitReport } from '../utils/saving
 import { identifyPlantInIngredient } from '../utils/plantDiversityTracker';
 import { isShelfStableDryGood } from '../backend_embedded/shelfStability';
 import { apiFetch, getServerUrl } from '../api/client';
+import { getLocalCheckedShoppingItems, setLocalCheckedShoppingItems } from '../api/syncManager';
 import {
   ShoppingBag, Share2, Printer, Check, CheckSquare, Square, Plus, Minus,
   Archive, Sparkles, Trash2, PackageCheck, ChevronLeft, ChevronRight,
@@ -270,8 +271,42 @@ export const ShoppingListView: React.FC<Props> = ({
   // In-Store Thumb Mode (große Touch-Tasten)
   const [thumbMode, setThumbMode] = useState(false);
 
-  // Checked Map for shopping items
-  const [checkedMap, setCheckedMap] = useState<Record<string, boolean>>({});
+  // Checked Map for shopping items with persistent bi-directional sync
+  const [checkedMap, setCheckedMap] = useState<Record<string, boolean>>(() => {
+    try {
+      const items = getLocalCheckedShoppingItems();
+      const map: Record<string, boolean> = {};
+      items.forEach((k) => { map[k] = true; });
+      return map;
+    } catch {
+      return {};
+    }
+  });
+
+  // Sync checkedMap changes to localStorage & syncManager
+  useEffect(() => {
+    const checkedKeys = Object.entries(checkedMap)
+      .filter(([_, val]) => val)
+      .map(([k]) => k);
+    setLocalCheckedShoppingItems(checkedKeys);
+  }, [checkedMap]);
+
+  // Listen for sync events from background/server
+  useEffect(() => {
+    const handleUpdate = () => {
+      const items = getLocalCheckedShoppingItems();
+      const map: Record<string, boolean> = {};
+      items.forEach((k) => { map[k] = true; });
+      setCheckedMap(map);
+    };
+    window.addEventListener('fitplaner_checked_items_updated', handleUpdate);
+    window.addEventListener('fitplaner_synced', handleUpdate);
+    return () => {
+      window.removeEventListener('fitplaner_checked_items_updated', handleUpdate);
+      window.removeEventListener('fitplaner_synced', handleUpdate);
+    };
+  }, []);
+
   const [copiedToast, setCopiedToast] = useState(false);
   const [bookedToast, setBookedToast] = useState(false);
 
@@ -1342,7 +1377,11 @@ export const ShoppingListView: React.FC<Props> = ({
             </div>
           )}
 
-          {/* Clean Store Filter & Action Bar (Direkt ganz oben!) */}
+          {/* 2-Column Split Layout on Desktop (>= 1024px / lg) */}
+          <div className="lg:grid lg:grid-cols-12 lg:gap-6 items-start">
+            {/* Left Column (Checkliste & Filialen): col-span-8 */}
+            <div className="lg:col-span-8 space-y-4">
+              {/* Clean Store Filter & Action Bar (Direkt ganz oben!) */}
           <div className="bg-white rounded-2xl p-2.5 border border-slate-200 shadow-xs flex items-center justify-between gap-2">
             {/* Horizontal Store Pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none flex-1 min-w-0">
@@ -1663,45 +1702,170 @@ export const ShoppingListView: React.FC<Props> = ({
             </div>
           )}
 
-          {/* Gestrichene Artikel (Excluded Items Drawer) */}
-          {excludedItems.length > 0 && (
-            <div className="bg-slate-50 rounded-3xl border border-dashed border-slate-300 p-4 mb-6">
-              <button
-                type="button"
-                onClick={() => setShowExcludedDrawer(!showExcludedDrawer)}
-                className="w-full flex items-center justify-between text-xs font-bold text-slate-600 hover:text-slate-900"
-              >
-                <div className="flex items-center gap-2">
-                  <Trash2 className="w-4 h-4 text-slate-400" />
-                  <span>Gestrichene Artikel ({excludedItems.length})</span>
-                </div>
-                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                  {showExcludedDrawer ? '▲ Ausblenden' : '▼ Anzeigen & Wiederherstellen'}
-                </span>
-              </button>
-
-              {showExcludedDrawer && (
-                <div className="divide-y divide-slate-200 mt-3 pt-2">
-                  {excludedItems.map((item) => (
-                    <div key={`${item.storeTag}-${item.name}`} className="py-2.5 flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-slate-400 line-through text-xs font-bold truncate">{item.name}</span>
-                        <span className="text-[10px] text-slate-400 shrink-0">({item.storeTag || item.retailer})</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRestoreItem(item)}
-                        className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-xs font-bold text-emerald-700 shadow-2xs flex items-center gap-1 active:scale-95 transition shrink-0 ml-2"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Wiederherstellen</span>
-                      </button>
+              {/* Gestrichene Artikel (Excluded Items Drawer) */}
+              {excludedItems.length > 0 && (
+                <div className="bg-slate-50 rounded-3xl border border-dashed border-slate-300 p-4 mb-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowExcludedDrawer(!showExcludedDrawer)}
+                    className="w-full flex items-center justify-between text-xs font-bold text-slate-600 hover:text-slate-900"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Trash2 className="w-4 h-4 text-slate-400" />
+                      <span>Gestrichene Artikel ({excludedItems.length})</span>
                     </div>
-                  ))}
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                      {showExcludedDrawer ? '▲ Ausblenden' : '▼ Anzeigen & Wiederherstellen'}
+                    </span>
+                  </button>
+
+                  {showExcludedDrawer && (
+                    <div className="divide-y divide-slate-200 mt-3 pt-2">
+                      {excludedItems.map((item) => (
+                        <div key={`${item.storeTag}-${item.name}`} className="py-2.5 flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-slate-400 line-through text-xs font-bold truncate">{item.name}</span>
+                            <span className="text-[10px] text-slate-400 shrink-0">({item.storeTag || item.retailer})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRestoreItem(item)}
+                            className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-xs font-bold text-emerald-700 shadow-2xs flex items-center gap-1 active:scale-95 transition shrink-0 ml-2"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Wiederherstellen</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
+
+            {/* Right Column (Desktop Supermarkt-Cockpit & Optimizers): col-span-4 */}
+            <div className="hidden lg:block lg:col-span-4 space-y-4 sticky top-20">
+              {/* Cockpit Card */}
+              <div className="bg-white rounded-3xl p-5 border-2 border-slate-200/90 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                      <ShoppingBag className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-slate-900">Supermarkt-Cockpit</h3>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Status & Finanzen</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-black font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                    {progressPercent}%
+                  </span>
+                </div>
+
+                {/* Progress Bar */}
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-slate-700 mb-1.5">
+                    <span>Wagen-Fortschritt</span>
+                    <span className="font-mono">{checkedItemsCount} / {totalActiveItemsCount} Artikel</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden p-0.5 border border-slate-200">
+                    <div
+                      className="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-300"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Financial Summary */}
+                <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200/80 space-y-2 text-xs">
+                  <div className="flex justify-between font-bold text-slate-600">
+                    <span>Bereits im Wagen:</span>
+                    <span className="font-mono text-emerald-700 font-black">{checkedCost.toFixed(2)} €</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-slate-600">
+                    <span>Noch offen:</span>
+                    <span className="font-mono text-amber-700 font-black">{remainingCost.toFixed(2)} €</span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-200 flex justify-between font-black text-slate-900 text-sm">
+                    <span>Gesamtsumme:</span>
+                    <span className="font-mono text-slate-900">{(checkedCost + remainingCost).toFixed(2)} €</span>
+                  </div>
+                </div>
+
+                {/* Filial-Verteilung */}
+                <div className="space-y-2">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 block">
+                    Filial-Verteilung
+                  </span>
+                  <div className="space-y-1.5">
+                    {availableStores.map(({ key, count, meta }) => {
+                      const done = activeItemsWithStore.filter((i) => i.storeTag === key && checkedMap[`${i.storeTag}-${i.name}`]).length;
+                      const pct = count > 0 ? Math.round((done / count) * 100) : 0;
+                      return (
+                        <div key={key} className="flex items-center justify-between text-xs bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200">
+                          <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                            <span>{meta.icon}</span>
+                            <span>{meta.label}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-[11px] font-bold text-slate-600">
+                              {done} / {count}
+                            </span>
+                            <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-md ${pct === 100 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}`}>
+                              {pct}%
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Desktop Actions */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowFinishShoppingModal(true)}
+                    disabled={checkedItemsCount === 0}
+                    className="w-full py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition active:scale-[0.98]"
+                  >
+                    <Archive className="w-4 h-4 text-amber-300" />
+                    <span>In Vorratskammer buchen ({checkedItemsCount})</span>
+                  </button>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCopyWhatsApp}
+                      className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                    >
+                      <Share2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>WhatsApp</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDownloadPdf}
+                      className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-slate-600" />
+                      <span>PDF Liste</span>
+                    </button>
+                  </div>
+
+                  {onOpenNettoBrowser && (
+                    <button
+                      type="button"
+                      onClick={onOpenNettoBrowser}
+                      className="w-full py-2 px-3 rounded-xl bg-yellow-50 hover:bg-yellow-100 text-yellow-950 font-bold text-xs border border-yellow-200 flex items-center justify-center gap-1.5 transition"
+                    >
+                      <Store className="w-3.5 h-3.5 text-yellow-700" />
+                      <span>Netto-Online Prospekt öffnen</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </>
       )}
 

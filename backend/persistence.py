@@ -65,6 +65,11 @@ def get_custom_shopping_file() -> str:
     return os.path.join(get_data_dir(), "custom_shopping_items.json")
 
 
+def get_checked_shopping_file() -> str:
+    return os.path.join(get_data_dir(), "checked_shopping_items.json")
+
+
+
 def get_daily_hub_file() -> str:
     return os.path.join(get_data_dir(), "daily_hub_state.json")
 
@@ -81,6 +86,10 @@ def get_health_dossiers_file() -> str:
     return os.path.join(get_data_dir(), "health_dossiers.json")
 
 
+def get_recurring_rules_file() -> str:
+    return os.path.join(get_data_dir(), "recurring_rules.json")
+
+
 # Backward compatibility properties/references
 DATA_DIR = get_data_dir()
 FAMILY_PROFILES_FILE = get_family_profiles_file()
@@ -91,6 +100,7 @@ CUSTOM_SHOPPING_FILE = get_custom_shopping_file()
 DAILY_HUB_FILE = get_daily_hub_file()
 SCHEDULE_SETTINGS_FILE = get_schedule_settings_file()
 TASK_COMPLETIONS_FILE = get_task_completions_file()
+RECURRING_RULES_FILE = get_recurring_rules_file()
 
 
 def _safe_json_save(file_path: str, data: Any) -> None:
@@ -250,6 +260,21 @@ def save_custom_shopping_items(items: List[CustomShoppingItem]) -> None:
     _safe_json_save(get_custom_shopping_file(), data)
 
 
+def load_checked_shopping_items() -> List[str]:
+    filepath = get_checked_shopping_file()
+    if not os.path.exists(filepath):
+        return []
+    raw = _safe_json_load(filepath)
+    if raw is not None and isinstance(raw, list):
+        return [str(x) for x in raw]
+    return []
+
+
+def save_checked_shopping_items(items: List[str]) -> None:
+    _safe_json_save(get_checked_shopping_file(), list(set(items)))
+
+
+
 # -------------------------------------------------------------
 # 5. DAILY HUB STATE PERSISTENCE
 # -------------------------------------------------------------
@@ -338,3 +363,24 @@ def delete_health_dossier(member_id: str) -> bool:
         _safe_json_save(get_health_dossiers_file(), all_dossiers)
         return True
     return False
+
+
+# -------------------------------------------------------------
+# 8. RECURRING RULES / ROUTINES PERSISTENCE
+# -------------------------------------------------------------
+
+def load_recurring_rules() -> List[Dict[str, Any]]:
+    filepath = get_recurring_rules_file()
+    if not os.path.exists(filepath):
+        return []
+    data = _safe_json_load(filepath, [])
+    if isinstance(data, dict):
+        return list(data.values())
+    elif isinstance(data, list):
+        return data
+    return []
+
+
+def save_recurring_rules(rules: List[Dict[str, Any]]) -> None:
+    _safe_json_save(get_recurring_rules_file(), rules)
+

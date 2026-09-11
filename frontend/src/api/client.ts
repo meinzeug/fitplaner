@@ -74,17 +74,34 @@ export async function checkServerConnection(
   targetUrl?: string
 ): Promise<{ ok: boolean; message?: string }> {
   const base = (targetUrl !== undefined ? targetUrl : getServerUrl()).replace(/\/+$/, '');
-  const testEndpoint = `${base}/api/settings`;
+  if (!base) return { ok: false, message: 'Keine Server-Adresse eingegeben' };
 
+  // Fast-path: check lightweight sync health ping
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 2500);
+  const timeoutId = setTimeout(() => controller.abort(), 2000);
 
   try {
-    const res = await fetch(testEndpoint, {
+    const healthRes = await fetch(`${base}/api/sync/health`, {
       signal: controller.signal,
       headers: { Accept: 'application/json' },
     });
     clearTimeout(timeoutId);
+    if (healthRes.ok) {
+      return { ok: true, message: 'Verbunden (Peer-to-Peer Sync bereit)' };
+    }
+  } catch {
+    clearTimeout(timeoutId);
+  }
+
+  // Fallback check to /api/settings
+  const fallbackController = new AbortController();
+  const fallbackTimeout = setTimeout(() => fallbackController.abort(), 2500);
+  try {
+    const res = await fetch(`${base}/api/settings`, {
+      signal: fallbackController.signal,
+      headers: { Accept: 'application/json' },
+    });
+    clearTimeout(fallbackTimeout);
     if (res.ok) {
       const contentType = res.headers.get('content-type') || '';
       if (contentType.includes('application/json')) {
@@ -94,7 +111,7 @@ export async function checkServerConnection(
     }
     return { ok: false, message: `HTTP Fehler ${res.status}` };
   } catch (err: any) {
-    clearTimeout(timeoutId);
+    clearTimeout(fallbackTimeout);
     if (err.name === 'AbortError') {
       return { ok: false, message: 'Zeitüberschreitung (Timeout)' };
     }
@@ -172,33 +189,12 @@ export async function apiFetch(path: string, options?: RequestInit): Promise<Res
 }
 
 /**
- * Bidirectional Sync between Smartphone IndexedDB and PC Host Server.
+ * Bidirectional Peer-to-Peer Sync between Smartphone and PC Server.
  */
 export async function syncDataWithServer(): Promise<{ ok: boolean; message: string }> {
   try {
-    const serverUrl = getServerUrl();
-    if (!serverUrl) return { ok: false, message: 'Keine Server-URL konfiguriert.' };
-
-    const statusCheck = await checkServerConnection(serverUrl);
-    if (!statusCheck.ok) {
-      return { ok: false, message: `Server nicht erreichbar: ${statusCheck.message}` };
-    }
-
-    // Pull from server
-    const pullRes = await fetch(`${serverUrl}/api/sync/mesh-pull`, {
-      headers: { Accept: 'application/json' },
-    });
-    if (pullRes.ok) {
-      const serverPacket = await pullRes.json();
-      // Import into local embedded backend
-      await embeddedBackend.handleRequest('/api/sync/mesh-push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(serverPacket),
-      });
-      return { ok: true, message: 'Daten erfolgreich synchronisiert!' };
-    }
-    return { ok: false, message: `Server Sync Fehler (${pullRes.status})` };
+    const { performBidirectionalSync } = await import('./syncManager');
+    return await performBidirectionalSync();
   } catch (err: any) {
     return { ok: false, message: err?.message || 'Synchronisationsfehler' };
   }

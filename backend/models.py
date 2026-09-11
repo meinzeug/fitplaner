@@ -2,7 +2,7 @@
 Data models for Netto & NP Smart Nutrition & Family Planner.
 """
 
-from typing import List, Dict, Optional, Literal, Any
+from typing import List, Dict, Optional, Literal, Any, Union
 from pydantic import BaseModel, Field
 
 
@@ -678,5 +678,40 @@ class MemberHealthDossier(BaseModel):
     is_encrypted: bool = False
     encryption_salt: Optional[str] = None
     integrity_hash: Optional[str] = None
+
+
+# -------------------------------------------------------------
+# GLEICHBERECHTIGTER PEER-TO-PEER VOLL-SYNC (PC ↔ SMARTPHONE)
+# -------------------------------------------------------------
+
+class BidirectionalSyncPacket(BaseModel):
+    device_id: str
+    device_name: str
+    timestamp: str
+    sequence_id: int = 1
+    # Core Synchronized Data
+    settings: Optional[Union[AppSettings, Dict[str, Any]]] = None
+    schedule_settings: Optional[Union[ScheduleTimeSettings, Dict[str, Any]]] = None
+    profiles: Optional[List[Any]] = None
+    pantry: Optional[List[Any]] = None
+    recipes: Optional[List[Any]] = None
+    chores: Optional[List[Any]] = None
+    plans: Optional[List[Any]] = None
+    weekly_budgets: Optional[Dict[str, float]] = None
+    custom_shopping_items: Optional[List[Any]] = None
+    checked_shopping_items: List[str] = Field(default_factory=list)
+    item_overrides: Optional[Dict[str, Any]] = None
+    daily_hub_state: Optional[Dict[str, Any]] = None
+    health_dossiers: Optional[Union[Dict[str, Any], List[Any]]] = None
+    recurring_rules: Optional[List[Any]] = None
+
+
+class BidirectionalSyncResponse(BaseModel):
+    status: str = "success"
+    server_device_name: str
+    server_timestamp: str
+    merged_data: BidirectionalSyncPacket
+    summary: Dict[str, Any] = Field(default_factory=dict)
+
 
 

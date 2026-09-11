@@ -71,6 +71,109 @@ class TestMeshSync(unittest.TestCase):
         self.assertTrue(self.daily_hub_state["lunchbox_packed"])
         self.assertTrue(self.daily_hub_state["fresh_pick_bought"])
 
+    def test_bidirectional_sync_packet(self):
+        from backend.models import BidirectionalSyncPacket, CustomShoppingItem
+        from backend.sync.mesh_sync import merge_bidirectional_sync_packet
+
+        packet = BidirectionalSyncPacket(
+            device_id="phone-dennis",
+            device_name="Dennis Smartphone (Autark)",
+            timestamp="2026-09-11T12:00:00",
+            checked_shopping_items=["Netto-Bananen", "NP-Skyr"],
+            custom_shopping_items=[
+                CustomShoppingItem(
+                    id="custom-1",
+                    name="Kaugummi",
+                    quantity=2,
+                    unit="Packung",
+                    category="Snacks",
+                    retailer="Netto"
+                )
+            ],
+            daily_hub_state={"lunchbox_packed": True, "dinner_cooked": True}
+        )
+
+        resp = merge_bidirectional_sync_packet(
+            packet=packet,
+            server_device_name="FitPlaner PC-Server (Zuhause)",
+            current_chores=self.chores,
+            current_members=self.members,
+            current_daily_hub=self.daily_hub_state
+        )
+
+        self.assertEqual(resp.status, "success")
+        self.assertEqual(resp.server_device_name, "FitPlaner PC-Server (Zuhause)")
+        self.assertIn("Netto-Bananen", resp.merged_data.checked_shopping_items)
+        self.assertIn("NP-Skyr", resp.merged_data.checked_shopping_items)
+        self.assertTrue(any(i.name == "Kaugummi" for i in resp.merged_data.custom_shopping_items))
+        self.assertTrue(resp.merged_data.daily_hub_state.get("dinner_cooked"))
+
+    def test_all_data_bidirectional_sync(self):
+        from backend.models import BidirectionalSyncPacket, FamilyMember, AppSettings, ScheduleTimeSettings
+        from backend.sync.mesh_sync import merge_bidirectional_sync_packet
+
+        # Updated profile from mobile phone with modified allergies, target calories, weight, points
+        phone_member = FamilyMember(
+            id="m1", name="Dennis Smartphone", gender="male", age=33,
+            height_cm=185, weight_kg=83.5, activity_level="active", goal="lose_weight",
+            dietary_preference="high_protein", allergies=["laktose", "gluten"],
+            disliked_foods=["rosenkohl"], target_calories=2200,
+            chore_points=35, water_intake_ml=2200, role_title="Chefkoch"
+        )
+        new_child = FamilyMember(
+            id="m2", name="Marie", gender="female", age=7,
+            height_cm=125, weight_kg=24, activity_level="active", goal="maintain",
+            role_title="Küchen-Fee", chore_points=15
+        )
+
+        packet = BidirectionalSyncPacket(
+            device_id="phone-dennis",
+            device_name="Dennis Smartphone",
+            timestamp="2026-09-11T12:30:00",
+            settings=AppSettings(primary_retailer="NP", default_weekly_budget=175.0),
+            schedule_settings=ScheduleTimeSettings(wake_up_time="06:30", dinner_time="19:00"),
+            profiles=[phone_member, new_child],
+            recurring_rules=[
+                {"id": "rec_milk_1", "name": "Bio-Vollmilch", "frequency": "weekly", "count_per_cycle": 3}
+            ],
+            health_dossiers={
+                "m1": {"allergies": ["laktose", "gluten"], "blood_type": "A+"}
+            }
+        )
+
+        resp = merge_bidirectional_sync_packet(
+            packet=packet,
+            server_device_name="FitPlaner PC-Server (Zuhause)",
+            current_members=self.members
+        )
+
+        self.assertEqual(resp.status, "success")
+        self.assertEqual(resp.summary["settings_merged"], 1)
+        self.assertEqual(resp.summary["schedule_settings_merged"], 1)
+        self.assertEqual(resp.summary["profiles_merged"], 2)
+        self.assertEqual(resp.summary["recurring_merged"], 1)
+        self.assertEqual(resp.summary["health_dossiers_merged"], 1)
+
+        # Verify merged profile data
+        merged_members = {m.id: m for m in resp.merged_data.profiles}
+        self.assertIn("m1", merged_members)
+        self.assertIn("m2", merged_members)
+        m1 = merged_members["m1"]
+        self.assertEqual(m1.name, "Dennis Smartphone")
+        self.assertEqual(m1.weight_kg, 83.5)
+        self.assertEqual(m1.target_calories, 2200)
+        self.assertEqual(m1.chore_points, 35)
+        self.assertEqual(m1.water_intake_ml, 2200)
+        self.assertIn("gluten", m1.allergies)
+        self.assertIn("laktose", m1.allergies)
+
+        # Verify settings
+        self.assertEqual(resp.merged_data.settings.primary_retailer, "NP")
+        self.assertEqual(resp.merged_data.settings.default_weekly_budget, 175.0)
+        self.assertEqual(resp.merged_data.schedule_settings.wake_up_time, "06:30")
+
 
 if __name__ == "__main__":
     unittest.main()
+
+
